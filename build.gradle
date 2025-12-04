@@ -34,6 +34,24 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    /* ====== 1. Sentry ====== */
+    implementation 'io.sentry:sentry-spring-boot-starter-jakarta:7.10.0'
+    implementation 'io.sentry:sentry-logback:7.10.0'
+
+    /* ====== 2. Logback ====== */
+    // Spring Boot에는 기본적으로 logback-classic 포함되어 있으므로 보통 추가 불필요
+    // 커스텀 RollingPolicy 등을 쓰고 싶으면 아래 추가
+    implementation 'ch.qos.logback:logback-classic'
+
+    /* ====== 3. Metrics (Micrometer) ====== */
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
+    /* ====== 4. Spring Boot Actuator ====== */
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    /* ====== 5. Spring Security ====== */
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 }
 
 tasks.named('test') {
