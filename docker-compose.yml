@@ -1,0 +1,64 @@
+services:
+  # [Spring Boot Application]
+  # Spring Boot 백엔드 애플리케이션을 빌드하고 실행하는 컨테이너입니다.
+  # - Build: 현재 디렉토리의 Dockerfile을 사용하여 멀티 스테이지 빌드 수행
+  # - Port: 호스트의 8080 포트를 컨테이너의 8080 포트와 연결
+  # - Network: 'pickeat-network'를 통해 MySQL 컨테이너와 통신
+  # - Environment: DB 접속 정보 및 타임존 설정 (.env 파일 참조)
+  # - Depends On: MySQL 컨테이너가 완전히 실행된 후 시작되도록 설정
+  app:
+    build: .
+    container_name: pickeat-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SENTRY_DSN: ${SENTRY_DSN}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - pickeat-network
+    restart: always
+
+  # [MySQL Database]
+  # 애플리케이션에서 사용할 MySQL 8.0 데이터베이스 컨테이너입니다.
+  # - Image: 공식 mysql:8.0 이미지 사용
+  # - Port: 호스트의 3307 포트를 컨테이너의 3306 포트와 연결 (로컬 충돌 방지)
+  # - Volume: 'mysql_data' 볼륨을 사용하여 컨테이너 재시작 후에도 데이터 보존
+  # - Config: 한글 저장을 위한 utf8mb4 설정 및 한국 시간(KST) 적용
+  mysql:
+    image: mysql:8.0
+    container_name: pickeat-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+#      MYSQL_USER: ${MYSQL_USER}
+#      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    networks:
+      - pickeat-network
+
+volumes:
+  mysql_data:
+
+
+networks:
+  pickeat-network:
+    driver: bridge
