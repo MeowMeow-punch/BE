@@ -1,3 +1,30 @@
 spring:
   application:
     name: pickeat
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/pickeat
+    username: root
+    password: jang4360
+
+sentry:
+  dsn: https://10e0a70c41f0258fee3cfe6f9f444b7f@o4510474982522880.ingest.us.sentry.io/4510475001921536
+  #  exception-resolver-order: -2147483647
+  traces-sample-rate: 1.0
+  debug: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    tags:
+      application: pickeat
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  config: classpath:logback-spring-local.xml

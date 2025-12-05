@@ -35,7 +35,7 @@ public class HttpAccessLogFilter extends OncePerRequestFilter {
         } finally {
             long duration = System.currentTimeMillis() - start;
 
-            log.info("http_access",
+            log.info("httpAccess",
                     kv("logType", LogType.HTTP_ACCESS.name()),
                     kv("method", request.getMethod()),
                     kv("uri", request.getRequestURI()),
