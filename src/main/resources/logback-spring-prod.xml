@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- 콘솔로 JSON 로그 출력 -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+
+                <!-- 기본 메타데이터 -->
+                <timestamp/>
+                <logLevel/>
+                <loggerName/>
+                <threadName/>
+
+                <!-- MDC(traceId, userId, clientIp 등) -->
+                <mdc/>
+
+                <!-- 메시지 + kv() 인자들 -->
+                <message/>
+                <arguments/>
+
+            </providers>
+        </encoder>
+    </appender>
+
+    <!-- 루트 로거: 기본은 INFO 이상 -->
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+
+    <!-- 필요하면 패키지/로거별 레벨 조정 -->
+    <!--
+    <logger name="HTTP_ACCESS_LOGGER" level="INFO"/>
+    <logger name="ERROR_LOGGER" level="ERROR"/>
+    -->
+
+</configuration>
