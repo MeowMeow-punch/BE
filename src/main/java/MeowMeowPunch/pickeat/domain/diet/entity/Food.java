@@ -1,15 +1,13 @@
 package MeowMeowPunch.pickeat.domain.diet.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
+import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -23,7 +21,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class Food {
+public class Food extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -88,26 +86,4 @@ public class Food {
 
 	@Column(name = "thumbnail_url", length = 255, nullable = false)
 	private String thumbnailUrl;
-
-	@Column(name = "created_at", nullable = false, updatable = false)
-	private LocalDateTime createdAt;
-
-	@Column(name = "updated_at", nullable = false)
-	private LocalDateTime updatedAt;
-
-	@PrePersist
-	protected void onCreate() {
-		LocalDateTime now = LocalDateTime.now();
-		this.createdAt = now;
-		this.updatedAt = now;
-	}
-
-	@PreUpdate
-	protected void onUpdate() {
-		this.updatedAt = LocalDateTime.now();
-	}
-
-	public void updateThumbnail(String thumbnailUrl) {
-		this.thumbnailUrl = thumbnailUrl;
-	}
 }
