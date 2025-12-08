@@ -34,7 +34,7 @@ public class FoodsCsvImporterService {
 		"base_amount", "base_unit",
 		"kcal", "carbs", "protein", "fat", "sugar",
 		"dietary_fiber", "vit_a", "vit_c", "vit_d",
-		"calcium", "iron", "sodium", "image"   // CSV 컬럼 이름은 image 유지
+		"calcium", "iron", "sodium", "image"
 	};
 
 	public void importCsv() throws Exception {
@@ -75,7 +75,7 @@ public class FoodsCsvImporterService {
 			    calcium       = EXCLUDED.calcium,
 			    iron          = EXCLUDED.iron,
 			    sodium        = EXCLUDED.sodium,
-			    thumbnail_url = EXCLUDED.thumbnail_url,  -- 여기 수정
+			    thumbnail_url = EXCLUDED.thumbnail_url,
 			    updated_at    = now()
 			""";
 
@@ -93,26 +93,28 @@ public class FoodsCsvImporterService {
 					 .parse(reader)) {
 
 				for (CSVRecord record : parser) {
-					ps.setString(1, record.get("food_code"));
+					String foodCode = record.get("food_code");
+
+					ps.setString(1, foodCode);
 					ps.setString(2, record.get("name"));
 					ps.setString(3, record.get("category"));
 
-					ps.setInt(4, Integer.parseInt(record.get("base_amount")));
+					ps.setInt(4, toInt(record.get("base_amount"), "base_amount", foodCode));
 					ps.setString(5, record.get("base_unit"));
 
-					ps.setBigDecimal(6, toDecimal(record.get("kcal")));
-					ps.setBigDecimal(7, toDecimal(record.get("carbs")));
-					ps.setBigDecimal(8, toDecimal(record.get("protein")));
-					ps.setBigDecimal(9, toDecimal(record.get("fat")));
-					ps.setBigDecimal(10, toDecimal(record.get("sugar")));
+					ps.setBigDecimal(6, toDecimal(record.get("kcal"), "kcal", foodCode));
+					ps.setBigDecimal(7, toDecimal(record.get("carbs"), "carbs", foodCode));
+					ps.setBigDecimal(8, toDecimal(record.get("protein"), "protein", foodCode));
+					ps.setBigDecimal(9, toDecimal(record.get("fat"), "fat", foodCode));
+					ps.setBigDecimal(10, toDecimal(record.get("sugar"), "sugar", foodCode));
 
-					ps.setBigDecimal(11, toDecimal(record.get("dietary_fiber")));
-					ps.setBigDecimal(12, toDecimal(record.get("vit_a")));
-					ps.setBigDecimal(13, toDecimal(record.get("vit_c")));
-					ps.setBigDecimal(14, toDecimal(record.get("vit_d")));
-					ps.setBigDecimal(15, toDecimal(record.get("calcium")));
-					ps.setBigDecimal(16, toDecimal(record.get("iron")));
-					ps.setBigDecimal(17, toDecimal(record.get("sodium")));
+					ps.setBigDecimal(11, toDecimal(record.get("dietary_fiber"), "dietary_fiber", foodCode));
+					ps.setBigDecimal(12, toDecimal(record.get("vit_a"), "vit_a", foodCode));
+					ps.setBigDecimal(13, toDecimal(record.get("vit_c"), "vit_c", foodCode));
+					ps.setBigDecimal(14, toDecimal(record.get("vit_d"), "vit_d", foodCode));
+					ps.setBigDecimal(15, toDecimal(record.get("calcium"), "calcium", foodCode));
+					ps.setBigDecimal(16, toDecimal(record.get("iron"), "iron", foodCode));
+					ps.setBigDecimal(17, toDecimal(record.get("sodium"), "sodium", foodCode));
 
 					// CSV 컬럼명은 image지만 DB 컬럼은 thumbnail_url
 					ps.setString(18, record.get("image"));
@@ -121,22 +123,42 @@ public class FoodsCsvImporterService {
 				}
 
 				ps.executeBatch();
+				conn.commit();
+				log.info("[IMPORTER] Import finished");
 			} catch (Exception e) {
 				conn.rollback();
-				log.error("[IMPORTER] Import failed", e);
+				log.error("[IMPORTER] Import failed, rolled back", e);
 				throw e;
 			}
-
-			conn.commit();
-			log.info("[IMPORTER] Import finished");
 		}
 	}
 
-	private static BigDecimal toDecimal(String raw) {
+	private static BigDecimal toDecimal(String raw, String columnName, String foodCode) {
 		String trimmed = raw == null ? "" : raw.trim();
 		if (trimmed.isEmpty()) {
+			log.warn("[IMPORTER] 빈 {} 값 감지. food_code={} → 0으로 대체", columnName, foodCode);
 			return BigDecimal.ZERO;
 		}
-		return new BigDecimal(trimmed);
+		try {
+			return new BigDecimal(trimmed);
+		} catch (NumberFormatException e) {
+			log.warn("[IMPORTER] 잘못된 {} 값 감지. food_code={}, raw='{}' → 0으로 대체",
+				columnName, foodCode, trimmed);
+			return BigDecimal.ZERO;
+		}
+	}
+
+	private int toInt(String value, String columnName, String foodCode) {
+		if (value == null || value.isBlank()) {
+			log.warn("[IMPORTER] 빈 {} 값 감지. food_code={} → 0으로 대체", columnName, foodCode);
+			return 0;
+		}
+		try {
+			return Integer.parseInt(value.trim());
+		} catch (NumberFormatException e) {
+			log.warn("[IMPORTER] 잘못된 {} 값 감지. food_code={}, raw='{}' → 0으로 대체",
+				columnName, foodCode, value);
+			return 0;
+		}
 	}
 }
