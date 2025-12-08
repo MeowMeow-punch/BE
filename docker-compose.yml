@@ -23,13 +23,13 @@ services:
       - pickeat-network
     restart: always
 
-    # [PostgreSQL Database]
-    # 애플리케이션에서 사용하는 PostgreSQL 16 데이터베이스 컨테이너
-    # - Image: 공식 postgres:16 이미지 사용
-    # - Port: 호스트 5432 → 컨테이너 5432 매핑
-    # - Volume: postgres_data 볼륨으로 DB 데이터를 영구 보존
-    # - Healthcheck: pg_isready를 사용해 DB 기동 여부 확인
-    # - Network: pickeat-network 내에서 app 컨테이너와 통신
+  # [PostgreSQL Database]
+  # 애플리케이션에서 사용하는 PostgreSQL 16 데이터베이스 컨테이너
+  # - Image: 공식 postgres:16 이미지 사용
+  # - Port: 호스트 5432 → 컨테이너 5432 매핑
+  # - Volume: postgres_data 볼륨으로 DB 데이터를 영구 보존
+  # - Healthcheck: pg_isready를 사용해 DB 기동 여부 확인
+  # - Network: pickeat-network 내에서 app 컨테이너와 통신
   postgres:
     image: postgres:16
     container_name: pickeat-postgres

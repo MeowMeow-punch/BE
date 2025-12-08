@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.util.Objects;
 
 import javax.sql.DataSource;
 
@@ -35,7 +34,7 @@ public class FoodsCsvImporterService {
 		"base_amount", "base_unit",
 		"kcal", "carbs", "protein", "fat", "sugar",
 		"dietary_fiber", "vit_a", "vit_c", "vit_d",
-		"calcium", "iron", "sodium", "image"
+		"calcium", "iron", "sodium", "image"   // CSV 컬럼 이름은 image 유지
 	};
 
 	public void importCsv() throws Exception {
@@ -48,7 +47,7 @@ public class FoodsCsvImporterService {
 			    base_amount, base_unit,
 			    kcal, carbs, protein, fat, sugar,
 			    dietary_fiber, vit_a, vit_c, vit_d,
-			    calcium, iron, sodium, image,
+			    calcium, iron, sodium, thumbnail_url,
 			    created_at, updated_at
 			)
 			VALUES (
@@ -76,7 +75,7 @@ public class FoodsCsvImporterService {
 			    calcium       = EXCLUDED.calcium,
 			    iron          = EXCLUDED.iron,
 			    sodium        = EXCLUDED.sodium,
-			    image         = EXCLUDED.image,
+			    thumbnail_url = EXCLUDED.thumbnail_url,  -- 여기 수정
 			    updated_at    = now()
 			""";
 
@@ -115,6 +114,7 @@ public class FoodsCsvImporterService {
 					ps.setBigDecimal(16, toDecimal(record.get("iron")));
 					ps.setBigDecimal(17, toDecimal(record.get("sodium")));
 
+					// CSV 컬럼명은 image지만 DB 컬럼은 thumbnail_url
 					ps.setString(18, record.get("image"));
 
 					ps.addBatch();
