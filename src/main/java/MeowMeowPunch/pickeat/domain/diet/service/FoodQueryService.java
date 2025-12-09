@@ -35,7 +35,7 @@ public class FoodQueryService {
 
 		String nextCursor = hasNext && !foods.isEmpty() ? String.valueOf(foods.get(foods.size() - 1).getId()) : null;
 
-		PageInfo pageInfo = new PageInfo(nextCursor, hasNext);
+		PageInfo pageInfo = hasNext ? PageInfo.of(nextCursor, true) : PageInfo.empty();
 		return FoodListResponse.from(foods, pageInfo);
 	}
 

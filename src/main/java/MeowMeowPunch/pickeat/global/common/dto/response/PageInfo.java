@@ -1,12 +1,14 @@
 package MeowMeowPunch.pickeat.global.common.dto.response;
 
-import lombok.Builder;
-
 public record PageInfo(
 	String nextCursor,
 	boolean hasNext
 ) {
-	@Builder
-	public PageInfo {
+	public static PageInfo of(String nextCursor, boolean hasNext) {
+		return new PageInfo(nextCursor, hasNext);
+	}
+
+	public static PageInfo empty() {
+		return new PageInfo(null, false);
 	}
 }

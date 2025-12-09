@@ -5,8 +5,11 @@ import java.math.RoundingMode;
 import java.util.List;
 
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
+import MeowMeowPunch.pickeat.global.common.dto.response.FoodItem;
+import MeowMeowPunch.pickeat.global.common.dto.response.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.PageInfo;
 
+// 음식 목록 리스트 응답 DTO
 public record FoodListResponse(
 	List<FoodItem> foods,
 	PageInfo pageInfo
@@ -19,12 +22,12 @@ public record FoodListResponse(
 	}
 
 	private static FoodItem toItem(Food food) {
-		return new FoodItem(
+		return FoodItem.of(
 			food.getId(),
 			food.getName(),
 			formatAmount(food.getBaseAmount(), food.getBaseUnit()),
 			toInt(food.getKcal()),
-			new Nutrients(
+			Nutrients.of(
 				toInt(food.getCarbs()),
 				toInt(food.getProtein()),
 				toInt(food.getFat())
@@ -45,22 +48,5 @@ public record FoodListResponse(
 			return 0;
 		}
 		return value.setScale(0, RoundingMode.HALF_UP).intValue();
-	}
-
-	public record FoodItem(
-		Long foodId,
-		String name,
-		String amount,
-		int calorie,
-		Nutrients nutrients,
-		String thumbnailUrl
-	) {
-	}
-
-	public record Nutrients(
-		int carbs,
-		int protein,
-		int fat
-	) {
 	}
 }
