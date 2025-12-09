@@ -32,8 +32,9 @@ public class FoodQueryService {
 		int limit = FoodPageAssembler.resolveLimit(size);
 
 		List<Food> foods = foodMapper.findFoodsByKeyword(keyword, cursorId, limit + 1);
+		int totalCount = foodMapper.findFoodsByKeywordCount(keyword);
 		FoodPage page = FoodPageAssembler.toPage(foods, limit);
 
-		return FoodSearchResponse.from(page.foods(), page.pageInfo());
+		return FoodSearchResponse.from(page.foods(), page.pageInfo(), totalCount);
 	}
 }

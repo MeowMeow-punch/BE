@@ -10,11 +10,11 @@ import MeowMeowPunch.pickeat.global.common.mapper.FoodDtoMapper;
 public record FoodSearchResponse(
 	int searchNum, List<FoodItem> foods, PageInfo pageInfo
 ) {
-	public static FoodSearchResponse from(List<Food> foods, PageInfo pageInfo) {
+	public static FoodSearchResponse from(List<Food> foods, PageInfo pageInfo, int totalCount) {
 		List<FoodItem> items = foods.stream()
 			.map(FoodDtoMapper::toFoodItem)
 			.toList();
 
-		return new FoodSearchResponse(items.size(), items, pageInfo);
+		return new FoodSearchResponse(totalCount, items, pageInfo);
 	}
 }

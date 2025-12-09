@@ -42,4 +42,10 @@
         ORDER BY id ASC
         LIMIT #{limit}
     </select>
+
+    <select id="findFoodsByKeywordCount" resultType="int">
+        SELECT COUNT(*)
+        FROM foods
+        WHERE name ILIKE CONCAT('%', #{keyword}, '%')
+    </select>
 </mapper>

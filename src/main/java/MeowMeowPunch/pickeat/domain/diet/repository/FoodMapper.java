@@ -19,4 +19,6 @@ public interface FoodMapper {
 		@Param("cursorId") Long cursorId,
 		@Param("limit") int limit
 	);
+
+	int findFoodsByKeywordCount(@Param("keyword") String keyword);
 }
