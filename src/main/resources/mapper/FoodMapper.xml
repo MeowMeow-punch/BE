@@ -22,4 +22,24 @@
         ORDER BY id ASC
         LIMIT #{limit}
     </select>
+
+    <select id="findFoodsByKeyword" resultType="MeowMeowPunch.pickeat.domain.diet.entity.Food">
+        SELECT
+        id,
+        name,
+        base_amount,
+        base_unit,
+        kcal,
+        carbs,
+        protein,
+        fat,
+        thumbnail_url
+        FROM foods
+        WHERE name ILIKE CONCAT('%', #{keyword}, '%')
+        <if test="cursorId != null">
+            AND id &gt; #{cursorId}
+        </if>
+        ORDER BY id ASC
+        LIMIT #{limit}
+    </select>
 </mapper>

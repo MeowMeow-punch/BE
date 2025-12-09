@@ -3,19 +3,18 @@ package MeowMeowPunch.pickeat.domain.diet.dto.response;
 import java.util.List;
 
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodDtoMapper;
 import MeowMeowPunch.pickeat.global.common.dto.response.FoodItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.PageInfo;
+import MeowMeowPunch.pickeat.global.common.mapper.FoodDtoMapper;
 
-// 음식 목록 리스트 응답 DTO
-public record FoodListResponse(
-	List<FoodItem> foods,
-	PageInfo pageInfo
+public record FoodSearchResponse(
+	int searchNum, List<FoodItem> foods, PageInfo pageInfo
 ) {
-	public static FoodListResponse from(List<Food> foods, PageInfo pageInfo) {
+	public static FoodSearchResponse from(List<Food> foods, PageInfo pageInfo) {
 		List<FoodItem> items = foods.stream()
 			.map(FoodDtoMapper::toFoodItem)
 			.toList();
-		return new FoodListResponse(items, pageInfo);
+
+		return new FoodSearchResponse(items.size(), items, pageInfo);
 	}
 }

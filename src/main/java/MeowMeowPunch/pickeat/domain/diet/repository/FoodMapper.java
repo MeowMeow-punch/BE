@@ -13,4 +13,10 @@ public interface FoodMapper {
 		@Param("cursorId") Long cursorId,
 		@Param("limit") int limit
 	);
+
+	List<Food> findFoodsByKeyword(
+		@Param("keyword") String keyword,
+		@Param("cursorId") Long cursorId,
+		@Param("limit") int limit
+	);
 }
