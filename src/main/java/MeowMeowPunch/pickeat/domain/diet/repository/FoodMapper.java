@@ -5,12 +5,20 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import MeowMeowPunch.pickeat.domain.diet.entity.Food;
+import MeowMeowPunch.pickeat.global.common.dto.response.FoodSummary;
 
 @Mapper
 public interface FoodMapper {
-	List<Food> findFoodsForCursor(
+	List<FoodSummary> findFoodSummariesForCursor(
 		@Param("cursorId") Long cursorId,
 		@Param("limit") int limit
 	);
+
+	List<FoodSummary> findFoodSummariesByKeyword(
+		@Param("keyword") String keyword,
+		@Param("cursorId") Long cursorId,
+		@Param("limit") int limit
+	);
+
+	int findFoodsByKeywordCount(@Param("keyword") String keyword);
 }
