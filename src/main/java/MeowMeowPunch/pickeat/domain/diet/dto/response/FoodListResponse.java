@@ -12,7 +12,7 @@ public record FoodListResponse(
 	List<FoodItem> foods,
 	PageInfo pageInfo
 ) {
-	public static FoodListResponse from(List<Food> foods, PageInfo pageInfo) {
+	public static FoodListResponse of(List<Food> foods, PageInfo pageInfo) {
 		List<FoodItem> items = foods.stream()
 			.map(FoodDtoMapper::toFoodItem)
 			.toList();

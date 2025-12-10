@@ -24,7 +24,7 @@ public class FoodQueryService {
 		List<Food> foods = foodMapper.findFoodsForCursor(cursorId, limit + 1);
 
 		FoodPage page = FoodPageAssembler.toPage(foods, limit);
-		return FoodListResponse.from(page.foods(), page.pageInfo());
+		return FoodListResponse.of(page.foods(), page.pageInfo());
 	}
 
 	public FoodSearchResponse search(String keyword, String cursor, Integer size) {
@@ -35,6 +35,6 @@ public class FoodQueryService {
 		int totalCount = foodMapper.findFoodsByKeywordCount(keyword);
 		FoodPage page = FoodPageAssembler.toPage(foods, limit);
 
-		return FoodSearchResponse.from(page.foods(), page.pageInfo(), totalCount);
+		return FoodSearchResponse.of(page.foods(), page.pageInfo(), totalCount);
 	}
 }
