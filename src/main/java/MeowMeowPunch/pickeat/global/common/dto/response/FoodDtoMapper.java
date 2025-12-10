@@ -24,17 +24,33 @@ public final class FoodDtoMapper {
 		);
 	}
 
-	public static String formatAmount(Integer amount, String unit) {
+	public static FoodItem toFoodItem(FoodSummary summary) {
+		return FoodItem.of(
+			summary.id(),
+			summary.name(),
+			formatAmount(summary.baseAmount(), summary.baseUnit()),
+			toInt(summary.kcal()),
+			Nutrients.of(
+				toInt(summary.carbs()),
+				toInt(summary.protein()),
+				toInt(summary.fat())
+			),
+			summary.thumbnailUrl()
+		);
+	}
+
+	private static String formatAmount(Integer amount, String unit) {
 		if (amount == null || unit == null) {
 			return "";
 		}
 		return amount + unit;
 	}
 
-	public static int toInt(BigDecimal value) {
+	private static int toInt(BigDecimal value) {
 		if (value == null) {
 			return 0;
 		}
 		return value.setScale(0, RoundingMode.HALF_UP).intValue();
 	}
+
 }

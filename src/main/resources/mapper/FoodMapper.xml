@@ -3,17 +3,17 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="MeowMeowPunch.pickeat.domain.diet.repository.FoodMapper">
-    <select id="findFoodsForCursor" resultType="MeowMeowPunch.pickeat.domain.diet.entity.Food">
+    <select id="findFoodSummariesForCursor" resultType="MeowMeowPunch.pickeat.global.common.dto.response.FoodSummary">
         SELECT
         id,
         name,
-        base_amount,
-        base_unit,
-        kcal,
-        carbs,
-        protein,
-        fat,
-        thumbnail_url
+        base_amount AS baseAmount,
+        base_unit AS baseUnit,
+        kcal AS kcal,
+        carbs AS carbs,
+        protein AS protein,
+        fat AS fat,
+        thumbnail_url AS thumbnailUrl
         FROM foods
         WHERE 1 = 1
         <if test="cursorId != null">
@@ -23,17 +23,17 @@
         LIMIT #{limit}
     </select>
 
-    <select id="findFoodsByKeyword" resultType="MeowMeowPunch.pickeat.domain.diet.entity.Food">
+    <select id="findFoodSummariesByKeyword" resultType="MeowMeowPunch.pickeat.global.common.dto.response.FoodSummary">
         SELECT
         id,
         name,
-        base_amount,
-        base_unit,
-        kcal,
-        carbs,
-        protein,
-        fat,
-        thumbnail_url
+        base_amount AS baseAmount,
+        base_unit AS baseUnit,
+        kcal AS kcal,
+        carbs AS carbs,
+        protein AS protein,
+        fat AS fat,
+        thumbnail_url AS thumbnailUrl
         FROM foods
         WHERE name ILIKE CONCAT('%', #{keyword}, '%')
         <if test="cursorId != null">

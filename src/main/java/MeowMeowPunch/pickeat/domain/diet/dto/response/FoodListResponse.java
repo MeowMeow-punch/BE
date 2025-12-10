@@ -2,8 +2,6 @@ package MeowMeowPunch.pickeat.domain.diet.dto.response;
 
 import java.util.List;
 
-import MeowMeowPunch.pickeat.domain.diet.entity.Food;
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodDtoMapper;
 import MeowMeowPunch.pickeat.global.common.dto.response.FoodItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.PageInfo;
 
@@ -12,10 +10,7 @@ public record FoodListResponse(
 	List<FoodItem> foods,
 	PageInfo pageInfo
 ) {
-	public static FoodListResponse of(List<Food> foods, PageInfo pageInfo) {
-		List<FoodItem> items = foods.stream()
-			.map(FoodDtoMapper::toFoodItem)
-			.toList();
-		return new FoodListResponse(items, pageInfo);
+	public static FoodListResponse of(List<FoodItem> foods, PageInfo pageInfo) {
+		return new FoodListResponse(foods, pageInfo);
 	}
 }
