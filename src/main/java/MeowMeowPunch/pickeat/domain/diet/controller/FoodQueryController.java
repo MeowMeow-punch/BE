@@ -20,22 +20,21 @@ public class FoodQueryController {
 
 	@GetMapping("/list/search")
 	public ResTemplate<FoodListResponse> getFoodList(
-		// @RequestHeader(name = "Authorization", required = false) String authorization,
-		@RequestParam(name = "cursor", required = false) String cursor,
-		@RequestParam(name = "size", required = false) Integer size
-	) {
+			// @RequestHeader(name = "Authorization", required = false) String
+			// authorization,
+			@RequestParam(name = "cursor", required = false) String cursor,
+			@RequestParam(name = "size", required = false) Integer size) {
 		FoodListResponse data = foodQueryService.getFoodList(cursor, size);
-		return new ResTemplate<>(HttpStatus.OK, "음식 리스트 조회 성공", data);
+		return ResTemplate.success(HttpStatus.OK, "음식 리스트 조회 성공", data);
 	}
 
 	@GetMapping("/search")
 	public ResTemplate<FoodSearchResponse> getSearchFood(
-		@RequestParam(name = "keyword", required = true) String keyword,
-		@RequestParam(name = "cursor", required = false) String cursor,
-		@RequestParam(name = "size", required = false) Integer size
-	) {
+			@RequestParam(name = "keyword", required = true) String keyword,
+			@RequestParam(name = "cursor", required = false) String cursor,
+			@RequestParam(name = "size", required = false) Integer size) {
 		FoodSearchResponse data = foodQueryService.search(keyword, cursor, size);
-		return new ResTemplate<>(HttpStatus.OK, "음식 검색 성공", data);
+		return ResTemplate.success(HttpStatus.OK, "음식 검색 성공", data);
 	}
 
 }
