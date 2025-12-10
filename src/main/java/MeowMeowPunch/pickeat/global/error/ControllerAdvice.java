@@ -22,103 +22,84 @@ import static net.logstash.logback.argument.StructuredArguments.kv;
 @RestControllerAdvice
 public class ControllerAdvice {
 
-    // 204, NoContentGroupException
-    @ExceptionHandler({ NoContentGroupException.class })
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ResTemplate<?> handleNoContent(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.NO_CONTENT;
-        logError("NO_CONTENT", status, e, request);
-        return createErrorResponse(e, status);
-    }
-
     // 400, InvalidGroupException
     @ExceptionHandler({ InvalidGroupException.class })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResTemplate<?> handleInvalidData(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.BAD_REQUEST;
-        logError("VALIDATION", status, e, request);
-        return createErrorResponse(e, status);
+        logError("VALIDATION", HttpStatus.BAD_REQUEST, e, request);
+        return createErrorResponse(e, HttpStatus.BAD_REQUEST);
     }
 
     // 401, AuthGroupException
     @ExceptionHandler({ AuthGroupException.class })
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ResTemplate<?> handleAuthDate(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.UNAUTHORIZED;
-        logError("AUTH", status, e, request);
-        return createErrorResponse(e, status);
+        logError("AUTH", HttpStatus.UNAUTHORIZED, e, request);
+        return createErrorResponse(e, HttpStatus.UNAUTHORIZED);
     }
 
     // 403, AccessDeniedGroupException
     @ExceptionHandler({ AccessDeniedGroupException.class })
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ResTemplate<?> handleAccessDeniedDate(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.FORBIDDEN;
-        logError("ACCESS_DENIED", status, e, request);
-        return createErrorResponse(e, status);
+        logError("ACCESS_DENIED", HttpStatus.FORBIDDEN, e, request);
+        return createErrorResponse(e, HttpStatus.FORBIDDEN);
     }
 
     // 404, NotFoundGroupException
     @ExceptionHandler({ NotFoundGroupException.class })
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ResTemplate<?> handleNotFoundDate(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.NOT_FOUND;
-        logError("NOT_FOUND", status, e, request);
-        return createErrorResponse(e, status);
+        logError("NOT_FOUND", HttpStatus.NOT_FOUND, e, request);
+        return createErrorResponse(e, HttpStatus.NOT_FOUND);
     }
 
     // 408, REQUEST_TIMEOUT
     @ExceptionHandler({ TimeoutGroupException.class })
     @ResponseStatus(HttpStatus.REQUEST_TIMEOUT)
     public ResTemplate<?> requestTimeout(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.REQUEST_TIMEOUT;
-        logError("TIMEOUT", status, e, request);
-        return createErrorResponse(e, status);
+        logError("TIMEOUT", HttpStatus.REQUEST_TIMEOUT, e, request);
+        return createErrorResponse(e, HttpStatus.REQUEST_TIMEOUT);
     }
 
     // 409, ConflictGroupException
     @ExceptionHandler({ ConflictGroupException.class })
     @ResponseStatus(HttpStatus.CONFLICT)
     public ResTemplate<?> handleConflict(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.CONFLICT;
-        logError("CONFLICT", status, e, request);
-        return createErrorResponse(e, status);
+        logError("CONFLICT", HttpStatus.CONFLICT, e, request);
+        return createErrorResponse(e, HttpStatus.CONFLICT);
     }
 
     // 418, TeapotGroupException
     @ExceptionHandler({ TeapotGroupException.class })
     @ResponseStatus(HttpStatus.I_AM_A_TEAPOT)
     public ResTemplate<?> handleTeapotGroupException(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.I_AM_A_TEAPOT;
-        logError("TEAPOT", status, e, request); // 또는 "SYSTEM"
-        return createErrorResponse(e, status);
+        logError("TEAPOT", HttpStatus.I_AM_A_TEAPOT, e, request); // 또는 "SYSTEM"
+        return createErrorResponse(e, HttpStatus.I_AM_A_TEAPOT);
     }
 
     // 422, UnprocessableGroupException
     @ExceptionHandler({ UnprocessableGroupException.class })
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
     public ResTemplate<?> handleUnprocessable(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
-        logError("UNPROCESSABLE", status, e, request);
-        return createErrorResponse(e, status);
+        logError("UNPROCESSABLE", HttpStatus.UNPROCESSABLE_ENTITY, e, request);
+        return createErrorResponse(e, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     // 429, ManyRequestsGroupException
     @ExceptionHandler({ ManyRequestsGroupException.class })
     @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
     public ResTemplate<?> handleManyRequest(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.TOO_MANY_REQUESTS;
-        logError("RATE_LIMIT", status, e, request);
-        return createErrorResponse(e, status);
+        logError("RATE_LIMIT", HttpStatus.TOO_MANY_REQUESTS, e, request);
+        return createErrorResponse(e, HttpStatus.TOO_MANY_REQUESTS);
     }
 
     // 500, InternalServerError (이메일 전송 과정에서 발생하는 오류를 위해 추가)
     @ExceptionHandler({ InternalServerErrorGroupException.class })
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResTemplate<?> handleInternalServerError(RuntimeException e, HttpServletRequest request) {
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-        logError("SYSTEM", status, e, request);
-        return createErrorResponse(e, status);
+        logError("SYSTEM", HttpStatus.INTERNAL_SERVER_ERROR, e, request);
+        return createErrorResponse(e, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     // 메서드 인자 문제 생겼을 때
