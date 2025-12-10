@@ -1,10 +1,14 @@
 package MeowMeowPunch.pickeat.global.common.dto.response;
 
+// Food 엔티티/조회 DTO를 API 응답용 FoodItem으로 변환하는 매퍼
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
+import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
 
+// 음식
 public final class FoodDtoMapper {
 	private FoodDtoMapper() {
 	}
@@ -39,11 +43,11 @@ public final class FoodDtoMapper {
 		);
 	}
 
-	private static String formatAmount(Integer amount, String unit) {
+	private static String formatAmount(Integer amount, FoodBaseUnit unit) {
 		if (amount == null || unit == null) {
 			return "";
 		}
-		return amount + unit;
+		return amount + unit.name();
 	}
 
 	private static int toInt(BigDecimal value) {

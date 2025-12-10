@@ -1,5 +1,7 @@
 package MeowMeowPunch.pickeat.global.common.dto.response;
 
+// 커서 기반 페이지네이션 정보를 내려주는 공통 DTO
+
 public record PageInfo(
 	String nextCursor,
 	boolean hasNext

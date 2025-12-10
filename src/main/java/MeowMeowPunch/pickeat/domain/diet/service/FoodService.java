@@ -15,14 +15,14 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class FoodQueryService {
+public class FoodService {
 	private final FoodMapper foodMapper;
 
+	// 음식 리스트 조회
 	public FoodListResponse getFoodList(String cursor, Integer size) {
 		Long cursorId = FoodPageAssembler.parseCursor(cursor);
 		int limit = FoodPageAssembler.resolveLimit(size);
 
-		// Mybatis 호출
 		List<FoodSummary> foods = foodMapper.findFoodSummariesForCursor(cursorId, limit + 1);
 
 		List<FoodItem> items = foods.stream()
@@ -33,11 +33,13 @@ public class FoodQueryService {
 		return FoodListResponse.of(page.foods(), page.pageInfo());
 	}
 
+	// 키워드 기반 음식 리스트 조회
 	public FoodSearchResponse search(String keyword, String cursor, Integer size) {
 		Long cursorId = FoodPageAssembler.parseCursor(cursor);
 		int limit = FoodPageAssembler.resolveLimit(size);
 
 		List<FoodSummary> foods = foodMapper.findFoodSummariesByKeyword(keyword, cursorId, limit + 1);
+
 		int totalCount = foodMapper.findFoodsByKeywordCount(keyword);
 		List<FoodItem> items = foods.stream()
 			.map(FoodDtoMapper::toFoodItem)
