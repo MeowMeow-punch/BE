@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper">
+
+    <!-- 오늘 섭취 합계 -->
+    <select id="findTodayTotals" resultType="MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals">
+        SELECT
+        COALESCE(SUM(kcal), 0) AS totalKcal,
+        COALESCE(SUM(carbs), 0) AS totalCarbs,
+        COALESCE(SUM(protein), 0) AS totalProtein,
+        COALESCE(SUM(fat), 0) AS totalFat
+        FROM my_diets
+        WHERE user_id = #{userId}
+        AND date = CURRENT_DATE
+    </select>
+
+    <!-- 남은 섭취량 기준 스코어 계산: TOP N (base_unit G만) -->
+    <select id="findTopFoodCandidates" resultType="MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate">
+        SELECT
+        f.id AS foodId,
+        f.name AS name,
+        f.thumbnail_url AS thumbnailUrl,
+        (f.kcal * #{portionFactor}) AS kcal,
+        (f.carbs * #{portionFactor}) AS carbs,
+        (f.protein * #{portionFactor}) AS protein,
+        (f.fat * #{portionFactor}) AS fat,
+        (
+        -- kcal 맞춤 점수 및 초과 패널티
+        (-1) * ABS( (#{remainingKcal}) - (f.kcal * #{portionFactor}) ) * #{weightKcal}
+        + CASE WHEN (f.kcal * #{portionFactor}) > #{remainingKcal} THEN (-1) * #{penaltyOverKcal} ELSE 0 END
+        -- 탄수화물
+        + (-1) * ABS( (#{remainingCarbs}) - (f.carbs * #{portionFactor}) ) * #{weightCarbs}
+        + CASE WHEN (f.carbs * #{portionFactor}) > #{remainingCarbs} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
+        -- 단백질
+        + (-1) * ABS( (#{remainingProtein}) - (f.protein * #{portionFactor}) ) * #{weightProtein}
+        + CASE WHEN (f.protein * #{portionFactor}) > #{remainingProtein} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
+        -- 지방
+        + (-1) * ABS( (#{remainingFat}) - (f.fat * #{portionFactor}) ) * #{weightFat}
+        + CASE WHEN (f.fat * #{portionFactor}) > #{remainingFat} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
+        ) AS score
+        FROM foods f
+        WHERE f.base_unit = 'G'
+        ORDER BY score DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

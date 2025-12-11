@@ -1,10 +1,14 @@
 package MeowMeowPunch.pickeat.domain.diet.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
+import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,6 +37,13 @@ public class RecommendedDiet extends BaseEntity {
 
 	@Column(name = "food_id", nullable = false)
 	private Long foodId;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "diet_status", nullable = false)
+	private DietStatus dietStatus;
+
+	@Column(name = "date", nullable = false)
+	private LocalDate date;
 
 	@Column(name = "title", length = 200, nullable = false)
 	private String title;

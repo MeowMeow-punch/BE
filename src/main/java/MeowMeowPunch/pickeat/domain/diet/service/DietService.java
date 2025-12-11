@@ -2,18 +2,19 @@ package MeowMeowPunch.pickeat.domain.diet.service;
 
 import static MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
+import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.AiFeedBack;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
-import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
-import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
-import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
+import MeowMeowPunch.pickeat.domain.diet.entity.PurposeType;
+import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.global.common.dto.response.RecommendedDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
 import lombok.RequiredArgsConstructor;
@@ -21,37 +22,30 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class DietService {
-	// 성별, 신체 정보에 따라 목표 값 계산하는 로직 만들 예정
+	// TODO: 유저 테이블 생성되면 삭제 예정
 	private static final int GOAL_KCAL = 2000;
 	private static final int GOAL_CARBS = 280;
 	private static final int GOAL_PROTEIN = 120;
 	private static final int GOAL_FAT = 70;
 
-	private final DietRepository dietRepository;
-	private final RecommendedDietRepository recommendedDietRepository;
+	private final DietRecommendationMapper dietRecommendationMapper;
+	private final DietRecommendationService dietRecommendationService;
 
-	// 홈 페이지 조회
-	public DietHomeResponse getHome() {
+	// 홈 페이지 조회 (오늘 기준)
+	public DietHomeResponse getHome(String userId, PurposeType purposeType) {
 		LocalDate targetDate = LocalDate.now();
 
-		List<Diet> diets = dietRepository.findAllByDate(targetDate);
+		// 오늘 섭취 합계
+		NutrientTotals totals = dietRecommendationMapper.findTodayTotals(userId);
 
-		BigDecimal totalKcal = BigDecimal.ZERO;
-		BigDecimal totalCarbs = BigDecimal.ZERO;
-		BigDecimal totalProtein = BigDecimal.ZERO;
-		BigDecimal totalFat = BigDecimal.ZERO;
+		// 식단 추천 계산 트리거 (이미 있으면 재사용) 후 TOP5 후보 반환
+		List<FoodRecommendationCandidate> recommendedCandidates = dietRecommendationService.recommendTopFoods(userId,
+			purposeType, totals);
 
-		for (Diet diet : diets) {
-			totalKcal = totalKcal.add(nullSafe(diet.getKcal()));
-			totalCarbs = totalCarbs.add(nullSafe(diet.getCarbs()));
-			totalProtein = totalProtein.add(nullSafe(diet.getProtein()));
-			totalFat = totalFat.add(nullSafe(diet.getFat()));
-		}
-
-		int currentKcal = toInt(totalKcal);
-		int currentCarbs = toInt(totalCarbs);
-		int currentProtein = toInt(totalProtein);
-		int currentFat = toInt(totalFat);
+		int currentKcal = toInt(nullSafe(totals.totalKcal()));
+		int currentCarbs = toInt(nullSafe(totals.totalCarbs()));
+		int currentProtein = toInt(nullSafe(totals.totalProtein()));
+		int currentFat = toInt(nullSafe(totals.totalFat()));
 
 		SummaryInfo summaryInfo = SummaryInfo.of(
 			SummaryInfo.Calorie.of(currentKcal, GOAL_KCAL),
@@ -60,20 +54,20 @@ public class DietService {
 			SummaryInfo.NutrientInfo.of(currentFat, GOAL_FAT, status(currentFat, GOAL_FAT))
 		);
 
-		// AI 연결 후 수정할 예정
+		// AI 연결 예정
 		AiFeedBack aiFeedBack = AiFeedBack.of(
 			"AI 피드백은 준비 중입니다.",
 			LocalDateTime.now().withNano(0).toString()
 		);
 
-		// AI 연결 후 수정할 예정
-		List<RecommendedDietInfo> recommended = recommendedDietRepository.findTop5ByOrderByCreatedAtDesc().stream()
-			.map(r -> RecommendedDietInfo.of(
-				r.getId(),
-				r.getTitle(),
-				"LUNCH", // 식사 타입 정보가 없어 임시로 LUNCH 지정
-				r.getThumbnailUrl(),
-				toInt(r.getKcal())
+		List<RecommendedDietInfo> recommended = recommendedCandidates.stream()
+			.limit(2)
+			.map(c -> RecommendedDietInfo.of(
+				c.foodId(),
+				c.name(),
+				mealSlot(LocalTime.now()).name(),
+				c.thumbnailUrl(),
+				toInt(c.kcal())
 			))
 			.toList();
 

@@ -1,5 +1,6 @@
 package MeowMeowPunch.pickeat.global.common.dto.response;
 
+// 추천 식단 카드 DTO
 public record RecommendedDietInfo(
 	Long dietId,
 	String name,

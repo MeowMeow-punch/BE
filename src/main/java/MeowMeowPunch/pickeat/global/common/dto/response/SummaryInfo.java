@@ -1,7 +1,6 @@
 package MeowMeowPunch.pickeat.global.common.dto.response;
 
-// 하루 식단 요약(칼로리/탄단지 목표 대비 현황) 응답 DTO
-
+// 하루 식단 요약(칼로리, 탄단지 목표 대비 현황) 응답 DTO
 public record SummaryInfo(
 	Calorie calorie, NutrientInfo carbs, NutrientInfo protein, NutrientInfo fat
 ) {
