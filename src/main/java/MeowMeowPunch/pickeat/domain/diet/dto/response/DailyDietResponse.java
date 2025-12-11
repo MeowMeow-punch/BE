@@ -12,7 +12,7 @@ public record DailyDietResponse(
 	AiFeedBack aiFeedbackInfo,
 	List<TodayDietInfo> todayDietInfo,
 	List<WeeklyCaloriesInfo> weeklyCaloriesInfo
-) {
+) implements DietResponse {
 	public static DailyDietResponse of(
 		String selectedDate,
 		SummaryInfo summaryInfo,

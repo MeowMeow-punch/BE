@@ -16,6 +16,18 @@
         AND date = #{date}
     </select>
 
+    <!-- 구간별 일간 칼로리 합계 (주간 차트용) -->
+    <select id="findDailyCalories" resultType="MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum">
+        SELECT
+            date AS date,
+            COALESCE(SUM(kcal), 0) AS totalKcal
+        FROM my_diets
+        WHERE user_id = #{userId}
+          AND date BETWEEN #{start} AND #{end}
+        GROUP BY date
+        ORDER BY date ASC
+    </select>
+
     <!-- 남은 섭취량 기준 스코어 계산: TOP N (base_unit G만) -->
     <select id="findTopFoodCandidates" resultType="MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate">
         WITH adjusted AS (

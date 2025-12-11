@@ -84,7 +84,7 @@ public class DietService {
 
 		AiFeedBack aiFeedBack = AiFeedBack.of(
 			"AI 피드백은 준비 중입니다.",
-			targetDate.atTime(LocalTime.now().withNano(0)).toString()
+			targetDate.atStartOfDay().toString()
 		);
 
 		List<TodayDietInfo> todayDietInfo = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate)
@@ -92,7 +92,11 @@ public class DietService {
 			.map(DietPageAssembler::toTodayDietInfo)
 			.toList();
 
-		List<WeeklyCaloriesInfo> weeklyCaloriesInfo = buildWeeklyCalories(dietRepository, userId, targetDate);
+		LocalDate today = LocalDate.now();
+		LocalDate end = targetDate.isAfter(today) ? today : targetDate;
+		LocalDate start = end.minusDays(6);
+		var calorieSums = dietRecommendationMapper.findDailyCalories(userId, start, end);
+		List<WeeklyCaloriesInfo> weeklyCaloriesInfo = buildWeeklyCalories(calorieSums, start);
 
 		return DailyDietResponse.of(
 			targetDate.toString(),

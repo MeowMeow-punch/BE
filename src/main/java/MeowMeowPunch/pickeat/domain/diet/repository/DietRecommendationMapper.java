@@ -7,6 +7,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum;
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 
@@ -14,6 +15,12 @@ import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 public interface DietRecommendationMapper {
 
 	NutrientTotals findTotalsByDate(@Param("userId") String userId, @Param("date") LocalDate date);
+
+	List<DailyCalorieSum> findDailyCalories(
+		@Param("userId") String userId,
+		@Param("start") LocalDate start,
+		@Param("end") LocalDate end
+	);
 
 	List<FoodRecommendationCandidate> findTopFoodCandidates(
 		@Param("remainingKcal") BigDecimal remainingKcal,

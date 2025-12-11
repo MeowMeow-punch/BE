@@ -13,10 +13,10 @@ import java.util.stream.Collectors;
 
 import org.springframework.util.StringUtils;
 
+import MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietDateException;
-import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
 import MeowMeowPunch.pickeat.global.common.dto.response.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.TodayDietInfo;
@@ -25,7 +25,12 @@ import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 
 // 식단 페이지 공통 계산, 포매팅 헬퍼
-public class DietPageAssembler {
+public final class DietPageAssembler {
+
+	private DietPageAssembler() {
+		// 유틸리티 클래스는 인스턴스화할 수 없습니다.
+	}
+
 	// TODO: 유저 테이블 생성되면 삭제 예정
 	private static final int GOAL_KCAL = 2000;
 	private static final int GOAL_CARBS = 280;
@@ -86,20 +91,11 @@ public class DietPageAssembler {
 	}
 
 	// 주간 칼로리 응답 생성 (오른쪽 끝 막대가 오늘 기준)
-	public static List<WeeklyCaloriesInfo> buildWeeklyCalories(DietRepository dietRepository, String userId,
-		LocalDate targetDate) {
-		LocalDate today = LocalDate.now();
-		LocalDate end = targetDate.isAfter(today) ? today : targetDate;
-		LocalDate start = end.minusDays(6);
-
-		// 7일간 날짜별로 칼로리 합산
-		Map<LocalDate, Integer> calorieByDate = dietRepository.findAllByUserIdAndDateBetweenOrderByDateAsc(userId,
-				start,
-				end)
-			.stream()
+	public static List<WeeklyCaloriesInfo> buildWeeklyCalories(List<DailyCalorieSum> sums, LocalDate start) {
+		Map<LocalDate, Integer> calorieByDate = sums.stream()
 			.collect(Collectors.toMap(
-				Diet::getDate,
-				d -> toInt(nullSafe(d.getKcal())),
+				DailyCalorieSum::date,
+				d -> toInt(nullSafe(d.totalKcal())),
 				Integer::sum
 			));
 
