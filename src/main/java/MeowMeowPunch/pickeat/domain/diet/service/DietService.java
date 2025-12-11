@@ -34,11 +34,12 @@ public class DietService {
 	private final DietRecommendationService dietRecommendationService;
 
 	// 홈 페이지 조회 (오늘 기준)
-	public DietHomeResponse getHome(String userId, String rawFocus) {
+	public DietHomeResponse getHome(String userId) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
 		}
-		Focus focus = parseFocus(rawFocus);
+		// TODO: focus 를 사용자 테이블에서 가져올 예정
+		Focus focus = parseFocus("BALANCE");
 
 		// 오늘 섭취 합계 (쿼리 1회)
 		NutrientTotals totals = dietRecommendationMapper.findTodayTotals(userId);

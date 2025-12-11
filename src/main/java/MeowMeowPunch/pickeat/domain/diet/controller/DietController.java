@@ -20,10 +20,9 @@ public class DietController {
 	// 식단 메인 페이지
 	@GetMapping
 	public ResTemplate<DietHomeResponse> getHome(
-		@RequestParam(name = "userId") String userId,
-		@RequestParam(name = "purpose", required = false, defaultValue = "BALANCE") String purpose
+		@RequestParam(name = "userId") String userId
 	) {
-		DietHomeResponse data = dietService.getHome(userId, purpose);
+		DietHomeResponse data = dietService.getHome(userId);
 		return new ResTemplate<>(HttpStatus.OK, "메인페이지 조회 성공", data);
 	}
 }
