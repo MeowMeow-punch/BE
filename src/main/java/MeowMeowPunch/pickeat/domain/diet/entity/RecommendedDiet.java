@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
-import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
+import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -40,7 +40,7 @@ public class RecommendedDiet extends BaseEntity {
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "diet_status", nullable = false)
-	private DietStatus dietStatus;
+	private DietType dietType;
 
 	@Column(name = "date", nullable = false)
 	private LocalDate date;

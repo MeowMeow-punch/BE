@@ -15,7 +15,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
-import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
+import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import lombok.RequiredArgsConstructor;
 
@@ -46,9 +46,9 @@ public class DietRecommendationService {
 	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, Focus focus,
 		NutrientTotals totals) {
 		LocalDate today = LocalDate.now();
-		DietStatus mealSlot = mealSlot(LocalTime.now());
+		DietType mealSlot = mealSlot(LocalTime.now());
 
-		List<RecommendedDiet> existing = recommendedDietRepository.findByUserIdAndDateAndDietStatusOrderByCreatedAtDesc(
+		List<RecommendedDiet> existing = recommendedDietRepository.findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(
 			userId, today, mealSlot);
 
 		// 오늘 날짜로 DietStatus(아침, 점심, 저녁, 간식) 있다면 바로 반환
@@ -92,13 +92,13 @@ public class DietRecommendationService {
 	}
 
 	// RecommendedDiet 테이블에 저장
-	private void saveTopRecommended(String userId, LocalDate date, DietStatus dietStatus,
+	private void saveTopRecommended(String userId, LocalDate date, DietType dietType,
 		List<FoodRecommendationCandidate> picks) {
 		for (FoodRecommendationCandidate c : picks) {
 			RecommendedDiet entity = RecommendedDiet.builder()
 				.userId(userId)
 				.foodId(c.foodId())
-				.dietStatus(dietStatus)
+				.dietType(dietType)
 				.date(date)
 				.title(c.name())
 				.kcal(nullSafe(c.kcal()))

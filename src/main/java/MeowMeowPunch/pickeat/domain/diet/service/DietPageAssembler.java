@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import org.springframework.util.StringUtils;
 
 import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
+import MeowMeowPunch.pickeat.global.common.enums.DietType;
 
 // 식단 페이지 공통 계산, 포매팅 헬퍼
 public final class DietPageAssembler {
@@ -33,27 +34,27 @@ public final class DietPageAssembler {
 		return value.setScale(0, RoundingMode.HALF_UP).intValue();
 	}
 
-	public static String status(int current, int goal) {
+	public static DietStatus status(int current, int goal) {
 		if (current < goal) {
-			return "LACK";
+			return DietStatus.LACK;
 		}
 		if (current > goal) {
-			return "OVER";
+			return DietStatus.OVER;
 		}
-		return "GOOD";
+		return DietStatus.GOOD;
 	}
 
-	public static DietStatus mealSlot(LocalTime now) {
+	public static DietType mealSlot(LocalTime now) {
 		int hour = now.getHour();
 		if (hour >= 4 && hour < 10) {
-			return DietStatus.BREAKFAST;
+			return DietType.BREAKFAST;
 		}
 		if (hour >= 10 && hour < 15) {
-			return DietStatus.LUNCH;
+			return DietType.LUNCH;
 		}
 		if (hour >= 15 && hour < 21) {
-			return DietStatus.DINNER;
+			return DietType.DINNER;
 		}
-		return DietStatus.SNACK;
+		return DietType.SNACK;
 	}
 }

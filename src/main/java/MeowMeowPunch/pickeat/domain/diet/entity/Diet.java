@@ -6,7 +6,7 @@ import java.time.LocalTime;
 
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
-import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
+import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -39,7 +39,7 @@ public class Diet extends BaseEntity {
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
-	private DietStatus status;
+	private DietType status;
 
 	@Column(name = "title", length = 200, nullable = false)
 	private String title;
