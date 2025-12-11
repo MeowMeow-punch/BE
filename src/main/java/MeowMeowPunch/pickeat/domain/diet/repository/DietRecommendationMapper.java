@@ -1,5 +1,6 @@
 package MeowMeowPunch.pickeat.domain.diet.repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
@@ -14,10 +15,10 @@ public interface DietRecommendationMapper {
 	NutrientTotals findTodayTotals(@Param("userId") String userId);
 
 	List<FoodRecommendationCandidate> findTopFoodCandidates(
-		@Param("remainingKcal") double remainingKcal,
-		@Param("remainingCarbs") double remainingCarbs,
-		@Param("remainingProtein") double remainingProtein,
-		@Param("remainingFat") double remainingFat,
+		@Param("remainingKcal") BigDecimal remainingKcal,
+		@Param("remainingCarbs") BigDecimal remainingCarbs,
+		@Param("remainingProtein") BigDecimal remainingProtein,
+		@Param("remainingFat") BigDecimal remainingFat,
 		@Param("weightKcal") double weightKcal,
 		@Param("weightCarbs") double weightCarbs,
 		@Param("weightProtein") double weightProtein,

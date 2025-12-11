@@ -58,10 +58,10 @@ public class DietRecommendationService {
 		}
 
 		// 1) 오늘 남은 여유 영양분 계산
-		double remainingKcal = remaining(GOAL_KCAL, totals.totalKcal());
-		double remainingCarbs = remaining(GOAL_CARBS, totals.totalCarbs());
-		double remainingProtein = remaining(GOAL_PROTEIN, totals.totalProtein());
-		double remainingFat = remaining(GOAL_FAT, totals.totalFat());
+		BigDecimal remainingKcal = remaining(GOAL_KCAL, totals.totalKcal());
+		BigDecimal remainingCarbs = remaining(GOAL_CARBS, totals.totalCarbs());
+		BigDecimal remainingProtein = remaining(GOAL_PROTEIN, totals.totalProtein());
+		BigDecimal remainingFat = remaining(GOAL_FAT, totals.totalFat());
 
 		// 2) 목적별 가중치/패널티 설정
 		Weight weight = weightByFocus(focus);
@@ -110,8 +110,8 @@ public class DietRecommendationService {
 	}
 
 	// 섭취해야할 영양분 계산
-	private double remaining(BigDecimal goal, BigDecimal eaten) {
-		return goal.subtract(nullSafe(eaten)).doubleValue();
+	private BigDecimal remaining(BigDecimal goal, BigDecimal eaten) {
+		return goal.subtract(nullSafe(eaten));
 	}
 
 	// TODO: 가중치 값은 GPT 추천으로 임의로 지정했고 추후 개선할 예정
