@@ -12,11 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
-import MeowMeowPunch.pickeat.domain.diet.entity.PurposeType;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
 import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
+import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -41,7 +41,7 @@ public class DietRecommendationService {
 	 * - 상위 2개는 추천 테이블에 저장 (추후 AI 선택으로 교체 예정)
 	 */
 	@Transactional
-	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, PurposeType purposeType,
+	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, Focus focus,
 		NutrientTotals totals) {
 		LocalDate today = LocalDate.now();
 		DietStatus mealSlot = mealSlot(LocalTime.now());
@@ -63,7 +63,7 @@ public class DietRecommendationService {
 		double remainingFat = remaining(GOAL_FAT, totals.totalFat());
 
 		// 2) 목적별 가중치/패널티 설정
-		Weight weight = weightByPurpose(purposeType);
+		Weight weight = weightByFocus(focus);
 
 		// 3) 남은 영양분 기반 top5 식단 추천 (포션 200g 기준)
 		List<FoodRecommendationCandidate> candidates = dietRecommendationMapper.findTopFoodCandidates(
@@ -112,9 +112,9 @@ public class DietRecommendationService {
 		return goal.subtract(nullSafe(eaten)).doubleValue();
 	}
 
-	// 가중치 값은 GPT 추천으로 임의로 지정했고 추후 개선할 예정
-	private Weight weightByPurpose(PurposeType purpose) {
-		return switch (purpose) {
+	// TODO: 가중치 값은 GPT 추천으로 임의로 지정했고 추후 개선할 예정
+	private Weight weightByFocus(Focus focus) {
+		return switch (focus) {
 			case DIET -> new Weight(
 				1.5, 1.0, 0.9, 0.8, // kcal, carbs, protein, fat 가중치
 				200, // kcal 초과 패널티

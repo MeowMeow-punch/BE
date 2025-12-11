@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
-import MeowMeowPunch.pickeat.domain.diet.entity.PurposeType;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +23,7 @@ public class DietController {
 		@RequestParam(name = "userId") String userId,
 		@RequestParam(name = "purpose", required = false, defaultValue = "BALANCE") String purpose
 	) {
-		PurposeType purposeType = PurposeType.valueOf(purpose.toUpperCase());
-		DietHomeResponse data = dietService.getHome(userId, purposeType);
+		DietHomeResponse data = dietService.getHome(userId, purpose);
 		return new ResTemplate<>(HttpStatus.OK, "메인페이지 조회 성공", data);
 	}
 }
