@@ -42,6 +42,9 @@
         ) AS score
         FROM foods f
         WHERE f.base_unit = 'G'
+        AND (f.kcal * #{portionFactor})
+        BETWEEN (#{remainingKcal} - #{kcalTolerance})
+        AND (#{remainingKcal} + #{kcalTolerance})
         ORDER BY score DESC
         LIMIT #{limit}
     </select>

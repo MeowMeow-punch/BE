@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class DietRecommendationService {
 	private static final double PORTION_FACTOR = 2.0; // 200g 기준
 	private static final int TOP_LIMIT = 5;
+	private static final int KCAL_TOLERANCE = 400; // +- 칼로리 기준
 
 	// 임시 목표값 (추후 사용자 정보 기반 계산)
 	private static final BigDecimal GOAL_KCAL = BigDecimal.valueOf(2000);
@@ -78,6 +79,7 @@ public class DietRecommendationService {
 			weight.penaltyOverKcal,
 			weight.penaltyOverMacro,
 			PORTION_FACTOR,
+			KCAL_TOLERANCE,
 			TOP_LIMIT
 		);
 
