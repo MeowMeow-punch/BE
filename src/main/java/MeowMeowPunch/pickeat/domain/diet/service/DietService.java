@@ -2,6 +2,7 @@ package MeowMeowPunch.pickeat.domain.diet.service;
 
 import static MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -12,53 +13,42 @@ import org.springframework.util.StringUtils;
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.AiFeedBack;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
-import MeowMeowPunch.pickeat.domain.diet.exception.InvalidPurposeTypeException;
 import MeowMeowPunch.pickeat.domain.diet.exception.MissingDietUserIdException;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
+import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
 import MeowMeowPunch.pickeat.global.common.dto.response.RecommendedDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.TodayDietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.WeeklyCaloriesInfo;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class DietService {
-	// TODO: 유저 테이블 생성되면 삭제 예정
-	private static final int GOAL_KCAL = 2000;
-	private static final int GOAL_CARBS = 280;
-	private static final int GOAL_PROTEIN = 120;
-	private static final int GOAL_FAT = 70;
 
 	private final DietRecommendationMapper dietRecommendationMapper;
 	private final DietRecommendationService dietRecommendationService;
+	private final DietRepository dietRepository;
 
 	// 홈 페이지 조회 (오늘 기준)
 	public DietHomeResponse getHome(String userId) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
 		}
-		// TODO: focus 를 사용자 테이블에서 가져올 예정
-		Focus focus = parseFocus("BALANCE");
+		Focus focus = Focus.BALANCE; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
+		LocalDate todayDate = LocalDate.now();
 
 		// 오늘 섭취 합계 (쿼리 1회)
-		NutrientTotals totals = dietRecommendationMapper.findTodayTotals(userId);
+		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, todayDate);
 
 		// 식단 추천 계산 트리거 (이미 있으면 재사용) 후 TOP5 후보 반환
 		List<FoodRecommendationCandidate> recommendedCandidates = dietRecommendationService.recommendTopFoods(userId,
 			focus, totals);
 
-		int currentKcal = toInt(nullSafe(totals.totalKcal()));
-		int currentCarbs = toInt(nullSafe(totals.totalCarbs()));
-		int currentProtein = toInt(nullSafe(totals.totalProtein()));
-		int currentFat = toInt(nullSafe(totals.totalFat()));
-
-		SummaryInfo summaryInfo = SummaryInfo.of(
-			SummaryInfo.Calorie.of(currentKcal, GOAL_KCAL),
-			SummaryInfo.NutrientInfo.of(currentCarbs, GOAL_CARBS, status(currentCarbs, GOAL_CARBS)),
-			SummaryInfo.NutrientInfo.of(currentProtein, GOAL_PROTEIN, status(currentProtein, GOAL_PROTEIN)),
-			SummaryInfo.NutrientInfo.of(currentFat, GOAL_FAT, status(currentFat, GOAL_FAT))
-		);
+		SummaryInfo summaryInfo = buildSummary(totals);
 
 		// TODO: AI 연결 예정
 		AiFeedBack aiFeedBack = AiFeedBack.of(
@@ -80,15 +70,36 @@ public class DietService {
 		return DietHomeResponse.of(summaryInfo, aiFeedBack, recommended);
 	}
 
-	// 목적
-	private Focus parseFocus(String raw) {
-		if (!StringUtils.hasText(raw)) {
-			return Focus.BALANCE;
+	// 특정 날짜 식단 조회
+	public DailyDietResponse getDaily(String userId, String rawDate) {
+		if (!StringUtils.hasText(userId)) {
+			throw new MissingDietUserIdException();
 		}
-		try {
-			return Focus.valueOf(raw.toUpperCase());
-		} catch (IllegalArgumentException e) {
-			throw new InvalidPurposeTypeException(raw);
-		}
+		Focus focus = Focus.BALANCE; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
+		LocalDate targetDate = parseDateOrToday(rawDate);
+
+		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, targetDate);
+
+		SummaryInfo summaryInfo = buildSummary(totals);
+
+		AiFeedBack aiFeedBack = AiFeedBack.of(
+			"AI 피드백은 준비 중입니다.",
+			targetDate.atTime(LocalTime.now().withNano(0)).toString()
+		);
+
+		List<TodayDietInfo> todayDietInfo = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate)
+			.stream()
+			.map(DietPageAssembler::toTodayDietInfo)
+			.toList();
+
+		List<WeeklyCaloriesInfo> weeklyCaloriesInfo = buildWeeklyCalories(dietRepository, userId, targetDate);
+
+		return DailyDietResponse.of(
+			targetDate.toString(),
+			summaryInfo,
+			aiFeedBack,
+			todayDietInfo,
+			weeklyCaloriesInfo
+		);
 	}
 }
