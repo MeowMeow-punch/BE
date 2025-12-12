@@ -44,7 +44,7 @@ public class DietRecommendationService {
 	 * - 상위 2개는 추천 테이블에 저장 (추후 AI 선택으로 교체 예정)
 	 */
 	@Transactional
-	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, Focus focus,
+	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, Focus purposeType,
 		NutrientTotals totals) {
 		LocalDate today = LocalDate.now();
 		DietType mealSlot = mealSlot(LocalTime.now());
@@ -66,7 +66,7 @@ public class DietRecommendationService {
 		BigDecimal remainingFat = remaining(GOAL_FAT, totals.totalFat());
 
 		// 2) 목적별 가중치/패널티 설정
-		Weight weight = weightByFocus(focus);
+		Weight weight = weightByPurpose(purposeType);
 
 		// 3) 남은 영양분 기반 top5 식단 추천 (포션 200g 기준)
 		List<FoodRecommendationCandidate> candidates = dietRecommendationMapper.findTopFoodCandidates(
@@ -122,7 +122,7 @@ public class DietRecommendationService {
 	}
 
 	// TODO: 가중치 값은 GPT 추천으로 임의로 지정했고 추후 개선할 예정
-	private Weight weightByFocus(Focus focus) {
+	private Weight weightByPurpose(Focus focus) {
 		return switch (focus) {
 			case DIET -> new Weight(
 				1.5, 1.0, 0.9, 0.8, // kcal, carbs, protein, fat 가중치
@@ -166,4 +166,5 @@ public class DietRecommendationService {
 		double penaltyOverMacro
 	) {
 	}
+
 }

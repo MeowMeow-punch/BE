@@ -4,8 +4,8 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper">
 
-    <!-- 오늘 섭취 합계 -->
-    <select id="findTodayTotals" resultType="MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals">
+    <!-- 특정 날짜 섭취 합계 -->
+    <select id="findTotalsByDate" resultType="MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals">
         SELECT
         COALESCE(SUM(kcal), 0) AS totalKcal,
         COALESCE(SUM(carbs), 0) AS totalCarbs,
@@ -13,7 +13,19 @@
         COALESCE(SUM(fat), 0) AS totalFat
         FROM my_diets
         WHERE user_id = #{userId}
-        AND date = CURRENT_DATE
+        AND date = #{date}
+    </select>
+
+    <!-- 구간별 일간 칼로리 합계 (주간 차트용) -->
+    <select id="findDailyCalories" resultType="MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum">
+        SELECT
+            date AS date,
+            COALESCE(SUM(kcal), 0) AS totalKcal
+        FROM my_diets
+        WHERE user_id = #{userId}
+          AND date BETWEEN #{start} AND #{end}
+        GROUP BY date
+        ORDER BY date ASC
     </select>
 
     <!-- 남은 섭취량 기준 스코어 계산: TOP N (base_unit G만) -->
