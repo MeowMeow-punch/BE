@@ -3,8 +3,11 @@ package MeowMeowPunch.pickeat.domain.diet.entity;
 import java.math.BigDecimal;
 
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
+import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -39,8 +42,9 @@ public class Food extends BaseEntity {
 	@Column(name = "base_amount", nullable = false)
 	private Integer baseAmount;
 
+	@Enumerated(EnumType.STRING)
 	@Column(name = "base_unit", length = 10, nullable = false)
-	private String baseUnit;
+	private FoodBaseUnit baseUnit;
 
 	@Column(name = "serving_size", precision = 6, scale = 2)
 	private BigDecimal servingSize;

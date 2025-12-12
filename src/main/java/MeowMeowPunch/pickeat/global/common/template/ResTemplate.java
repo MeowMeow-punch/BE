@@ -1,14 +1,16 @@
 package MeowMeowPunch.pickeat.global.common.template;
 
+import org.springframework.http.HttpStatus;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 
 @Slf4j
 @Getter
-@JsonPropertyOrder({ "code", "message", "data" })
+@JsonPropertyOrder({"code", "message", "data"})
 public class ResTemplate<T> {
 	int code;
 	String message;
@@ -17,7 +19,7 @@ public class ResTemplate<T> {
 	T data;
 
 	// Private 생성자 => success, error 메서드로 반환
-	private ResTemplate(HttpStatus httpStatus, String message, T data) {
+	public ResTemplate(HttpStatus httpStatus, String message, T data) {
 		this.code = httpStatus.value();
 		this.message = message;
 		this.data = data;

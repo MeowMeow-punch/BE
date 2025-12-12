@@ -3,25 +3,11 @@ package MeowMeowPunch.pickeat.global.common.dto.response;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import MeowMeowPunch.pickeat.domain.diet.entity.Food;
+import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
 
+// Food 엔티티/조회 DTO 를 API 응답용 FoodItem 으로 변환하는 매퍼
 public final class FoodDtoMapper {
 	private FoodDtoMapper() {
-	}
-
-	public static FoodItem toFoodItem(Food food) {
-		return FoodItem.of(
-			food.getId(),
-			food.getName(),
-			formatAmount(food.getBaseAmount(), food.getBaseUnit()),
-			toInt(food.getKcal()),
-			Nutrients.of(
-				toInt(food.getCarbs()),
-				toInt(food.getProtein()),
-				toInt(food.getFat())
-			),
-			food.getThumbnailUrl()
-		);
 	}
 
 	public static FoodItem toFoodItem(FoodSummary summary) {
@@ -39,11 +25,11 @@ public final class FoodDtoMapper {
 		);
 	}
 
-	private static String formatAmount(Integer amount, String unit) {
+	private static String formatAmount(Integer amount, FoodBaseUnit unit) {
 		if (amount == null || unit == null) {
 			return "";
 		}
-		return amount + unit;
+		return amount + unit.name();
 	}
 
 	private static int toInt(BigDecimal value) {
