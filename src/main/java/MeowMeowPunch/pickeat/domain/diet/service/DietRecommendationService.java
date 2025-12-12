@@ -15,6 +15,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietRecommendationSaveException;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import lombok.RequiredArgsConstructor;
@@ -86,7 +87,11 @@ public class DietRecommendationService {
 		);
 
 		// TODO: 추후 AI가 TOP 5 중 2개를 선택하도록 연동할 예정
-		saveTopRecommended(userId, today, mealSlot, candidates.stream().limit(2).toList());
+		try {
+			saveTopRecommended(userId, today, mealSlot, candidates.stream().limit(2).toList());
+		} catch (Exception e) {
+			throw new DietRecommendationSaveException(e);
+		}
 
 		return candidates;
 	}
