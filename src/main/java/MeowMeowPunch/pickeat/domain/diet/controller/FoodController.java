@@ -39,5 +39,4 @@ public class FoodController {
 		FoodSearchResponse data = foodService.search(keyword, cursor, size);
 		return new ResTemplate<>(HttpStatus.OK, "음식 검색 성공", data);
 	}
-
 }
