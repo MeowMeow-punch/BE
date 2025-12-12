@@ -7,8 +7,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
+import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -25,6 +25,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietAccessDeniedException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.MissingDietUserIdException;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietFoodRepository;
@@ -133,17 +134,7 @@ public class DietService {
 		LocalDate date = parseDateOrToday(request.date());
 		LocalTime time = parseTime(request.time());
 
-		List<Long> requestedFoodIds = request.foods().stream()
-			.map(DietRequest.FoodQuantity::foodId)
-			.toList();
-
-		// 음식 id 검증
-		Map<Long, Food> foodById = foodRepository.findAllById(requestedFoodIds).stream()
-			.collect(Collectors.toMap(Food::getId, Function.identity()));
-		validateFoodsExist(requestedFoodIds, foodById);
-
-		// 추가한 음식들을 하나의 식단으로 집계
-		DietAggregation aggregation = aggregateFoods(request.foods(), foodById);
+		DietAggregation aggregation = prepareAggregation(request);
 
 		Diet diet = Diet.createUserInput(
 			userId,
@@ -155,14 +146,7 @@ public class DietService {
 
 		Diet saved = dietRepository.save(diet);
 
-		// DietFood 테이블에 quantity 저장
-		List<DietFood> dietFoods = request.foods().stream()
-			.map(f -> DietFood.builder()
-				.dietId(saved.getId())
-				.foodId(f.foodId())
-				.quantity(toQuantity(f.quantity()))
-				.build())
-			.toList();
+		List<DietFood> dietFoods = buildDietFoods(saved.getId(), request);
 		dietFoodRepository.saveAll(dietFoods);
 	}
 
@@ -176,18 +160,14 @@ public class DietService {
 		Diet diet = dietRepository.findById(dietId)
 			.orElseThrow(() -> new DietNotFoundException(dietId));
 
+		if (!diet.getUserId().equals(userId)) {
+			throw new DietAccessDeniedException(dietId);
+		}
+
 		LocalDate date = parseDateOrToday(request.date());
 		LocalTime time = parseTime(request.time());
 
-		List<Long> requestedFoodIds = request.foods().stream()
-			.map(DietRequest.FoodQuantity::foodId)
-			.toList();
-
-		Map<Long, Food> foodById = foodRepository.findAllById(requestedFoodIds).stream()
-			.collect(Collectors.toMap(Food::getId, Function.identity()));
-		validateFoodsExist(requestedFoodIds, foodById);
-
-		DietAggregation aggregation = aggregateFoods(request.foods(), foodById);
+		DietAggregation aggregation = prepareAggregation(request);
 
 		diet.updateUserInput(
 			request.mealType(),
@@ -197,13 +177,7 @@ public class DietService {
 		);
 
 		dietFoodRepository.deleteAllByDietId(dietId);
-		List<DietFood> dietFoods = request.foods().stream()
-			.map(f -> DietFood.builder()
-				.dietId(dietId)
-				.foodId(f.foodId())
-				.quantity(toQuantity(f.quantity()))
-				.build())
-			.toList();
+		List<DietFood> dietFoods = buildDietFoods(dietId, request);
 		dietFoodRepository.saveAll(dietFoods);
 	}
 
@@ -217,7 +191,33 @@ public class DietService {
 		Diet diet = dietRepository.findById(dietId)
 			.orElseThrow(() -> new DietNotFoundException(dietId));
 
+		if (!diet.getUserId().equals(userId)) {
+			throw new DietAccessDeniedException(dietId);
+		}
+
 		dietFoodRepository.deleteAllByDietId(dietId);
 		dietRepository.delete(diet);
+	}
+
+	private DietAggregation prepareAggregation(DietRequest request) {
+		List<Long> requestedFoodIds = request.foods().stream()
+			.map(DietRequest.FoodQuantity::foodId)
+			.toList();
+
+		Map<Long, Food> foodById = foodRepository.findAllById(requestedFoodIds).stream()
+			.collect(Collectors.toMap(Food::getId, Function.identity()));
+		validateFoodsExist(requestedFoodIds, foodById);
+
+		return aggregateFoods(request.foods(), foodById);
+	}
+
+	private List<DietFood> buildDietFoods(Long dietId, DietRequest request) {
+		return request.foods().stream()
+			.map(f -> DietFood.builder()
+				.dietId(dietId)
+				.foodId(f.foodId())
+				.quantity(toQuantity(f.quantity()))
+				.build())
+			.toList();
 	}
 }

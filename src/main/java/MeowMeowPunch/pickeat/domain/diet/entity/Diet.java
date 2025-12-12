@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-import MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler;
 import MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler.DietAggregation;
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
@@ -139,7 +138,6 @@ public class Diet extends BaseEntity {
 		this.date = date;
 		this.time = time;
 		this.thumbnailUrl = aggregation.thumbnailUrl();
-		this.sourceType = DietSourceType.USERINPUT;
 		this.kcal = aggregation.kcal();
 		this.carbs = aggregation.carbs();
 		this.protein = aggregation.protein();

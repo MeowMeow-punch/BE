@@ -1,9 +1,11 @@
 package MeowMeowPunch.pickeat.domain.diet.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -51,7 +53,7 @@ public class DietController {
 	}
 
 	// 식단 수정
-	@PostMapping("/{myDietId}")
+	@PutMapping("/{myDietId}")
 	public ResTemplate<Void> updateDiet(
 		@RequestParam(name = "userId") String userId,
 		@PathVariable("myDietId") Long myDietId,
@@ -62,12 +64,12 @@ public class DietController {
 	}
 
 	// 식단 삭제
-	@PostMapping("/{myDietId}/delete")
+	@DeleteMapping("/{myDietId}/delete")
 	public ResTemplate<Void> deleteDiet(
 		@RequestParam(name = "userId") String userId,
 		@PathVariable("myDietId") Long myDietId
 	) {
 		dietService.delete(userId, myDietId);
-		return ResTemplate.success(HttpStatus.OK, "삭제 성공");
+		return ResTemplate.success(HttpStatus.OK, "식단 삭제 성공");
 	}
 }
