@@ -8,8 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 
 public interface DietRepository extends JpaRepository<Diet, Long> {
-
 	List<Diet> findAllByUserIdAndDateOrderByTimeAsc(String userId, LocalDate date);
-
-	List<Diet> findAllByUserIdAndDateBetweenOrderByDateAsc(String userId, LocalDate start, LocalDate end);
 }
