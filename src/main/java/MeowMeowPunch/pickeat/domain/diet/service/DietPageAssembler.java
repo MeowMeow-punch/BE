@@ -15,8 +15,13 @@ import org.springframework.util.StringUtils;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
+import MeowMeowPunch.pickeat.domain.diet.dto.request.DietCreateRequest;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
+import MeowMeowPunch.pickeat.domain.diet.entity.Food;
+import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietDateException;
+import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietFoodQuantityException;
+import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietTimeException;
 import MeowMeowPunch.pickeat.global.common.dto.response.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.TodayDietInfo;
@@ -28,7 +33,6 @@ import MeowMeowPunch.pickeat.global.common.enums.DietType;
 public final class DietPageAssembler {
 
 	private DietPageAssembler() {
-		// 유틸리티 클래스는 인스턴스화할 수 없습니다.
 	}
 
 	// TODO: 유저 테이블 생성되면 삭제 예정
@@ -138,5 +142,116 @@ public final class DietPageAssembler {
 			return 0;
 		}
 		return value.setScale(0, RoundingMode.HALF_UP).intValue();
+	}
+
+	// 시간, 분을 파싱
+	public static LocalTime parseTime(String raw) {
+		try {
+			return LocalTime.parse(raw, DateTimeFormatter.ofPattern("HH:mm"));
+		} catch (DateTimeParseException e) {
+			throw new InvalidDietTimeException(raw);
+		}
+	}
+
+	// 음식 ID가 존재하는지 검증
+	public static void validateFoodsExist(List<Long> requestedFoodIds, Map<Long, Food> foodById) {
+		requestedFoodIds.stream()
+			.filter(id -> !foodById.containsKey(id))
+			.findFirst()
+			.ifPresent(id -> {
+				throw new FoodNotFoundException(id);
+			});
+	}
+
+	// 추가한 음식들을 하나의 식단으로 집계
+	public static DietAggregation aggregateFoods(List<DietCreateRequest.FoodQuantity> foods, Map<Long, Food> foodById) {
+		BigDecimal totalKcal = BigDecimal.ZERO;
+		BigDecimal totalCarbs = BigDecimal.ZERO;
+		BigDecimal totalProtein = BigDecimal.ZERO;
+		BigDecimal totalFat = BigDecimal.ZERO;
+		BigDecimal totalSugar = BigDecimal.ZERO;
+		BigDecimal totalVitA = BigDecimal.ZERO;
+		BigDecimal totalVitC = BigDecimal.ZERO;
+		BigDecimal totalVitD = BigDecimal.ZERO;
+		BigDecimal totalCalcium = BigDecimal.ZERO;
+		BigDecimal totalIron = BigDecimal.ZERO;
+		BigDecimal totalDietaryFiber = BigDecimal.ZERO;
+		BigDecimal totalSodium = BigDecimal.ZERO;
+
+		List<String> names = new ArrayList<>();
+		String thumbnailUrl = null;
+
+		for (DietCreateRequest.FoodQuantity item : foods) {
+			Food food = foodById.get(item.foodId());
+			short quantity = toQuantity(item.quantity());
+			BigDecimal multiplier = BigDecimal.valueOf(quantity);
+
+			names.add(food.getName());
+			if (thumbnailUrl == null) {
+				thumbnailUrl = food.getThumbnailUrl();
+			}
+
+			totalKcal = totalKcal.add(nullSafe(food.getKcal()).multiply(multiplier));
+			totalCarbs = totalCarbs.add(nullSafe(food.getCarbs()).multiply(multiplier));
+			totalProtein = totalProtein.add(nullSafe(food.getProtein()).multiply(multiplier));
+			totalFat = totalFat.add(nullSafe(food.getFat()).multiply(multiplier));
+			totalSugar = totalSugar.add(nullSafe(food.getSugar()).multiply(multiplier));
+			totalVitA = totalVitA.add(nullSafe(food.getVitA()).multiply(multiplier));
+			totalVitC = totalVitC.add(nullSafe(food.getVitC()).multiply(multiplier));
+			totalVitD = totalVitD.add(nullSafe(food.getVitD()).multiply(multiplier));
+			totalCalcium = totalCalcium.add(nullSafe(food.getCalcium()).multiply(multiplier));
+			totalIron = totalIron.add(nullSafe(food.getIron()).multiply(multiplier));
+			totalDietaryFiber = totalDietaryFiber.add(nullSafe(food.getDietaryFiber()).multiply(multiplier));
+			totalSodium = totalSodium.add(nullSafe(food.getSodium()).multiply(multiplier));
+		}
+
+		String title = String.join(", ", names);
+
+		return new DietAggregation(
+			title,
+			thumbnailUrl,
+			totalKcal,
+			totalCarbs,
+			totalProtein,
+			totalFat,
+			totalSugar,
+			totalVitA,
+			totalVitC,
+			totalVitD,
+			totalCalcium,
+			totalIron,
+			totalDietaryFiber,
+			totalSodium
+		);
+	}
+
+	// quantity 값 검증
+	public static short toQuantity(Integer quantity) {
+		if (quantity == null || quantity <= 0) {
+			throw new InvalidDietFoodQuantityException(quantity == null ? 0 : quantity);
+		}
+		if (quantity > Short.MAX_VALUE) {
+			throw new InvalidDietFoodQuantityException(quantity);
+		}
+		return quantity.shortValue();
+	}
+
+	// 식단 집계용 DTO
+	public static record DietAggregation(
+		String title,
+		String thumbnailUrl,
+		BigDecimal kcal,
+		BigDecimal carbs,
+		BigDecimal protein,
+		BigDecimal fat,
+		BigDecimal sugar,
+		BigDecimal vitA,
+		BigDecimal vitC,
+		BigDecimal vitD,
+		BigDecimal calcium,
+		BigDecimal iron,
+		BigDecimal dietaryFiber,
+		BigDecimal sodium
+	) {
 	}
 }

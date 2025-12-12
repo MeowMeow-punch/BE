@@ -93,4 +93,48 @@ public class Diet extends BaseEntity {
 
 	@Column(name = "sodium", precision = 8, scale = 2)
 	private BigDecimal sodium;
+
+	// 사용자 입력 식단 생성용 팩토리
+	public static Diet createUserInput(
+		String userId,
+		DietType status,
+		String title,
+		LocalDate date,
+		LocalTime time,
+		String thumbnailUrl,
+		BigDecimal kcal,
+		BigDecimal carbs,
+		BigDecimal protein,
+		BigDecimal fat,
+		BigDecimal sugar,
+		BigDecimal vitA,
+		BigDecimal vitC,
+		BigDecimal vitD,
+		BigDecimal calcium,
+		BigDecimal iron,
+		BigDecimal dietaryFiber,
+		BigDecimal sodium
+	) {
+		return Diet.builder()
+			.userId(userId)
+			.status(status)
+			.title(title)
+			.date(date)
+			.time(time)
+			.thumbnailUrl(thumbnailUrl)
+			.sourceType(DietSourceType.USERINPUT)
+			.kcal(kcal)
+			.carbs(carbs)
+			.protein(protein)
+			.fat(fat)
+			.sugar(sugar)
+			.vitA(vitA)
+			.vitC(vitC)
+			.vitD(vitD)
+			.calcium(calcium)
+			.iron(iron)
+			.dietaryFiber(dietaryFiber)
+			.sodium(sodium)
+			.build();
+	}
 }

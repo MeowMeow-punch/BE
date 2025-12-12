@@ -26,7 +26,7 @@ public class FoodController {
 		@RequestParam(name = "size", required = false) Integer size
 	) {
 		FoodListResponse data = foodService.getFoodList(cursor, size);
-		return new ResTemplate<>(HttpStatus.OK, "음식 리스트 조회 성공", data);
+		return ResTemplate.success(HttpStatus.OK, "음식 리스트 조회 성공", data);
 	}
 
 	// 키워드 기반 음식 리스트 조회
@@ -37,6 +37,6 @@ public class FoodController {
 		@RequestParam(name = "size", required = false) Integer size
 	) {
 		FoodSearchResponse data = foodService.search(keyword, cursor, size);
-		return new ResTemplate<>(HttpStatus.OK, "음식 검색 성공", data);
+		return ResTemplate.success(HttpStatus.OK, "음식 검색 성공", data);
 	}
 }

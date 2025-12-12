@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietCreateRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietCreateResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
@@ -40,16 +39,16 @@ public class DietController {
 			? "식단 페이지 조회 성공"
 			: "메인페이지 조회 성공";
 
-		return new ResTemplate<>(HttpStatus.OK, message, data);
+		return ResTemplate.success(HttpStatus.OK, message, data);
 	}
 
 	// 식단 등록
 	@PostMapping("/create")
-	public ResTemplate<DietCreateResponse> createDiet(
+	public ResTemplate<Void> createDiet(
 		@RequestParam(name = "userId") String userId,
 		@Valid @RequestBody DietCreateRequest request
 	) {
-		DietCreateResponse data = dietService.create(userId, request);
-		return new ResTemplate<>(HttpStatus.CREATED, "식단 등록 성공", data);
+		dietService.create(userId, request);
+		return ResTemplate.success(HttpStatus.OK, "식단 등록 성공");
 	}
 }
