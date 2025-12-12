@@ -142,22 +142,9 @@ public class DietService {
 		Diet diet = Diet.createUserInput(
 			userId,
 			request.mealType(),
-			aggregation.title(),
 			date,
 			time,
-			aggregation.thumbnailUrl(),
-			aggregation.kcal(),
-			aggregation.carbs(),
-			aggregation.protein(),
-			aggregation.fat(),
-			aggregation.sugar(),
-			aggregation.vitA(),
-			aggregation.vitC(),
-			aggregation.vitD(),
-			aggregation.calcium(),
-			aggregation.iron(),
-			aggregation.dietaryFiber(),
-			aggregation.sodium()
+			aggregation
 		);
 
 		Diet saved = dietRepository.save(diet);

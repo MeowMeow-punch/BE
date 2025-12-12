@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+import MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler;
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
@@ -98,43 +99,30 @@ public class Diet extends BaseEntity {
 	public static Diet createUserInput(
 		String userId,
 		DietType status,
-		String title,
 		LocalDate date,
 		LocalTime time,
-		String thumbnailUrl,
-		BigDecimal kcal,
-		BigDecimal carbs,
-		BigDecimal protein,
-		BigDecimal fat,
-		BigDecimal sugar,
-		BigDecimal vitA,
-		BigDecimal vitC,
-		BigDecimal vitD,
-		BigDecimal calcium,
-		BigDecimal iron,
-		BigDecimal dietaryFiber,
-		BigDecimal sodium
+		DietPageAssembler.DietAggregation aggregation
 	) {
 		return Diet.builder()
 			.userId(userId)
 			.status(status)
-			.title(title)
+			.title(aggregation.title())
 			.date(date)
 			.time(time)
-			.thumbnailUrl(thumbnailUrl)
+			.thumbnailUrl(aggregation.thumbnailUrl())
 			.sourceType(DietSourceType.USERINPUT)
-			.kcal(kcal)
-			.carbs(carbs)
-			.protein(protein)
-			.fat(fat)
-			.sugar(sugar)
-			.vitA(vitA)
-			.vitC(vitC)
-			.vitD(vitD)
-			.calcium(calcium)
-			.iron(iron)
-			.dietaryFiber(dietaryFiber)
-			.sodium(sodium)
+			.kcal(aggregation.kcal())
+			.carbs(aggregation.carbs())
+			.protein(aggregation.protein())
+			.fat(aggregation.fat())
+			.sugar(aggregation.sugar())
+			.vitA(aggregation.vitA())
+			.vitC(aggregation.vitC())
+			.vitD(aggregation.vitD())
+			.calcium(aggregation.calcium())
+			.iron(aggregation.iron())
+			.dietaryFiber(aggregation.dietaryFiber())
+			.sodium(aggregation.sodium())
 			.build();
 	}
 }
