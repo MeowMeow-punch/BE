@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -17,11 +18,16 @@ import MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
+import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietDateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietFoodQuantityException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietTimeException;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietFoodItem;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.FoodDtoMapper;
+import MeowMeowPunch.pickeat.global.common.dto.response.FoodItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.TodayDietInfo;
@@ -35,6 +41,7 @@ public final class DietPageAssembler {
 	private DietPageAssembler() {
 	}
 
+	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 	// TODO: 유저 테이블 생성되면 삭제 예정
 	private static final int GOAL_KCAL = 2000;
 	private static final int GOAL_CARBS = 280;
@@ -44,7 +51,7 @@ public final class DietPageAssembler {
 	// 필요 시 YYYY-MM-DD 문자열 검증용
 	public static LocalDate parseDateOrToday(String raw) {
 		if (!StringUtils.hasText(raw)) {
-			return LocalDate.now();
+			return LocalDate.now(KOREA_ZONE);
 		}
 		try {
 			return LocalDate.parse(raw, DateTimeFormatter.ISO_LOCAL_DATE);
@@ -128,6 +135,21 @@ public final class DietPageAssembler {
 				toInt(nullSafe(diet.getFat()))
 			),
 			diet.getThumbnailUrl()
+		);
+	}
+
+	// 단일 식단 상세 응답 생성
+	public static DietInfo toDietInfo(Diet diet, List<DietFood> dietFoods, Map<Long, Food> foodById) {
+		List<DietFoodItem> foods = dietFoods.stream()
+			.map(df -> toDietFoodItem(foodById.get(df.getFoodId()), df))
+			.toList();
+
+		return DietInfo.of(
+			diet.getId(),
+			diet.getStatus().name(),
+			diet.getTime() != null ? diet.getTime().toString() : "",
+			diet.getDate().toString(),
+			foods
 		);
 	}
 
@@ -234,6 +256,11 @@ public final class DietPageAssembler {
 			throw new InvalidDietFoodQuantityException(quantity);
 		}
 		return quantity.shortValue();
+	}
+
+	private static DietFoodItem toDietFoodItem(Food food, DietFood dietFood) {
+		FoodItem base = FoodDtoMapper.toFoodItem(food);
+		return DietFoodItem.from(base, dietFood.getQuantity());
 	}
 
 	// 식단 집계용 DTO

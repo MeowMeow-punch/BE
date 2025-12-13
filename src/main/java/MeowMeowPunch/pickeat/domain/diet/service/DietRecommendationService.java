@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class DietRecommendationService {
-	private static final double PORTION_FACTOR = 2.0; // 200g 기준
 	private static final int TOP_LIMIT = 5;
 	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 기준
 	private static final String BASE_UNIT_GRAM = "G";
@@ -96,7 +95,6 @@ public class DietRecommendationService {
 			weight.fat,
 			weight.penaltyOverKcal,
 			weight.penaltyOverMacro,
-			PORTION_FACTOR,
 			KCAL_TOLERANCE,
 			BASE_UNIT_GRAM,
 			TOP_LIMIT

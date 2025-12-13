@@ -21,13 +21,17 @@ import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.AiFeedBack;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietInfo;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietAccessDeniedException;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietDetailNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietNotFoundException;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietFoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.MissingDietUserIdException;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
@@ -57,7 +61,7 @@ public class DietService {
 			throw new MissingDietUserIdException();
 		}
 		Focus focus = Focus.BALANCE; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
-		LocalDate todayDate = LocalDate.now();
+		LocalDate todayDate = LocalDate.now(KOREA_ZONE);
 
 		// 오늘 섭취 합계 (쿼리 1회)
 		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, todayDate);
@@ -71,7 +75,7 @@ public class DietService {
 		// TODO: AI 연결 예정
 		AiFeedBack aiFeedBack = AiFeedBack.of(
 			"AI 피드백은 준비 중입니다.",
-			LocalDateTime.now().withNano(0).toString()
+			LocalDateTime.now(KOREA_ZONE).withNano(0).toString()
 		);
 
 		List<RecommendedDietInfo> recommended = recommendedCandidates.stream()
@@ -124,6 +128,28 @@ public class DietService {
 			todayDietInfo,
 			weeklyCaloriesInfo
 		);
+	}
+
+	// 식단 상세 조회
+	public DietDetailResponse getDetail(Long dietId) {
+		Diet diet = dietRepository.findById(dietId)
+			.orElseThrow(() -> new DietDetailNotFoundException(dietId));
+
+		List<DietFood> dietFoods = dietFoodRepository.findAllByDietId(diet.getId());
+		if (dietFoods.isEmpty()) {
+			throw new DietFoodNotFoundException(diet.getId());
+		}
+
+		List<Long> foodIds = dietFoods.stream()
+			.map(DietFood::getFoodId)
+			.toList();
+
+		Map<Long, Food> foodById = foodRepository.findAllById(foodIds).stream()
+			.collect(Collectors.toMap(Food::getId, Function.identity()));
+		validateFoodsExist(foodIds, foodById);
+
+		DietInfo dietInfo = DietPageAssembler.toDietInfo(diet, dietFoods, foodById);
+		return DietDetailResponse.of(dietInfo);
 	}
 
 	// 식단 등록

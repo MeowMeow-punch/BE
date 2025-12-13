@@ -15,6 +15,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -25,13 +26,22 @@ public class DietController {
 	private final DietService dietService;
 
 	// 날짜별 식단 페이지 조회
-	@GetMapping
+	@GetMapping(params = {"userId", "date"})
 	public ResTemplate<DietResponse> getDiet(
 		@RequestParam(name = "userId") String userId,
 		@RequestParam(name = "date") String date
 	) {
 		DietResponse data = dietService.getDaily(userId, date);
 		return ResTemplate.success(HttpStatus.OK, "식단 페이지 조회 성공", data);
+	}
+
+	// 식단 상세 조회
+	@GetMapping(params = "dietId")
+	public ResTemplate<DietDetailResponse> getDietDetail(
+		@RequestParam(name = "dietId") Long dietId
+	) {
+		DietDetailResponse data = dietService.getDetail(dietId);
+		return ResTemplate.success(HttpStatus.OK, "식단 상세 조회 성공", data);
 	}
 
 	// 식단 등록

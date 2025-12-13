@@ -35,13 +35,13 @@
                 f.id AS foodId,
                 f.name AS name,
                 f.thumbnail_url AS thumbnailUrl,
-                (f.kcal * #{portionFactor})    AS adj_kcal,
-                (f.carbs * #{portionFactor})   AS adj_carbs,
-                (f.protein * #{portionFactor}) AS adj_protein,
-                (f.fat * #{portionFactor})     AS adj_fat
+                f.kcal    AS adj_kcal,
+                f.carbs   AS adj_carbs,
+                f.protein AS adj_protein,
+                f.fat     AS adj_fat
             FROM foods f
             WHERE f.base_unit = #{baseUnit}
-            AND (f.kcal * #{portionFactor}) BETWEEN (#{remainingKcal} - #{kcalTolerance}) AND (#{remainingKcal} + #{kcalTolerance})
+            AND f.kcal BETWEEN (#{remainingKcal} - #{kcalTolerance}) AND (#{remainingKcal} + #{kcalTolerance})
             <if test="excludedCategories != null and excludedCategories.size() > 0">
                 AND f.category NOT IN
                 <foreach collection="excludedCategories" item="cat" open="(" close=")" separator=",">

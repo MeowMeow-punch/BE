@@ -34,7 +34,6 @@ public interface DietRecommendationMapper {
 		@Param("weightFat") double weightFat,
 		@Param("penaltyOverKcal") double penaltyOverKcal,
 		@Param("penaltyOverMacro") double penaltyOverMacro,
-		@Param("portionFactor") double portionFactor,
 		@Param("kcalTolerance") double kcalTolerance,
 		@Param("baseUnit") String baseUnit,
 		@Param("limit") int limit
