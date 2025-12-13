@@ -2,7 +2,7 @@ package MeowMeowPunch.pickeat.domain.diet.dto.response;
 
 import java.util.List;
 
-// 식단 상세 응답의 본문 데이터
+// 식단 상세 응답 DTO
 public record DietInfo(
 	Long myDietId,
 	String mealType,

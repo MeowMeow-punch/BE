@@ -1,6 +1,6 @@
 package MeowMeowPunch.pickeat.domain.diet.dto.response;
 
-// 식단 상세 조회 응답 DTO
+// 식단 상세 응답 DTO
 public record DietDetailResponse(
 	DietInfo dietInfo
 ) {

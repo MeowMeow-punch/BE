@@ -6,6 +6,7 @@ import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.WeeklyCaloriesInfo;
 
+// 특정 날짜 식단 응답 DTO
 public record DailyDietResponse(
 	String selectedDate,
 	SummaryInfo summaryInfo,

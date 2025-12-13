@@ -21,17 +21,17 @@ import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.AiFeedBack;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietInfo;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietInfo;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietAccessDeniedException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietDetailNotFoundException;
-import MeowMeowPunch.pickeat.domain.diet.exception.DietNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietFoodNotFoundException;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.MissingDietUserIdException;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
@@ -227,6 +227,7 @@ public class DietService {
 		dietRepository.delete(diet);
 	}
 
+	// 식단 추가/수정을 위한 집계 사전 작업
 	private DietAggregation prepareAggregation(DietRequest request) {
 		List<Long> requestedFoodIds = request.foods().stream()
 			.map(DietRequest.FoodQuantity::foodId)
@@ -239,6 +240,7 @@ public class DietService {
 		return aggregateFoods(request.foods(), foodById);
 	}
 
+	// 식단 추가/수정을 위한 식단-음식 중간 테이블 필드 생성
 	private List<DietFood> buildDietFoods(Long dietId, DietRequest request) {
 		return request.foods().stream()
 			.map(f -> DietFood.builder()

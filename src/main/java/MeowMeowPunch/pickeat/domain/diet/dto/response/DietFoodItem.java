@@ -3,7 +3,7 @@ package MeowMeowPunch.pickeat.domain.diet.dto.response;
 import MeowMeowPunch.pickeat.global.common.dto.response.FoodItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.Nutrients;
 
-// 식단 상세에서 한 음식의 섭취 정보를 표현
+// 식단 상세 - 음식 정보 DTO
 public record DietFoodItem(
 	Long foodId,
 	String name,

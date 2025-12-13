@@ -5,6 +5,7 @@ import java.util.List;
 import MeowMeowPunch.pickeat.global.common.dto.response.RecommendedDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
 
+// 식단 메인 응답 DTO
 public record DietHomeResponse(
 	SummaryInfo summaryInfo,
 	AiFeedBack aiFeedbackInfo,
