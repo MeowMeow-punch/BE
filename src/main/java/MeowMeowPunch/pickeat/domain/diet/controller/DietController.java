@@ -21,22 +21,14 @@ import lombok.RequiredArgsConstructor;
 public class DietController {
 	private final DietService dietService;
 
-	// 식단 메인, 날짜별 조회 (date 유무로 분기)
+	// 날짜별 식단 페이지 조회
 	@GetMapping
 	public ResTemplate<DietResponse> getDiet(
 		@RequestParam(name = "userId") String userId,
-		@RequestParam(name = "date", required = false) String date
+		@RequestParam(name = "date") String date
 	) {
-		boolean isDailyQuery = date != null && !date.isBlank();
-		DietResponse data = isDailyQuery
-			? dietService.getDaily(userId, date)
-			: dietService.getHome(userId);
-
-		String message = isDailyQuery
-			? "식단 페이지 조회 성공"
-			: "메인페이지 조회 성공";
-
-		return ResTemplate.success(HttpStatus.OK, message, data);
+		DietResponse data = dietService.getDaily(userId, date);
+		return ResTemplate.success(HttpStatus.OK, "식단 페이지 조회 성공", data);
 	}
 
 	// 식단 등록
