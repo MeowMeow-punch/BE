@@ -1,14 +1,17 @@
 package MeowMeowPunch.pickeat.domain.diet.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import MeowMeowPunch.pickeat.domain.diet.dto.request.DietCreateRequest;
+import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
@@ -35,9 +38,30 @@ public class DietController {
 	@PostMapping("/create")
 	public ResTemplate<Void> createDiet(
 		@RequestParam(name = "userId") String userId,
-		@Valid @RequestBody DietCreateRequest request
+		@Valid @RequestBody DietRequest request
 	) {
 		dietService.create(userId, request);
 		return ResTemplate.success(HttpStatus.OK, "식단 등록 성공");
+	}
+
+	// 식단 수정
+	@PutMapping("/{myDietId}")
+	public ResTemplate<Void> updateDiet(
+		@RequestParam(name = "userId") String userId,
+		@PathVariable("myDietId") Long myDietId,
+		@Valid @RequestBody DietRequest request
+	) {
+		dietService.update(userId, myDietId, request);
+		return ResTemplate.success(HttpStatus.OK, "식단 수정 성공");
+	}
+
+	// 식단 삭제
+	@DeleteMapping("/{myDietId}/delete")
+	public ResTemplate<Void> deleteDiet(
+		@RequestParam(name = "userId") String userId,
+		@PathVariable("myDietId") Long myDietId
+	) {
+		dietService.delete(userId, myDietId);
+		return ResTemplate.success(HttpStatus.OK, "식단 삭제 성공");
 	}
 }

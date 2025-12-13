@@ -9,7 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
-public record DietCreateRequest(
+public record DietRequest(
 	@NotBlank(message = "date는 필수입니다.")
 	String date,
 

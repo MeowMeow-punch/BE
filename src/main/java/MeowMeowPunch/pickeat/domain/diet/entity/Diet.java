@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-import MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler;
+import MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler.DietAggregation;
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
@@ -101,7 +101,7 @@ public class Diet extends BaseEntity {
 		DietType status,
 		LocalDate date,
 		LocalTime time,
-		DietPageAssembler.DietAggregation aggregation
+		DietAggregation aggregation
 	) {
 		return Diet.builder()
 			.userId(userId)
@@ -124,5 +124,31 @@ public class Diet extends BaseEntity {
 			.dietaryFiber(aggregation.dietaryFiber())
 			.sodium(aggregation.sodium())
 			.build();
+	}
+
+	// 사용자 입력 식단 수정용 메서드
+	public void updateUserInput(
+		DietType status,
+		LocalDate date,
+		LocalTime time,
+		DietAggregation aggregation
+	) {
+		this.status = status;
+		this.title = aggregation.title();
+		this.date = date;
+		this.time = time;
+		this.thumbnailUrl = aggregation.thumbnailUrl();
+		this.kcal = aggregation.kcal();
+		this.carbs = aggregation.carbs();
+		this.protein = aggregation.protein();
+		this.fat = aggregation.fat();
+		this.sugar = aggregation.sugar();
+		this.vitA = aggregation.vitA();
+		this.vitC = aggregation.vitC();
+		this.vitD = aggregation.vitD();
+		this.calcium = aggregation.calcium();
+		this.iron = aggregation.iron();
+		this.dietaryFiber = aggregation.dietaryFiber();
+		this.sodium = aggregation.sodium();
 	}
 }

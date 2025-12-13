@@ -15,7 +15,7 @@ import org.springframework.util.StringUtils;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
-import MeowMeowPunch.pickeat.domain.diet.dto.request.DietCreateRequest;
+import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
@@ -94,7 +94,7 @@ public final class DietPageAssembler {
 		);
 	}
 
-	// 주간 칼로리 응답 생성 (오른쪽 끝 막대가 오늘 기준)
+	// 주간 칼로리 응답 생성 (이번주 기준)
 	public static List<WeeklyCaloriesInfo> buildWeeklyCalories(List<DailyCalorieSum> sums, LocalDate start) {
 		Map<LocalDate, Integer> calorieByDate = sums.stream()
 			.collect(Collectors.toMap(
@@ -164,7 +164,7 @@ public final class DietPageAssembler {
 	}
 
 	// 추가한 음식들을 하나의 식단으로 집계
-	public static DietAggregation aggregateFoods(List<DietCreateRequest.FoodQuantity> foods, Map<Long, Food> foodById) {
+	public static DietAggregation aggregateFoods(List<DietRequest.FoodQuantity> foods, Map<Long, Food> foodById) {
 		BigDecimal totalKcal = BigDecimal.ZERO;
 		BigDecimal totalCarbs = BigDecimal.ZERO;
 		BigDecimal totalProtein = BigDecimal.ZERO;
@@ -181,7 +181,7 @@ public final class DietPageAssembler {
 		List<String> names = new ArrayList<>();
 		String thumbnailUrl = null;
 
-		for (DietCreateRequest.FoodQuantity item : foods) {
+		for (DietRequest.FoodQuantity item : foods) {
 			Food food = foodById.get(item.foodId());
 			short quantity = toQuantity(item.quantity());
 			BigDecimal multiplier = BigDecimal.valueOf(quantity);
