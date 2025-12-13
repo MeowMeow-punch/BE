@@ -9,7 +9,7 @@ public record DietHomeResponse(
 	SummaryInfo summaryInfo,
 	AiFeedBack aiFeedbackInfo,
 	List<RecommendedDietInfo> recommendedDietsInfo
-) {
+) implements DietResponse {
 	public static DietHomeResponse of(SummaryInfo summaryInfo, AiFeedBack aiFeedbackInfo,
 		List<RecommendedDietInfo> recommendedDietsInfo) {
 		return new DietHomeResponse(summaryInfo, aiFeedbackInfo, recommendedDietsInfo);

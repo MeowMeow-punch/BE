@@ -30,6 +30,11 @@ public class ResTemplate<T> {
 		return new ResTemplate<>(httpStatus, message, data);
 	}
 
+	// 성공 (data 없이 반환)
+	public static ResTemplate<Void> success(HttpStatus httpStatus, String message) {
+		return new ResTemplate<>(httpStatus, message, null);
+	}
+
 	// 실패
 	public static <T> ResTemplate<T> error(HttpStatus httpStatus, String message) {
 		return new ResTemplate<>(httpStatus, message, null);

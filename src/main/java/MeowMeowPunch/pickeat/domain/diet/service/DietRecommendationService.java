@@ -5,7 +5,9 @@ import static MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,9 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietRecommendationSaveException;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
-import MeowMeowPunch.pickeat.domain.diet.exception.DietRecommendationSaveException;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import lombok.RequiredArgsConstructor;
@@ -25,14 +27,21 @@ import lombok.RequiredArgsConstructor;
 public class DietRecommendationService {
 	private static final double PORTION_FACTOR = 2.0; // 200g 기준
 	private static final int TOP_LIMIT = 5;
-	private static final int KCAL_TOLERANCE = 400; // +- 칼로리 기준
+	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 기준
 	private static final String BASE_UNIT_GRAM = "G";
+	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 
 	// 임시 목표값 (추후 사용자 정보 기반 계산)
 	private static final BigDecimal GOAL_KCAL = BigDecimal.valueOf(2000);
 	private static final BigDecimal GOAL_CARBS = BigDecimal.valueOf(280);
 	private static final BigDecimal GOAL_PROTEIN = BigDecimal.valueOf(120);
 	private static final BigDecimal GOAL_FAT = BigDecimal.valueOf(70);
+	private static final Map<DietType, BigDecimal> MEAL_RATIO = Map.of(
+		DietType.BREAKFAST, new BigDecimal("0.30"),
+		DietType.LUNCH, new BigDecimal("0.30"),
+		DietType.DINNER, new BigDecimal("0.30"),
+		DietType.SNACK, new BigDecimal("0.10")
+	);
 
 	private final DietRecommendationMapper dietRecommendationMapper;
 	private final RecommendedDietRepository recommendedDietRepository;
@@ -44,36 +53,41 @@ public class DietRecommendationService {
 	 * - 상위 2개는 추천 테이블에 저장 (추후 AI 선택으로 교체 예정)
 	 */
 	@Transactional
-	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, Focus focus,
+	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, Focus purposeType,
 		NutrientTotals totals) {
-		LocalDate today = LocalDate.now();
-		DietType mealSlot = mealSlot(LocalTime.now());
+		LocalDate today = LocalDate.now(KOREA_ZONE);
+		LocalTime nowTime = LocalTime.now(KOREA_ZONE);
+		DietType mealSlot = mealSlot(nowTime);
 
 		List<RecommendedDiet> existing = recommendedDietRepository.findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(
 			userId, today, mealSlot);
 
-		// 오늘 날짜로 DietStatus(아침, 점심, 저녁, 간식) 있다면 바로 반환
-		if (!existing.isEmpty()) {
+		// 오늘 날짜로 DietStatus(아침, 점심, 저녁, 간식) 추천이 2개 이상 있으면 바로 반환
+		if (existing.size() >= 2) {
 			return existing.stream()
 				.map(this::toCandidate)
 				.toList();
 		}
+		// 부족한 기존 추천은 삭제 후 재계산
+		if (!existing.isEmpty()) {
+			recommendedDietRepository.deleteAll(existing);
+		}
 
-		// 1) 오늘 남은 여유 영양분 계산
-		BigDecimal remainingKcal = remaining(GOAL_KCAL, totals.totalKcal());
-		BigDecimal remainingCarbs = remaining(GOAL_CARBS, totals.totalCarbs());
-		BigDecimal remainingProtein = remaining(GOAL_PROTEIN, totals.totalProtein());
-		BigDecimal remainingFat = remaining(GOAL_FAT, totals.totalFat());
+		// 1) 끼니별 목표 영양분 계산
+		BigDecimal targetMealKcal = targetForMeal(GOAL_KCAL, totals.totalKcal(), mealSlot);
+		BigDecimal targetMealCarbs = targetMacroForMeal(GOAL_CARBS, totals.totalCarbs(), mealSlot);
+		BigDecimal targetMealProtein = targetMacroForMeal(GOAL_PROTEIN, totals.totalProtein(), mealSlot);
+		BigDecimal targetMealFat = targetMacroForMeal(GOAL_FAT, totals.totalFat(), mealSlot);
 
 		// 2) 목적별 가중치/패널티 설정
-		Weight weight = weightByFocus(focus);
+		Weight weight = weightByPurpose(purposeType);
 
 		// 3) 남은 영양분 기반 top5 식단 추천 (포션 200g 기준)
 		List<FoodRecommendationCandidate> candidates = dietRecommendationMapper.findTopFoodCandidates(
-			remainingKcal,
-			remainingCarbs,
-			remainingProtein,
-			remainingFat,
+			targetMealKcal,
+			targetMealCarbs,
+			targetMealProtein,
+			targetMealFat,
 			weight.kcal,
 			weight.carbs,
 			weight.protein,
@@ -116,13 +130,33 @@ public class DietRecommendationService {
 		}
 	}
 
-	// 섭취해야할 영양분 계산
-	private BigDecimal remaining(BigDecimal goal, BigDecimal eaten) {
-		return goal.subtract(nullSafe(eaten));
+	// 한 끼 타겟 산출 (음수 방지)
+	private BigDecimal remainingDaily(BigDecimal goal, BigDecimal eaten) {
+		BigDecimal r = goal.subtract(nullSafe(eaten));
+		return r.max(BigDecimal.ZERO);
+	}
+
+	// 칼로리 타겟 값 측정
+	private BigDecimal targetForMeal(BigDecimal dailyGoal, BigDecimal eatenSoFar, DietType mealSlot) {
+		BigDecimal remaining = remainingDaily(dailyGoal, eatenSoFar); // 오늘 남은 잔여 칼로리
+		BigDecimal slotGoal = dailyGoal.multiply(
+			MEAL_RATIO.getOrDefault(mealSlot, new BigDecimal("0.25"))); // 해당 끼니의 이상적 목표량
+		BigDecimal rawTarget = slotGoal.min(remaining); // 이번 끼니가 slotGoal 과 남은 잔여량을 넘을 수 없도록 하기위해 둘 중 더 작은 값을 택한다
+		BigDecimal min = new BigDecimal("250");
+		BigDecimal max = new BigDecimal("800");
+		return rawTarget.max(min).min(max); // 상한, 하한을 고정
+	}
+
+	// 영양분 타겟 값 측정
+	private BigDecimal targetMacroForMeal(BigDecimal dailyGoalMacro, BigDecimal eatenMacro, DietType mealSlot) {
+		BigDecimal remaining = remainingDaily(dailyGoalMacro, eatenMacro);
+		BigDecimal slotGoal = dailyGoalMacro.multiply(MEAL_RATIO.getOrDefault(mealSlot, new BigDecimal("0.25")));
+		BigDecimal rawTarget = slotGoal.min(remaining);
+		return rawTarget.max(BigDecimal.ZERO);
 	}
 
 	// TODO: 가중치 값은 GPT 추천으로 임의로 지정했고 추후 개선할 예정
-	private Weight weightByFocus(Focus focus) {
+	private Weight weightByPurpose(Focus focus) {
 		return switch (focus) {
 			case DIET -> new Weight(
 				1.5, 1.0, 0.9, 0.8, // kcal, carbs, protein, fat 가중치

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+import MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler;
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
@@ -93,4 +94,35 @@ public class Diet extends BaseEntity {
 
 	@Column(name = "sodium", precision = 8, scale = 2)
 	private BigDecimal sodium;
+
+	// 사용자 입력 식단 생성용 팩토리
+	public static Diet createUserInput(
+		String userId,
+		DietType status,
+		LocalDate date,
+		LocalTime time,
+		DietPageAssembler.DietAggregation aggregation
+	) {
+		return Diet.builder()
+			.userId(userId)
+			.status(status)
+			.title(aggregation.title())
+			.date(date)
+			.time(time)
+			.thumbnailUrl(aggregation.thumbnailUrl())
+			.sourceType(DietSourceType.USERINPUT)
+			.kcal(aggregation.kcal())
+			.carbs(aggregation.carbs())
+			.protein(aggregation.protein())
+			.fat(aggregation.fat())
+			.sugar(aggregation.sugar())
+			.vitA(aggregation.vitA())
+			.vitC(aggregation.vitC())
+			.vitD(aggregation.vitD())
+			.calcium(aggregation.calcium())
+			.iron(aggregation.iron())
+			.dietaryFiber(aggregation.dietaryFiber())
+			.sodium(aggregation.sodium())
+			.build();
+	}
 }

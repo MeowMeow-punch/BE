@@ -1,18 +1,26 @@
 package MeowMeowPunch.pickeat.domain.diet.repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum;
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 
 @Mapper
 public interface DietRecommendationMapper {
 
-	NutrientTotals findTodayTotals(@Param("userId") String userId);
+	NutrientTotals findTotalsByDate(@Param("userId") String userId, @Param("date") LocalDate date);
+
+	List<DailyCalorieSum> findDailyCalories(
+		@Param("userId") String userId,
+		@Param("start") LocalDate start,
+		@Param("end") LocalDate end
+	);
 
 	List<FoodRecommendationCandidate> findTopFoodCandidates(
 		@Param("remainingKcal") BigDecimal remainingKcal,
