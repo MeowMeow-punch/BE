@@ -78,6 +78,7 @@ public class DietRecommendationService {
 		BigDecimal targetMealCarbs = targetMacroForMeal(GOAL_CARBS, totals.totalCarbs(), mealSlot);
 		BigDecimal targetMealProtein = targetMacroForMeal(GOAL_PROTEIN, totals.totalProtein(), mealSlot);
 		BigDecimal targetMealFat = targetMacroForMeal(GOAL_FAT, totals.totalFat(), mealSlot);
+		List<String> excludedCategories = excludedCategoriesForMeal(mealSlot);
 
 		// 2) 목적별 가중치/패널티 설정
 		Weight weight = weightByPurpose(purposeType);
@@ -88,6 +89,7 @@ public class DietRecommendationService {
 			targetMealCarbs,
 			targetMealProtein,
 			targetMealFat,
+			excludedCategories,
 			weight.kcal,
 			weight.carbs,
 			weight.protein,
@@ -153,6 +155,19 @@ public class DietRecommendationService {
 		BigDecimal slotGoal = dailyGoalMacro.multiply(MEAL_RATIO.getOrDefault(mealSlot, new BigDecimal("0.25")));
 		BigDecimal rawTarget = slotGoal.min(remaining);
 		return rawTarget.max(BigDecimal.ZERO);
+	}
+
+	// (아침, 점심, 저녁)식단 추천에서 제외할 카테고리
+	private List<String> excludedCategoriesForMeal(DietType mealSlot) {
+		if (mealSlot == DietType.SNACK) {
+			return List.of();
+		}
+		return List.of(
+			"빵 및 과자류",
+			"유제품류 및 빙과류",
+			"음료 및 차류",
+			"과일류"
+		);
 	}
 
 	// TODO: 가중치 값은 GPT 추천으로 임의로 지정했고 추후 개선할 예정

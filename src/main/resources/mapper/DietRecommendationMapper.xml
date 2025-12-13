@@ -42,6 +42,12 @@
             FROM foods f
             WHERE f.base_unit = #{baseUnit}
             AND (f.kcal * #{portionFactor}) BETWEEN (#{remainingKcal} - #{kcalTolerance}) AND (#{remainingKcal} + #{kcalTolerance})
+            <if test="excludedCategories != null and excludedCategories.size() > 0">
+                AND f.category NOT IN
+                <foreach collection="excludedCategories" item="cat" open="(" close=")" separator=",">
+                    #{cat}
+                </foreach>
+            </if>
         )
         SELECT
             foodId,
