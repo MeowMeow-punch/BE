@@ -6,9 +6,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -42,6 +43,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class DietService {
+	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 
 	private final DietRecommendationMapper dietRecommendationMapper;
 	private final DietRecommendationService dietRecommendationService;
@@ -77,7 +79,7 @@ public class DietService {
 			.map(c -> RecommendedDietInfo.of(
 				c.foodId(),
 				c.name(),
-				mealSlot(LocalTime.now()).name(),
+				mealSlot(LocalTime.now(KOREA_ZONE)).name(),
 				c.thumbnailUrl(),
 				toInt(c.kcal())
 			))
