@@ -1,10 +1,7 @@
-package MeowMeowPunch.pickeat.domain.diet.dto.response;
-
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodItem;
-import MeowMeowPunch.pickeat.global.common.dto.response.Nutrients;
+package MeowMeowPunch.pickeat.global.common.dto.response.diet;
 
 // 식단 상세 - 음식 정보 DTO
-public record DietFoodItem(
+public record DietDetailItem(
 	Long foodId,
 	String name,
 	int amount,
@@ -13,8 +10,8 @@ public record DietFoodItem(
 	Nutrients nutrients,
 	String thumbnailUrl
 ) {
-	public static DietFoodItem from(FoodItem item, int quantity) {
-		return new DietFoodItem(
+	public static DietDetailItem from(FoodItem item, int quantity) {
+		return new DietDetailItem(
 			item.foodId(),
 			item.name(),
 			item.amount(),

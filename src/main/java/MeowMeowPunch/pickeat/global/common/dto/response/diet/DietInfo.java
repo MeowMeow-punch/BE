@@ -1,4 +1,4 @@
-package MeowMeowPunch.pickeat.domain.diet.dto.response;
+package MeowMeowPunch.pickeat.global.common.dto.response.diet;
 
 import java.util.List;
 
@@ -8,9 +8,9 @@ public record DietInfo(
 	String mealType,
 	String time,
 	String date,
-	List<DietFoodItem> foods
+	List<DietDetailItem> foods
 ) {
-	public static DietInfo of(Long myDietId, String mealType, String time, String date, List<DietFoodItem> foods) {
+	public static DietInfo of(Long myDietId, String mealType, String time, String date, List<DietDetailItem> foods) {
 		return new DietInfo(myDietId, mealType, time, date, foods);
 	}
 }

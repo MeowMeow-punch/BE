@@ -2,9 +2,9 @@ package MeowMeowPunch.pickeat.domain.diet.dto.response;
 
 import java.util.List;
 
-import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.TodayDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.WeeklyCaloriesInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.WeeklyCaloriesInfo;
 
 // 특정 날짜 식단 응답 DTO
 public record DailyDietResponse(

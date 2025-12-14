@@ -4,8 +4,8 @@ import java.util.List;
 
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietCursorException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietPageSizeException;
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodItem;
-import MeowMeowPunch.pickeat.global.common.dto.response.PageInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodItem;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.PageInfo;
 
 // 음식 목록 커서 결과를 가공하는 헬퍼
 public final class FoodPageAssembler {

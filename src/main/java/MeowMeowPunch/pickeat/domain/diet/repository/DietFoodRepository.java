@@ -11,4 +11,6 @@ public interface DietFoodRepository extends JpaRepository<DietFood, DietFoodId> 
 	void deleteAllByDietId(Long dietId);
 
 	List<DietFood> findAllByDietId(Long dietId);
+
+	List<DietFood> findAllByDietIdIn(List<Long> dietIds);
 }

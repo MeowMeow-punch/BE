@@ -24,7 +24,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.response.AiFeedBack;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietInfo;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
@@ -37,10 +37,11 @@ import MeowMeowPunch.pickeat.domain.diet.repository.DietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
-import MeowMeowPunch.pickeat.global.common.dto.response.RecommendedDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.TodayDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.WeeklyCaloriesInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.WeeklyCaloriesInfo;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import lombok.RequiredArgsConstructor;
 
@@ -55,7 +56,7 @@ public class DietService {
 	private final DietFoodRepository dietFoodRepository;
 	private final FoodRepository foodRepository;
 
-	// 홈 페이지 조회 (오늘 기준)
+	// 메인 페이지 조회 (오늘 기준)
 	public DietHomeResponse getHome(String userId) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
@@ -84,7 +85,7 @@ public class DietService {
 				c.foodId(),
 				c.name(),
 				mealSlot(LocalTime.now(KOREA_ZONE)).name(),
-				c.thumbnailUrl(),
+				toThumbnailList(c.thumbnailUrl()),
 				toInt(c.kcal())
 			))
 			.toList();
@@ -110,10 +111,34 @@ public class DietService {
 		);
 
 		// 오늘의 식단 - 시간순으로 정렬
-		List<TodayDietInfo> todayDietInfo = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate)
-			.stream()
+		List<Diet> diets = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate);
+		List<Long> dietIds = diets.stream()
+			.map(Diet::getId)
+			.toList();
+
+		Map<Long, List<DietFood>> dietFoodsByDietId = dietIds.isEmpty()
+			? Map.of()
+			: dietFoodRepository.findAllByDietIdIn(dietIds).stream()
+				.collect(Collectors.groupingBy(DietFood::getDietId));
+
+		List<Long> foodIds = dietFoodsByDietId.values().stream()
+			.flatMap(List::stream)
+			.map(DietFood::getFoodId)
+			.distinct()
+			.toList();
+
+		Map<Long, Food> foodById = foodRepository.findAllById(foodIds).stream()
+			.collect(Collectors.toMap(Food::getId, Function.identity()));
+		validateFoodsExist(foodIds, foodById);
+
+		Map<Long, List<String>> thumbnailsByDietId = DietPageAssembler.buildThumbnailsByDiet(dietFoodsByDietId, foodById);
+
+		List<TodayDietInfo> todayDietInfo = diets.stream()
 			.sorted(Comparator.comparing(Diet::getTime, Comparator.nullsLast(Comparator.naturalOrder())))
-			.map(DietPageAssembler::toTodayDietInfo)
+			.map(diet -> DietPageAssembler.toTodayDietInfo(
+				diet,
+				thumbnailsByDietId.getOrDefault(diet.getId(), List.of())
+			))
 			.toList();
 
 		LocalDate weekStart = targetDate.with(DayOfWeek.MONDAY);
@@ -150,6 +175,18 @@ public class DietService {
 
 		DietInfo dietInfo = DietPageAssembler.toDietInfo(diet, dietFoods, foodById);
 		return DietDetailResponse.of(dietInfo);
+	}
+
+	// 특정 날짜의 상세 영양분 조회
+	public NutritionResponse getNutrition(String userId, String rawDate) {
+		if (!StringUtils.hasText(userId)) {
+			throw new MissingDietUserIdException();
+		}
+
+		LocalDate targetDate = parseDateOrToday(rawDate);
+		List<Diet> diets = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate);
+
+		return NutritionResponse.of(DietPageAssembler.buildNutritionInfo(diets));
 	}
 
 	// 식단 등록
@@ -249,5 +286,12 @@ public class DietService {
 				.quantity(toQuantity(f.quantity()))
 				.build())
 			.toList();
+	}
+
+	private List<String> toThumbnailList(String thumbnailUrl) {
+		if (!StringUtils.hasText(thumbnailUrl)) {
+			return List.of();
+		}
+		return List.of(thumbnailUrl);
 	}
 }

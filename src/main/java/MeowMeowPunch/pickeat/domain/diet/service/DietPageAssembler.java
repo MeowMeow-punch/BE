@@ -10,6 +10,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.util.StringUtils;
@@ -24,14 +25,16 @@ import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietDateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietFoodQuantityException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietTimeException;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietFoodItem;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodDtoMapper;
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodItem;
-import MeowMeowPunch.pickeat.global.common.dto.response.Nutrients;
-import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.TodayDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.WeeklyCaloriesInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietDetailItem;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodDtoMapper;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodItem;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.Nutrients;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.NutritionDetail;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.NutritionInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.WeeklyCaloriesInfo;
 import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 
@@ -47,6 +50,14 @@ public final class DietPageAssembler {
 	private static final int GOAL_CARBS = 280;
 	private static final int GOAL_PROTEIN = 120;
 	private static final int GOAL_FAT = 70;
+	private static final int GOAL_SUGAR = 50;
+	private static final int GOAL_DIETARY_FIBER = 25;
+	private static final int GOAL_VITAMIN_A = 700;
+	private static final int GOAL_VITAMIN_C = 100;
+	private static final int GOAL_VITAMIN_D = 10;
+	private static final int GOAL_CALCIUM = 700;
+	private static final int GOAL_IRON = 14;
+	private static final int GOAL_SODIUM = 2000;
 
 	// 필요 시 YYYY-MM-DD 문자열 검증용
 	public static LocalDate parseDateOrToday(String raw) {
@@ -122,7 +133,7 @@ public final class DietPageAssembler {
 	}
 
 	// 오늘 등록 식단 응답 생성
-	public static TodayDietInfo toTodayDietInfo(Diet diet) {
+	public static TodayDietInfo toTodayDietInfo(Diet diet, List<String> thumbnailUrls) {
 		return TodayDietInfo.of(
 			diet.getId(),
 			diet.getTitle(),
@@ -134,13 +145,13 @@ public final class DietPageAssembler {
 				toInt(nullSafe(diet.getProtein())),
 				toInt(nullSafe(diet.getFat()))
 			),
-			diet.getThumbnailUrl()
+			thumbnailUrls
 		);
 	}
 
 	// 단일 식단 상세 응답 생성
 	public static DietInfo toDietInfo(Diet diet, List<DietFood> dietFoods, Map<Long, Food> foodById) {
-		List<DietFoodItem> foods = dietFoods.stream()
+		List<DietDetailItem> foods = dietFoods.stream()
 			.map(df -> toDietFoodItem(foodById.get(df.getFoodId()), df))
 			.toList();
 
@@ -153,36 +164,53 @@ public final class DietPageAssembler {
 		);
 	}
 
-	// null -> 0 변환용
-	public static BigDecimal nullSafe(BigDecimal value) {
-		return value == null ? BigDecimal.ZERO : value;
-	}
+	// 특정 날짜에 등록된 식단들의 부가 영양분 합계를 생성
+	public static NutritionInfo buildNutritionInfo(List<Diet> diets) {
+		BigDecimal sugar = BigDecimal.ZERO;
+		BigDecimal dietaryFiber = BigDecimal.ZERO;
+		BigDecimal vitA = BigDecimal.ZERO;
+		BigDecimal vitC = BigDecimal.ZERO;
+		BigDecimal vitD = BigDecimal.ZERO;
+		BigDecimal calcium = BigDecimal.ZERO;
+		BigDecimal iron = BigDecimal.ZERO;
+		BigDecimal sodium = BigDecimal.ZERO;
 
-	// Decimal -> int 변환용
-	public static int toInt(BigDecimal value) {
-		if (value == null) {
-			return 0;
+		for (Diet diet : diets) {
+			sugar = sugar.add(nullSafe(diet.getSugar()));
+			dietaryFiber = dietaryFiber.add(nullSafe(diet.getDietaryFiber()));
+			vitA = vitA.add(nullSafe(diet.getVitA()));
+			vitC = vitC.add(nullSafe(diet.getVitC()));
+			vitD = vitD.add(nullSafe(diet.getVitD()));
+			calcium = calcium.add(nullSafe(diet.getCalcium()));
+			iron = iron.add(nullSafe(diet.getIron()));
+			sodium = sodium.add(nullSafe(diet.getSodium()));
 		}
-		return value.setScale(0, RoundingMode.HALF_UP).intValue();
+
+		return NutritionInfo.of(
+			NutritionDetail.of(toDecimal(sugar), GOAL_SUGAR, "g"),
+			NutritionDetail.of(toDecimal(dietaryFiber), GOAL_DIETARY_FIBER, "g"),
+			NutritionDetail.of(toDecimal(vitA), GOAL_VITAMIN_A, "ug_RAE"),
+			NutritionDetail.of(toDecimal(vitC), GOAL_VITAMIN_C, "mg"),
+			NutritionDetail.of(toDecimal(vitD), GOAL_VITAMIN_D, "ug"),
+			NutritionDetail.of(toDecimal(calcium), GOAL_CALCIUM, "mg"),
+			NutritionDetail.of(toDecimal(iron), GOAL_IRON, "mg"),
+			NutritionDetail.of(toDecimal(sodium), GOAL_SODIUM, "mg")
+		);
 	}
 
-	// 시간, 분을 파싱
-	public static LocalTime parseTime(String raw) {
-		try {
-			return LocalTime.parse(raw, DateTimeFormatter.ofPattern("HH:mm"));
-		} catch (DateTimeParseException e) {
-			throw new InvalidDietTimeException(raw);
-		}
-	}
-
-	// 음식 ID가 존재하는지 검증
-	public static void validateFoodsExist(List<Long> requestedFoodIds, Map<Long, Food> foodById) {
-		requestedFoodIds.stream()
-			.filter(id -> !foodById.containsKey(id))
-			.findFirst()
-			.ifPresent(id -> {
-				throw new FoodNotFoundException(id);
-			});
+	// 식단별 음식 썸네일 리스트 생성
+	public static Map<Long, List<String>> buildThumbnailsByDiet(Map<Long, List<DietFood>> dietFoodsByDietId,
+		Map<Long, Food> foodById) {
+		return dietFoodsByDietId.entrySet().stream()
+			.collect(Collectors.toMap(
+				Map.Entry::getKey,
+				e -> e.getValue().stream()
+					.map(df -> foodById.get(df.getFoodId()))
+					.filter(Objects::nonNull)
+					.map(Food::getThumbnailUrl)
+					.distinct()
+					.toList()
+			));
 	}
 
 	// 추가한 음식들을 하나의 식단으로 집계
@@ -258,9 +286,56 @@ public final class DietPageAssembler {
 		return quantity.shortValue();
 	}
 
-	private static DietFoodItem toDietFoodItem(Food food, DietFood dietFood) {
+	// 식단 상세 아이템 DTO 생성용
+	private static DietDetailItem toDietFoodItem(Food food, DietFood dietFood) {
 		FoodItem base = FoodDtoMapper.toFoodItem(food);
-		return DietFoodItem.from(base, dietFood.getQuantity());
+		return DietDetailItem.from(base, dietFood.getQuantity());
+	}
+
+	// null -> 0 변환용
+	public static BigDecimal nullSafe(BigDecimal value) {
+		return value == null ? BigDecimal.ZERO : value;
+	}
+
+	// Decimal -> int 변환용
+	public static int toInt(BigDecimal value) {
+		if (value == null) {
+			return 0;
+		}
+		return value.setScale(0, RoundingMode.HALF_UP).intValue();
+	}
+
+	// 시간, 분을 파싱
+	public static LocalTime parseTime(String raw) {
+		try {
+			return LocalTime.parse(raw, DateTimeFormatter.ofPattern("HH:mm"));
+		} catch (DateTimeParseException e) {
+			throw new InvalidDietTimeException(raw);
+		}
+	}
+
+	// 음식 ID가 존재하는지 검증
+	public static void validateFoodsExist(List<Long> requestedFoodIds, Map<Long, Food> foodById) {
+		requestedFoodIds.stream()
+			.filter(id -> !foodById.containsKey(id))
+			.findFirst()
+			.ifPresent(id -> {
+				throw new FoodNotFoundException(id);
+			});
+	}
+
+	// 소수점 처리: 값이 정수면 소수부 제거, 있으면 한 자리까지 반올림
+	private static BigDecimal toDecimal(BigDecimal value) {
+		if (value == null) {
+			return BigDecimal.ZERO;
+		}
+		BigDecimal scaled = value.setScale(1, RoundingMode.HALF_UP);
+		BigDecimal stripped = scaled.stripTrailingZeros();
+		// stripTrailingZeros 가 0.x 형태에서 scale 음수로 내려가는 경우를 보정
+		if (stripped.scale() < 0) {
+			return stripped.setScale(0);
+		}
+		return stripped;
 	}
 
 	// 식단 집계용 DTO

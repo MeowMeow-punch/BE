@@ -1,4 +1,4 @@
-package MeowMeowPunch.pickeat.global.common.dto.response;
+package MeowMeowPunch.pickeat.global.common.dto.response.diet;
 
 // 단일 음식 목록에 보여주는 공통 응답 DTO
 public record FoodItem(

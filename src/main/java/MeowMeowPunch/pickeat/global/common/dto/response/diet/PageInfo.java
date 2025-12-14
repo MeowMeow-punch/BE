@@ -1,4 +1,4 @@
-package MeowMeowPunch.pickeat.global.common.dto.response;
+package MeowMeowPunch.pickeat.global.common.dto.response.diet;
 
 // 커서 기반 페이지네이션 정보를 보내주는 공통 DTO
 public record PageInfo(
