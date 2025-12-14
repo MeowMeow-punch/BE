@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -27,7 +27,7 @@ public class DietController {
 	private final DietService dietService;
 
 	// 날짜별 식단 페이지 조회
-	@GetMapping(params = {"userId", "date"})
+	@GetMapping
 	public ResTemplate<DietResponse> getDiet(
 		@RequestParam(name = "userId") String userId,
 		@RequestParam(name = "date") String date
@@ -37,11 +37,12 @@ public class DietController {
 	}
 
 	// 식단 상세 조회
-	@GetMapping(params = "dietId")
+	@GetMapping("/{myDietId}")
 	public ResTemplate<DietDetailResponse> getDietDetail(
-		@RequestParam(name = "dietId") Long dietId
+		@RequestParam(name = "userId") String userId,
+		@PathVariable("myDietId") Long dietId
 	) {
-		DietDetailResponse data = dietService.getDetail(dietId);
+		DietDetailResponse data = dietService.getDetail(userId, dietId);
 		return ResTemplate.success(HttpStatus.OK, "식단 상세 조회 성공", data);
 	}
 
@@ -56,7 +57,7 @@ public class DietController {
 	}
 
 	// 식단 등록
-	@PostMapping("/create")
+	@PostMapping
 	public ResTemplate<Void> createDiet(
 		@RequestParam(name = "userId") String userId,
 		@Valid @RequestBody DietRequest request
@@ -77,7 +78,7 @@ public class DietController {
 	}
 
 	// 식단 삭제
-	@DeleteMapping("/{myDietId}/delete")
+	@DeleteMapping("/{myDietId}")
 	public ResTemplate<Void> deleteDiet(
 		@RequestParam(name = "userId") String userId,
 		@PathVariable("myDietId") Long myDietId

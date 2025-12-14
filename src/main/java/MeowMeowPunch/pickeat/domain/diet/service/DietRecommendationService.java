@@ -111,11 +111,7 @@ public class DietRecommendationService {
 	// RecommendedDiet 테이블에 저장
 	private void saveTopRecommended(String userId, LocalDate date, DietType dietType,
 		List<FoodRecommendationCandidate> picks) {
-		List<FoodRecommendationCandidate> toSave = picks.stream()
-			.limit(MAX_PICK)
-			.toList();
-
-		for (FoodRecommendationCandidate c : toSave) {
+		for (FoodRecommendationCandidate c : picks) {
 			RecommendedDiet entity = RecommendedDiet.builder()
 				.userId(userId)
 				.foodId(c.foodId())

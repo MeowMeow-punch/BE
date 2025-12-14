@@ -23,8 +23,7 @@ public class SecurityConfig {
 			)
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(
-					"/diet/**",     // 식단 API
-					"/main/**"      // 메인 페이지 API
+					"/diet/**"     // 식단 API
 				).permitAll()
 				.anyRequest().authenticated()   // 나머지는 나중에 JWT 붙일 때 사용
 			);

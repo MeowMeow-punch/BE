@@ -13,12 +13,12 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/main")
+@RequestMapping("/diet")
 public class MainController {
 	private final DietService dietService;
 
 	// 메인 페이지 조회
-	@GetMapping
+	@GetMapping("/main")
 	public ResTemplate<DietResponse> getDiet(
 		@RequestParam(name = "userId") String userId
 	) {

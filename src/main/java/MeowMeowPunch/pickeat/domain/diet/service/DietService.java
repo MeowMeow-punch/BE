@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -119,7 +118,7 @@ public class DietService {
 		Map<Long, List<DietFood>> dietFoodsByDietId = dietIds.isEmpty()
 			? Map.of()
 			: dietFoodRepository.findAllByDietIdIn(dietIds).stream()
-				.collect(Collectors.groupingBy(DietFood::getDietId));
+			.collect(Collectors.groupingBy(DietFood::getDietId));
 
 		List<Long> foodIds = dietFoodsByDietId.values().stream()
 			.flatMap(List::stream)
@@ -131,10 +130,10 @@ public class DietService {
 			.collect(Collectors.toMap(Food::getId, Function.identity()));
 		validateFoodsExist(foodIds, foodById);
 
-		Map<Long, List<String>> thumbnailsByDietId = DietPageAssembler.buildThumbnailsByDiet(dietFoodsByDietId, foodById);
+		Map<Long, List<String>> thumbnailsByDietId = DietPageAssembler.buildThumbnailsByDiet(dietFoodsByDietId,
+			foodById);
 
 		List<TodayDietInfo> todayDietInfo = diets.stream()
-			.sorted(Comparator.comparing(Diet::getTime, Comparator.nullsLast(Comparator.naturalOrder())))
 			.map(diet -> DietPageAssembler.toTodayDietInfo(
 				diet,
 				thumbnailsByDietId.getOrDefault(diet.getId(), List.of())
@@ -156,7 +155,11 @@ public class DietService {
 	}
 
 	// 식단 상세 조회
-	public DietDetailResponse getDetail(Long dietId) {
+	public DietDetailResponse getDetail(String userId, Long dietId) {
+		if (!StringUtils.hasText(userId)) {
+			throw new MissingDietUserIdException();
+		}
+
 		Diet diet = dietRepository.findById(dietId)
 			.orElseThrow(() -> new DietDetailNotFoundException(dietId));
 

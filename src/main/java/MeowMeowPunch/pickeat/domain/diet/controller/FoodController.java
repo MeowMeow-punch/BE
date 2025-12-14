@@ -19,9 +19,8 @@ public class FoodController {
 	private final FoodService foodService;
 
 	// 음식 리스트 조회
-	@GetMapping("/list/search")
+	@GetMapping("/food/list")
 	public ResTemplate<FoodListResponse> getFoodList(
-		// @RequestHeader(name = "Authorization", required = false) String authorization,
 		@RequestParam(name = "cursor", required = false) String cursor,
 		@RequestParam(name = "size", required = false) Integer size
 	) {
@@ -30,9 +29,9 @@ public class FoodController {
 	}
 
 	// 키워드 기반 음식 리스트 조회
-	@GetMapping("/search")
+	@GetMapping("/food")
 	public ResTemplate<FoodSearchResponse> getSearchFood(
-		@RequestParam(name = "keyword", required = true) String keyword,
+		@RequestParam(name = "keyword") String keyword,
 		@RequestParam(name = "cursor", required = false) String cursor,
 		@RequestParam(name = "size", required = false) Integer size
 	) {
