@@ -25,7 +25,9 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class DietRecommendationService {
-	private static final int TOP_LIMIT = 5;
+	private static final int TOP_LIMIT = 6;
+	private static final int MIN_PICK = 1;
+	private static final int MAX_PICK = 2;
 	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 기준
 	private static final String BASE_UNIT_GRAM = "G";
 	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
@@ -61,15 +63,11 @@ public class DietRecommendationService {
 		List<RecommendedDiet> existing = recommendedDietRepository.findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(
 			userId, today, mealSlot);
 
-		// 오늘 날짜로 DietStatus(아침, 점심, 저녁, 간식) 추천이 2개 이상 있으면 바로 반환
-		if (existing.size() >= 2) {
+		// 오늘 날짜로 DietStatus(아침, 점심, 저녁, 간식) 추천이 1개 이상 있으면 바로 반환
+		if (existing.size() >= MIN_PICK) {
 			return existing.stream()
 				.map(this::toCandidate)
 				.toList();
-		}
-		// 부족한 기존 추천은 삭제 후 재계산
-		if (!existing.isEmpty()) {
-			recommendedDietRepository.deleteAll(existing);
 		}
 
 		// 1) 끼니별 목표 영양분 계산
@@ -77,18 +75,18 @@ public class DietRecommendationService {
 		BigDecimal targetMealCarbs = targetMacroForMeal(GOAL_CARBS, totals.totalCarbs(), mealSlot);
 		BigDecimal targetMealProtein = targetMacroForMeal(GOAL_PROTEIN, totals.totalProtein(), mealSlot);
 		BigDecimal targetMealFat = targetMacroForMeal(GOAL_FAT, totals.totalFat(), mealSlot);
-		List<String> excludedCategories = excludedCategoriesForMeal(mealSlot);
+		List<String> allowedCategories = allowedCategoriesForMeal(mealSlot);
 
 		// 2) 목적별 가중치/패널티 설정
 		Weight weight = weightByPurpose(purposeType);
 
-		// 3) 남은 영양분 기반 top5 식단 추천 (포션 200g 기준)
+		// 3) 남은 영양분 기반 TOP 후보 생성 (AI가 1~2개 선택 예정)
 		List<FoodRecommendationCandidate> candidates = dietRecommendationMapper.findTopFoodCandidates(
 			targetMealKcal,
 			targetMealCarbs,
 			targetMealProtein,
 			targetMealFat,
-			excludedCategories,
+			allowedCategories,
 			weight.kcal,
 			weight.carbs,
 			weight.protein,
@@ -100,9 +98,9 @@ public class DietRecommendationService {
 			TOP_LIMIT
 		);
 
-		// TODO: 추후 AI가 TOP 5 중 2개를 선택하도록 연동할 예정
+		// TODO: AI 선택 연동 후 결과 개수(1~2)에 맞게 저장하도록 수정
 		try {
-			saveTopRecommended(userId, today, mealSlot, candidates.stream().limit(2).toList());
+			saveTopRecommended(userId, today, mealSlot, candidates.stream().limit(MAX_PICK).toList());
 		} catch (Exception e) {
 			throw new DietRecommendationSaveException(e);
 		}
@@ -113,7 +111,11 @@ public class DietRecommendationService {
 	// RecommendedDiet 테이블에 저장
 	private void saveTopRecommended(String userId, LocalDate date, DietType dietType,
 		List<FoodRecommendationCandidate> picks) {
-		for (FoodRecommendationCandidate c : picks) {
+		List<FoodRecommendationCandidate> toSave = picks.stream()
+			.limit(MAX_PICK)
+			.toList();
+
+		for (FoodRecommendationCandidate c : toSave) {
 			RecommendedDiet entity = RecommendedDiet.builder()
 				.userId(userId)
 				.foodId(c.foodId())
@@ -155,16 +157,28 @@ public class DietRecommendationService {
 		return rawTarget.max(BigDecimal.ZERO);
 	}
 
-	// (아침, 점심, 저녁)식단 추천에서 제외할 카테고리
-	private List<String> excludedCategoriesForMeal(DietType mealSlot) {
+	// mealSlot 별로 허용할 카테고리
+	private List<String> allowedCategoriesForMeal(DietType mealSlot) {
 		if (mealSlot == DietType.SNACK) {
-			return List.of();
+			return List.of(
+				"빵 및 과자류",
+				"유제품류 및 빙과류",
+				"음료 및 차류",
+				"과일류"
+			);
 		}
 		return List.of(
-			"빵 및 과자류",
-			"유제품류 및 빙과류",
-			"음료 및 차류",
-			"과일류"
+			"밥류",
+			"찜류",
+			"구이류",
+			"볶음류",
+			"조림류",
+			"튀김류",
+			"찌개 및 전골류",
+			"국 및 탕류",
+			"면 및 만두류",
+			"수·조·어·육류",
+			"두류, 견과 및 종실류"
 		);
 	}
 
@@ -199,6 +213,7 @@ public class DietRecommendationService {
 			nullSafe(r.getCarbs()),
 			nullSafe(r.getProtein()),
 			nullSafe(r.getFat()),
+			null,
 			0.0 // 이미 저장된 추천은 점수 없음
 		);
 	}

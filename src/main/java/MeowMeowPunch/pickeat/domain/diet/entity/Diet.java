@@ -99,6 +99,7 @@ public class Diet extends BaseEntity {
 	public static Diet createUserInput(
 		String userId,
 		DietType status,
+		DietSourceType sourceType,
 		LocalDate date,
 		LocalTime time,
 		DietAggregation aggregation
@@ -110,7 +111,7 @@ public class Diet extends BaseEntity {
 			.date(date)
 			.time(time)
 			.thumbnailUrl(aggregation.thumbnailUrl())
-			.sourceType(DietSourceType.USERINPUT)
+			.sourceType(sourceType)
 			.kcal(aggregation.kcal())
 			.carbs(aggregation.carbs())
 			.protein(aggregation.protein())
@@ -129,6 +130,7 @@ public class Diet extends BaseEntity {
 	// 사용자 입력 식단 수정용 메서드
 	public void updateUserInput(
 		DietType status,
+		DietSourceType sourceType,
 		LocalDate date,
 		LocalTime time,
 		DietAggregation aggregation
@@ -138,6 +140,7 @@ public class Diet extends BaseEntity {
 		this.date = date;
 		this.time = time;
 		this.thumbnailUrl = aggregation.thumbnailUrl();
+		this.sourceType = sourceType;
 		this.kcal = aggregation.kcal();
 		this.carbs = aggregation.carbs();
 		this.protein = aggregation.protein();

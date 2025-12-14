@@ -27,7 +27,7 @@ public interface DietRecommendationMapper {
 		@Param("remainingCarbs") BigDecimal remainingCarbs,
 		@Param("remainingProtein") BigDecimal remainingProtein,
 		@Param("remainingFat") BigDecimal remainingFat,
-		@Param("excludedCategories") List<String> excludedCategories,
+		@Param("allowedCategories") List<String> allowedCategories,
 		@Param("weightKcal") double weightKcal,
 		@Param("weightCarbs") double weightCarbs,
 		@Param("weightProtein") double weightProtein,

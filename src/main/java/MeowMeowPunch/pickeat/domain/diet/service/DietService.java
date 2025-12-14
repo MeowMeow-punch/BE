@@ -204,6 +204,7 @@ public class DietService {
 		Diet diet = Diet.createUserInput(
 			userId,
 			request.mealType(),
+			request.sourceType(),
 			date,
 			time,
 			aggregation
@@ -236,6 +237,7 @@ public class DietService {
 
 		diet.updateUserInput(
 			request.mealType(),
+			request.sourceType(),
 			date,
 			time,
 			aggregation
