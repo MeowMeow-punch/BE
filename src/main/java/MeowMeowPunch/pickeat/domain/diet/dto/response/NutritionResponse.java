@@ -6,7 +6,7 @@ import MeowMeowPunch.pickeat.global.common.dto.response.diet.NutritionInfo;
 public record NutritionResponse(
 	NutritionInfo nutritionInfo
 ) {
-	public static NutritionResponse of(NutritionInfo nutritionInfo) {
+	public static NutritionResponse from(NutritionInfo nutritionInfo) {
 		return new NutritionResponse(nutritionInfo);
 	}
 }

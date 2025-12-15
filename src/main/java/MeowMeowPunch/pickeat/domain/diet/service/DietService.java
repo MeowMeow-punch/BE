@@ -177,7 +177,7 @@ public class DietService {
 		validateFoodsExist(foodIds, foodById);
 
 		DietInfo dietInfo = DietPageAssembler.toDietInfo(diet, dietFoods, foodById);
-		return DietDetailResponse.of(dietInfo);
+		return DietDetailResponse.from(dietInfo);
 	}
 
 	// 특정 날짜의 상세 영양분 조회
@@ -189,7 +189,7 @@ public class DietService {
 		LocalDate targetDate = parseDateOrToday(rawDate);
 		List<Diet> diets = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate);
 
-		return NutritionResponse.of(DietPageAssembler.buildNutritionInfo(diets));
+		return NutritionResponse.from(DietPageAssembler.buildNutritionInfo(diets));
 	}
 
 	// 식단 등록

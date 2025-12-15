@@ -20,6 +20,8 @@ import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
+import MeowMeowPunch.pickeat.global.common.enums.MainMealCategory;
+import MeowMeowPunch.pickeat.global.common.enums.SnackCategory;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -156,26 +158,9 @@ public class DietRecommendationService {
 	// mealSlot 별로 허용할 카테고리
 	private List<String> allowedCategoriesForMeal(DietType mealSlot) {
 		if (mealSlot == DietType.SNACK) {
-			return List.of(
-				"빵 및 과자류",
-				"유제품류 및 빙과류",
-				"음료 및 차류",
-				"과일류"
-			);
+			return SnackCategory.labels();
 		}
-		return List.of(
-			"밥류",
-			"찜류",
-			"구이류",
-			"볶음류",
-			"조림류",
-			"튀김류",
-			"찌개 및 전골류",
-			"국 및 탕류",
-			"면 및 만두류",
-			"수·조·어·육류",
-			"두류, 견과 및 종실류"
-		);
+		return MainMealCategory.labels();
 	}
 
 	// TODO: 가중치 값은 GPT 추천으로 임의로 지정했고 추후 개선할 예정
