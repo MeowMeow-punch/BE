@@ -1,4 +1,4 @@
-package MeowMeowPunch.pickeat.global.common.dto.response;
+package MeowMeowPunch.pickeat.global.common.dto.response.diet;
 
 import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
 

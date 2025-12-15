@@ -34,14 +34,21 @@
             SELECT
                 f.id AS foodId,
                 f.name AS name,
+                f.category AS category,
                 f.thumbnail_url AS thumbnailUrl,
-                (f.kcal * #{portionFactor})    AS adj_kcal,
-                (f.carbs * #{portionFactor})   AS adj_carbs,
-                (f.protein * #{portionFactor}) AS adj_protein,
-                (f.fat * #{portionFactor})     AS adj_fat
+                f.kcal    AS adj_kcal,
+                f.carbs   AS adj_carbs,
+                f.protein AS adj_protein,
+                f.fat     AS adj_fat
             FROM foods f
             WHERE f.base_unit = #{baseUnit}
-            AND (f.kcal * #{portionFactor}) BETWEEN (#{remainingKcal} - #{kcalTolerance}) AND (#{remainingKcal} + #{kcalTolerance})
+            AND f.kcal BETWEEN (#{remainingKcal} - #{kcalTolerance}) AND (#{remainingKcal} + #{kcalTolerance})
+            <if test="allowedCategories != null and allowedCategories.size() > 0">
+                AND f.category IN
+                <foreach collection="allowedCategories" item="cat" open="(" close=")" separator=",">
+                    #{cat}
+                </foreach>
+            </if>
         )
         SELECT
             foodId,
@@ -51,6 +58,7 @@
             adj_carbs AS carbs,
             adj_protein AS protein,
             adj_fat AS fat,
+            category,
             (
                 -- kcal 맞춤 점수 및 초과 패널티
                 (-1) * ABS(#{remainingKcal} - adj_kcal) * #{weightKcal}

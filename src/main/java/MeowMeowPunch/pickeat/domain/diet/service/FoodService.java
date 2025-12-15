@@ -8,9 +8,9 @@ import MeowMeowPunch.pickeat.domain.diet.dto.response.FoodListResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.FoodSearchResponse;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodMapper;
 import MeowMeowPunch.pickeat.domain.diet.service.FoodPageAssembler.FoodPage;
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodDtoMapper;
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodItem;
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodSummary;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodDtoMapper;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodItem;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodSummary;
 import lombok.RequiredArgsConstructor;
 
 @Service

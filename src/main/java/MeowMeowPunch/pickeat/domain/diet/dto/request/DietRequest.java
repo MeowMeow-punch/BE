@@ -2,6 +2,7 @@ package MeowMeowPunch.pickeat.domain.diet.dto.request;
 
 import java.util.List;
 
+import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -9,12 +10,15 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
-public record DietCreateRequest(
+public record DietRequest(
 	@NotBlank(message = "date는 필수입니다.")
 	String date,
 
 	@NotNull(message = "mealType은 필수입니다.")
 	DietType mealType,
+
+	@NotNull(message = "sourceType은 필수입니다.")
+	DietSourceType sourceType,
 
 	@NotBlank(message = "time은 필수입니다.")
 	String time,

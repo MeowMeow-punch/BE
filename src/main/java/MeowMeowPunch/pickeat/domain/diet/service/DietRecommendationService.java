@@ -20,13 +20,16 @@ import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
+import MeowMeowPunch.pickeat.global.common.enums.MainMealCategory;
+import MeowMeowPunch.pickeat.global.common.enums.SnackCategory;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class DietRecommendationService {
-	private static final double PORTION_FACTOR = 2.0; // 200g 기준
-	private static final int TOP_LIMIT = 5;
+	private static final int TOP_LIMIT = 6;
+	private static final int MIN_PICK = 1;
+	private static final int MAX_PICK = 2;
 	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 기준
 	private static final String BASE_UNIT_GRAM = "G";
 	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
@@ -62,15 +65,11 @@ public class DietRecommendationService {
 		List<RecommendedDiet> existing = recommendedDietRepository.findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(
 			userId, today, mealSlot);
 
-		// 오늘 날짜로 DietStatus(아침, 점심, 저녁, 간식) 추천이 2개 이상 있으면 바로 반환
-		if (existing.size() >= 2) {
+		// 오늘 날짜로 DietStatus(아침, 점심, 저녁, 간식) 추천이 1개 이상 있으면 바로 반환
+		if (existing.size() >= MIN_PICK) {
 			return existing.stream()
 				.map(this::toCandidate)
 				.toList();
-		}
-		// 부족한 기존 추천은 삭제 후 재계산
-		if (!existing.isEmpty()) {
-			recommendedDietRepository.deleteAll(existing);
 		}
 
 		// 1) 끼니별 목표 영양분 계산
@@ -78,31 +77,32 @@ public class DietRecommendationService {
 		BigDecimal targetMealCarbs = targetMacroForMeal(GOAL_CARBS, totals.totalCarbs(), mealSlot);
 		BigDecimal targetMealProtein = targetMacroForMeal(GOAL_PROTEIN, totals.totalProtein(), mealSlot);
 		BigDecimal targetMealFat = targetMacroForMeal(GOAL_FAT, totals.totalFat(), mealSlot);
+		List<String> allowedCategories = allowedCategoriesForMeal(mealSlot);
 
 		// 2) 목적별 가중치/패널티 설정
 		Weight weight = weightByPurpose(purposeType);
 
-		// 3) 남은 영양분 기반 top5 식단 추천 (포션 200g 기준)
+		// 3) 남은 영양분 기반 TOP 후보 생성 (AI가 1~2개 선택 예정)
 		List<FoodRecommendationCandidate> candidates = dietRecommendationMapper.findTopFoodCandidates(
 			targetMealKcal,
 			targetMealCarbs,
 			targetMealProtein,
 			targetMealFat,
+			allowedCategories,
 			weight.kcal,
 			weight.carbs,
 			weight.protein,
 			weight.fat,
 			weight.penaltyOverKcal,
 			weight.penaltyOverMacro,
-			PORTION_FACTOR,
 			KCAL_TOLERANCE,
 			BASE_UNIT_GRAM,
 			TOP_LIMIT
 		);
 
-		// TODO: 추후 AI가 TOP 5 중 2개를 선택하도록 연동할 예정
+		// TODO: AI 선택 연동 후 결과 개수(1~2)에 맞게 저장하도록 수정
 		try {
-			saveTopRecommended(userId, today, mealSlot, candidates.stream().limit(2).toList());
+			saveTopRecommended(userId, today, mealSlot, candidates.stream().limit(MAX_PICK).toList());
 		} catch (Exception e) {
 			throw new DietRecommendationSaveException(e);
 		}
@@ -155,6 +155,14 @@ public class DietRecommendationService {
 		return rawTarget.max(BigDecimal.ZERO);
 	}
 
+	// mealSlot 별로 허용할 카테고리
+	private List<String> allowedCategoriesForMeal(DietType mealSlot) {
+		if (mealSlot == DietType.SNACK) {
+			return SnackCategory.labels();
+		}
+		return MainMealCategory.labels();
+	}
+
 	// TODO: 가중치 값은 GPT 추천으로 임의로 지정했고 추후 개선할 예정
 	private Weight weightByPurpose(Focus focus) {
 		return switch (focus) {
@@ -186,6 +194,7 @@ public class DietRecommendationService {
 			nullSafe(r.getCarbs()),
 			nullSafe(r.getProtein()),
 			nullSafe(r.getFat()),
+			null,
 			0.0 // 이미 저장된 추천은 점수 없음
 		);
 	}

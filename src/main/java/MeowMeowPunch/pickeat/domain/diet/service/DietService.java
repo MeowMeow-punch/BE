@@ -18,22 +18,29 @@ import org.springframework.util.StringUtils;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
-import MeowMeowPunch.pickeat.domain.diet.dto.request.DietCreateRequest;
+import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.AiFeedBack;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietAccessDeniedException;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietDetailNotFoundException;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietFoodNotFoundException;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.MissingDietUserIdException;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
-import MeowMeowPunch.pickeat.global.common.dto.response.RecommendedDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.SummaryInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.TodayDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.WeeklyCaloriesInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.WeeklyCaloriesInfo;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import lombok.RequiredArgsConstructor;
 
@@ -48,13 +55,13 @@ public class DietService {
 	private final DietFoodRepository dietFoodRepository;
 	private final FoodRepository foodRepository;
 
-	// 홈 페이지 조회 (오늘 기준)
+	// 메인 페이지 조회 (오늘 기준)
 	public DietHomeResponse getHome(String userId) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
 		}
 		Focus focus = Focus.BALANCE; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
-		LocalDate todayDate = LocalDate.now();
+		LocalDate todayDate = LocalDate.now(KOREA_ZONE);
 
 		// 오늘 섭취 합계 (쿼리 1회)
 		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, todayDate);
@@ -68,7 +75,7 @@ public class DietService {
 		// TODO: AI 연결 예정
 		AiFeedBack aiFeedBack = AiFeedBack.of(
 			"AI 피드백은 준비 중입니다.",
-			LocalDateTime.now().withNano(0).toString()
+			LocalDateTime.now(KOREA_ZONE).withNano(0).toString()
 		);
 
 		List<RecommendedDietInfo> recommended = recommendedCandidates.stream()
@@ -77,7 +84,7 @@ public class DietService {
 				c.foodId(),
 				c.name(),
 				mealSlot(LocalTime.now(KOREA_ZONE)).name(),
-				c.thumbnailUrl(),
+				toThumbnailList(c.thumbnailUrl()),
 				toInt(c.kcal())
 			))
 			.toList();
@@ -102,16 +109,41 @@ public class DietService {
 			targetDate.atStartOfDay().toString()
 		);
 
-		List<TodayDietInfo> todayDietInfo = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate)
-			.stream()
-			.map(DietPageAssembler::toTodayDietInfo)
+		// 오늘의 식단 - 시간순으로 정렬
+		List<Diet> diets = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate);
+		List<Long> dietIds = diets.stream()
+			.map(Diet::getId)
 			.toList();
 
-		LocalDate today = LocalDate.now();
-		LocalDate end = targetDate.isAfter(today) ? today : targetDate;
-		LocalDate start = end.minusDays(6);
-		var calorieSums = dietRecommendationMapper.findDailyCalories(userId, start, end);
-		List<WeeklyCaloriesInfo> weeklyCaloriesInfo = buildWeeklyCalories(calorieSums, start);
+		Map<Long, List<DietFood>> dietFoodsByDietId = dietIds.isEmpty()
+			? Map.of()
+			: dietFoodRepository.findAllByDietIdIn(dietIds).stream()
+			.collect(Collectors.groupingBy(DietFood::getDietId));
+
+		List<Long> foodIds = dietFoodsByDietId.values().stream()
+			.flatMap(List::stream)
+			.map(DietFood::getFoodId)
+			.distinct()
+			.toList();
+
+		Map<Long, Food> foodById = foodRepository.findAllById(foodIds).stream()
+			.collect(Collectors.toMap(Food::getId, Function.identity()));
+		validateFoodsExist(foodIds, foodById);
+
+		Map<Long, List<String>> thumbnailsByDietId = DietPageAssembler.buildThumbnailsByDiet(dietFoodsByDietId,
+			foodById);
+
+		List<TodayDietInfo> todayDietInfo = diets.stream()
+			.map(diet -> DietPageAssembler.toTodayDietInfo(
+				diet,
+				thumbnailsByDietId.getOrDefault(diet.getId(), List.of())
+			))
+			.toList();
+
+		LocalDate weekStart = targetDate.with(DayOfWeek.MONDAY);
+		LocalDate weekEnd = weekStart.plusDays(6);
+		var calorieSums = dietRecommendationMapper.findDailyCalories(userId, weekStart, weekEnd);
+		List<WeeklyCaloriesInfo> weeklyCaloriesInfo = buildWeeklyCalories(calorieSums, weekStart);
 
 		return DailyDietResponse.of(
 			targetDate.toString(),
@@ -122,29 +154,60 @@ public class DietService {
 		);
 	}
 
-	@Transactional
-	public void create(String userId, DietCreateRequest request) {
+	// 식단 상세 조회
+	public DietDetailResponse getDetail(String userId, Long dietId) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
 		}
+
+		Diet diet = dietRepository.findById(dietId)
+			.orElseThrow(() -> new DietDetailNotFoundException(dietId));
+
+		List<DietFood> dietFoods = dietFoodRepository.findAllByDietId(diet.getId());
+		if (dietFoods.isEmpty()) {
+			throw new DietFoodNotFoundException(diet.getId());
+		}
+
+		List<Long> foodIds = dietFoods.stream()
+			.map(DietFood::getFoodId)
+			.toList();
+
+		Map<Long, Food> foodById = foodRepository.findAllById(foodIds).stream()
+			.collect(Collectors.toMap(Food::getId, Function.identity()));
+		validateFoodsExist(foodIds, foodById);
+
+		DietInfo dietInfo = DietPageAssembler.toDietInfo(diet, dietFoods, foodById);
+		return DietDetailResponse.from(dietInfo);
+	}
+
+	// 특정 날짜의 상세 영양분 조회
+	public NutritionResponse getNutrition(String userId, String rawDate) {
+		if (!StringUtils.hasText(userId)) {
+			throw new MissingDietUserIdException();
+		}
+
+		LocalDate targetDate = parseDateOrToday(rawDate);
+		List<Diet> diets = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate);
+
+		return NutritionResponse.from(DietPageAssembler.buildNutritionInfo(diets));
+	}
+
+	// 식단 등록
+	@Transactional
+	public void create(String userId, DietRequest request) {
+		if (!StringUtils.hasText(userId)) {
+			throw new MissingDietUserIdException();
+		}
+
 		LocalDate date = parseDateOrToday(request.date());
 		LocalTime time = parseTime(request.time());
 
-		List<Long> requestedFoodIds = request.foods().stream()
-			.map(DietCreateRequest.FoodQuantity::foodId)
-			.toList();
-
-		// 음식 id 검증
-		Map<Long, Food> foodById = foodRepository.findAllById(requestedFoodIds).stream()
-			.collect(Collectors.toMap(Food::getId, Function.identity()));
-		validateFoodsExist(requestedFoodIds, foodById);
-
-		// 추가한 음식들을 하나의 식단으로 집계
-		DietAggregation aggregation = aggregateFoods(request.foods(), foodById);
+		DietAggregation aggregation = prepareAggregation(request);
 
 		Diet diet = Diet.createUserInput(
 			userId,
 			request.mealType(),
+			request.sourceType(),
 			date,
 			time,
 			aggregation
@@ -152,14 +215,88 @@ public class DietService {
 
 		Diet saved = dietRepository.save(diet);
 
-		// DietFood 테이블에 quantity 저장
-		List<DietFood> dietFoods = request.foods().stream()
+		List<DietFood> dietFoods = buildDietFoods(saved.getId(), request);
+		dietFoodRepository.saveAll(dietFoods);
+	}
+
+	// 식단 수정
+	@Transactional
+	public void update(String userId, Long dietId, DietRequest request) {
+		if (!StringUtils.hasText(userId)) {
+			throw new MissingDietUserIdException();
+		}
+
+		Diet diet = dietRepository.findById(dietId)
+			.orElseThrow(() -> new DietNotFoundException(dietId));
+
+		if (!diet.getUserId().equals(userId)) {
+			throw new DietAccessDeniedException(dietId);
+		}
+
+		LocalDate date = parseDateOrToday(request.date());
+		LocalTime time = parseTime(request.time());
+
+		DietAggregation aggregation = prepareAggregation(request);
+
+		diet.updateUserInput(
+			request.mealType(),
+			request.sourceType(),
+			date,
+			time,
+			aggregation
+		);
+
+		dietFoodRepository.deleteAllByDietId(dietId);
+		List<DietFood> dietFoods = buildDietFoods(dietId, request);
+		dietFoodRepository.saveAll(dietFoods);
+	}
+
+	// 식단 삭제
+	@Transactional
+	public void delete(String userId, Long dietId) {
+		if (!StringUtils.hasText(userId)) {
+			throw new MissingDietUserIdException();
+		}
+
+		Diet diet = dietRepository.findById(dietId)
+			.orElseThrow(() -> new DietNotFoundException(dietId));
+
+		if (!diet.getUserId().equals(userId)) {
+			throw new DietAccessDeniedException(dietId);
+		}
+
+		dietFoodRepository.deleteAllByDietId(dietId);
+		dietRepository.delete(diet);
+	}
+
+	// 식단 추가/수정을 위한 집계 사전 작업
+	private DietAggregation prepareAggregation(DietRequest request) {
+		List<Long> requestedFoodIds = request.foods().stream()
+			.map(DietRequest.FoodQuantity::foodId)
+			.toList();
+
+		Map<Long, Food> foodById = foodRepository.findAllById(requestedFoodIds).stream()
+			.collect(Collectors.toMap(Food::getId, Function.identity()));
+		validateFoodsExist(requestedFoodIds, foodById);
+
+		return aggregateFoods(request.foods(), foodById);
+	}
+
+	// 식단 추가/수정을 위한 식단-음식 중간 테이블 필드 생성
+	private List<DietFood> buildDietFoods(Long dietId, DietRequest request) {
+		return request.foods().stream()
 			.map(f -> DietFood.builder()
-				.dietId(saved.getId())
+				.dietId(dietId)
 				.foodId(f.foodId())
 				.quantity(toQuantity(f.quantity()))
 				.build())
 			.toList();
-		dietFoodRepository.saveAll(dietFoods);
+	}
+
+	private List<String> toThumbnailList(String thumbnailUrl) {
+		if (!StringUtils.hasText(thumbnailUrl)) {
+			return List.of();
+		}
+		return List.of(thumbnailUrl);
 	}
 }

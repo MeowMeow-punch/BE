@@ -5,7 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import MeowMeowPunch.pickeat.global.common.dto.response.FoodSummary;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodSummary;
 
 @Mapper
 public interface FoodMapper {

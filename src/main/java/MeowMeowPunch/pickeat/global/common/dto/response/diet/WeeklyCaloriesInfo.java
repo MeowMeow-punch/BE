@@ -1,4 +1,4 @@
-package MeowMeowPunch.pickeat.global.common.dto.response;
+package MeowMeowPunch.pickeat.global.common.dto.response.diet;
 
 public record WeeklyCaloriesInfo(
 	String day,

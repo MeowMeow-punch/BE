@@ -11,6 +11,7 @@ public record FoodRecommendationCandidate(
 	BigDecimal carbs,
 	BigDecimal protein,
 	BigDecimal fat,
+	String category,
 	double score
 ) {
 }

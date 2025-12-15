@@ -1,9 +1,9 @@
-package MeowMeowPunch.pickeat.global.common.dto.response;
+package MeowMeowPunch.pickeat.global.common.dto.response.diet;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
+import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 
 // Food 엔티티/조회 DTO 를 API 응답용 FoodItem 으로 변환하는 매퍼
 public final class FoodDtoMapper {
@@ -14,7 +14,7 @@ public final class FoodDtoMapper {
 		return FoodItem.of(
 			summary.id(),
 			summary.name(),
-			formatAmount(summary.baseAmount(), summary.baseUnit()),
+			toAmount(summary.baseAmount()),
 			toInt(summary.kcal()),
 			Nutrients.of(
 				toInt(summary.carbs()),
@@ -25,11 +25,26 @@ public final class FoodDtoMapper {
 		);
 	}
 
-	private static String formatAmount(Integer amount, FoodBaseUnit unit) {
-		if (amount == null || unit == null) {
-			return "";
+	public static FoodItem toFoodItem(Food food) {
+		return FoodItem.of(
+			food.getId(),
+			food.getName(),
+			toAmount(food.getBaseAmount()),
+			toInt(food.getKcal()),
+			Nutrients.of(
+				toInt(food.getCarbs()),
+				toInt(food.getProtein()),
+				toInt(food.getFat())
+			),
+			food.getThumbnailUrl()
+		);
+	}
+
+	private static int toAmount(Integer amount) {
+		if (amount == null) {
+			return 0;
 		}
-		return amount + unit.name();
+		return amount;
 	}
 
 	private static int toInt(BigDecimal value) {
