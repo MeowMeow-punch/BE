@@ -100,8 +100,7 @@ public class WelstoryClient {
 		Supplier<HttpResult<WelstoryResponse<T>>> caller) {
 		for (int attempt = 0; attempt < 2; attempt++) {
 			HttpResult<WelstoryResponse<T>> res = caller.get();
-			boolean emptyBody = res.text() == null || res.text().isBlank();
-			if (!isAuthFailure(res.status()) && !emptyBody) {
+			if (!isAuthFailure(res.status())) {
 				return res;
 			}
 			// 첫 호출이 401/403이면 재로그인 후 한 번 더 시도
