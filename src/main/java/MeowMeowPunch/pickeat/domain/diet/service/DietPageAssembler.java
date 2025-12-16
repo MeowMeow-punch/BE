@@ -84,18 +84,17 @@ public final class DietPageAssembler {
 
 	// 시간대별 DietType 반환
 	public static DietType mealSlot(LocalTime now) {
-		// int hour = now.getHour();
-		// if (hour >= 4 && hour < 10) {
-		// 	return DietType.BREAKFAST;
-		// }
-		// if (hour >= 10 && hour < 15) {
-		// 	return DietType.LUNCH;
-		// }
-		// if (hour >= 15 && hour < 21) {
-		// 	return DietType.DINNER;
-		// }
-		// return DietType.SNACK;
-		return DietType.LUNCH;
+		int hour = now.getHour();
+		if (hour >= 4 && hour < 10) {
+			return DietType.BREAKFAST;
+		}
+		if (hour >= 10 && hour < 15) {
+			return DietType.LUNCH;
+		}
+		if (hour >= 15 && hour < 21) {
+			return DietType.DINNER;
+		}
+		return DietType.SNACK;
 	}
 
 	// SummaryInfo 응답 생성

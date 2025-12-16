@@ -11,9 +11,10 @@ public final class Endpoints {
 
 	// 특정 날짜·식사시간대의 식단 목록 URI 생성
 	public static String listMeal(int dateYyyymmdd, String mealTimeId, String restaurantId) {
-		return "/api/meal?menuDt=" + dateYyyymmdd +
-			"&menuMealType=" + mealTimeId +
-			"&restaurantCode=" + restaurantId;
+		return org.springframework.web.util.UriComponentsBuilder.fromPath("/api/meal")
+			.queryParam("menuDt", dateYyyymmdd)
+			.queryParam("menuMealType", mealTimeId)
+			.queryParam("restaurantCode", restaurantId).toUriString();
 	}
 
 	// 특정 식단의 영양 정보 URI 생성

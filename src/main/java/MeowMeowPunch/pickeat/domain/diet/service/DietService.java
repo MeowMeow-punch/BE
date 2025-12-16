@@ -48,6 +48,8 @@ import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.WeeklyCaloriesInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationDetailResponse;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationInfo;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import lombok.RequiredArgsConstructor;
 
@@ -90,7 +92,7 @@ public class DietService {
 		List<RecommendedDietInfo> recommended = recommendedCandidates.stream()
 			.limit(2)
 			.map(c -> RecommendedDietInfo.of(
-				c.foodId(),
+				c.foodId(), // 여기서는 FoodRecommendationCandidate.foodId에 RecommendedDiet ID가 담겨옴
 				c.name(),
 				mealSlot(LocalTime.now(KOREA_ZONE)).name(),
 				toThumbnailList(c.thumbnailUrl()),
@@ -202,7 +204,7 @@ public class DietService {
 	}
 
 	// 추천 식단 상세 조회 (수정 진입용)
-	public DietDetailResponse getRecommendedDetail(String userId, Long recommendationId) {
+	public RecommendationDetailResponse getRecommendedDetail(String userId, Long recommendationId) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
 		}
@@ -243,14 +245,14 @@ public class DietService {
 			throw new DietFoodNotFoundException(recommendationId);
 		}
 
-		DietInfo dietInfo = DietInfo.of(
+		RecommendationInfo info = RecommendationInfo.of(
 			recommended.getId(),
 			recommended.getDietType().name(),
 			"", // 추천 식단에는 time 정보 없음
 			recommended.getDate().toString(),
 			items
 		);
-		return DietDetailResponse.from(dietInfo);
+		return RecommendationDetailResponse.from(info);
 	}
 
 	// 식단 등록

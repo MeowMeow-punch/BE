@@ -20,8 +20,8 @@ import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDietFood;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietRecommendationSaveException;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
-import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
+import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
@@ -41,7 +41,8 @@ public class DietRecommendationService {
 	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 기준
 	private static final String BASE_UNIT_GRAM = "G";
 	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
-
+	private static final String WELSTORY_LUNCH_ID = "2";
+	private static final String WELSTORY_LUNCH_NAME = "점심";
 	// 임시 목표값 (추후 사용자 정보 기반 계산)
 	private static final BigDecimal GOAL_KCAL = BigDecimal.valueOf(2000);
 	private static final BigDecimal GOAL_CARBS = BigDecimal.valueOf(280);
@@ -92,11 +93,11 @@ public class DietRecommendationService {
 			List<FoodRecommendationCandidate> groupLunch = recommendWelstoryLunch(today, purposeType, totals);
 			if (!groupLunch.isEmpty()) {
 				try {
-					saveTopRecommended(userId, today, mealSlot, groupLunch);
+					List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot, groupLunch);
+					return saved.stream().map(this::toCandidate).toList();
 				} catch (Exception e) {
 					throw new DietRecommendationSaveException(e);
 				}
-				return groupLunch;
 			}
 		}
 
@@ -130,12 +131,12 @@ public class DietRecommendationService {
 
 		// TODO: AI 선택 연동 후 결과 개수(1~2)에 맞게 저장하도록 수정
 		try {
-			saveTopRecommended(userId, today, mealSlot, candidates.stream().limit(MAX_PICK).toList());
+			List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot,
+				candidates.stream().limit(MAX_PICK).toList());
+			return saved.stream().map(this::toCandidate).toList();
 		} catch (Exception e) {
 			throw new DietRecommendationSaveException(e);
 		}
-
-		return candidates;
 	}
 
 	private List<FoodRecommendationCandidate> recommendWelstoryLunch(LocalDate targetDate, Focus focus,
@@ -148,11 +149,9 @@ public class DietRecommendationService {
 		}
 
 		int dateYyyymmdd = toYyyymmdd(targetDate);
-		String mealTimeId = "2"; // 점심
-		String mealTimeName = "점심";
 
 		List<FoodRecommendationCandidate> menus = welstoryMenuService.getRecommendationCandidates(
-			restaurantId, dateYyyymmdd, mealTimeId, mealTimeName);
+			restaurantId, dateYyyymmdd, WELSTORY_LUNCH_ID, WELSTORY_LUNCH_NAME);
 		if (menus.isEmpty()) {
 			return List.of();
 		}
@@ -210,23 +209,24 @@ public class DietRecommendationService {
 	}
 
 	// RecommendedDiet 테이블에 저장
-	private void saveTopRecommended(String userId, LocalDate date, DietType dietType,
+	private List<RecommendedDiet> saveTopRecommended(String userId, LocalDate date, DietType dietType,
 		List<FoodRecommendationCandidate> picks) {
-		for (FoodRecommendationCandidate c : picks) {
+		return picks.stream().map(c -> {
 			Long foodId = resolveFoodId(c);
-			RecommendedDiet entity = RecommendedDiet.builder()
-				.userId(userId)
-				.foodId(foodId)
-				.dietType(dietType)
-				.date(date)
-				.title(c.name())
-				.kcal(nullSafe(c.kcal()))
-				.carbs(nullSafe(c.carbs()))
-				.protein(nullSafe(c.protein()))
-				.fat(nullSafe(c.fat()))
-				.thumbnailUrl(c.thumbnailUrl())
-				.build();
-			RecommendedDiet saved = recommendedDietRepository.save(entity);
+			RecommendedDiet saved = recommendedDietRepository.save(
+				RecommendedDiet.builder()
+					.userId(userId)
+					.foodId(foodId)
+					.dietType(dietType)
+					.date(date)
+					.title(c.name())
+					.kcal(nullSafe(c.kcal()))
+					.carbs(nullSafe(c.carbs()))
+					.protein(nullSafe(c.protein()))
+					.fat(nullSafe(c.fat()))
+					.thumbnailUrl(c.thumbnailUrl())
+					.build()
+			);
 			recommendedDietFoodRepository.save(
 				RecommendedDietFood.builder()
 					.recommendedDiet(saved)
@@ -234,7 +234,8 @@ public class DietRecommendationService {
 					.quantity(1)
 					.build()
 			);
-		}
+			return saved;
+		}).toList();
 	}
 
 	private Long resolveFoodId(FoodRecommendationCandidate c) {
@@ -329,7 +330,7 @@ public class DietRecommendationService {
 	// DB에 저장된 추천을 응답용 후보로 변환
 	private FoodRecommendationCandidate toCandidate(RecommendedDiet r) {
 		return new FoodRecommendationCandidate(
-			r.getFoodId(),
+			r.getId(), // dietId를 candidate의 id 슬롯으로 전달해 DietService에서 사용
 			r.getTitle(),
 			r.getThumbnailUrl(),
 			nullSafe(r.getKcal()),

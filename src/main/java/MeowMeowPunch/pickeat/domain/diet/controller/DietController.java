@@ -16,6 +16,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationDetailResponse;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -79,11 +80,11 @@ public class DietController {
 
 	// 추천 식단 상세 조회 (수정 진입용)
 	@GetMapping("/recommendation/{recommendationId}")
-	public ResTemplate<DietDetailResponse> getRecommendedDietDetail(
+	public ResTemplate<RecommendationDetailResponse> getRecommendedDietDetail(
 		@RequestParam(name = "userId") String userId,
 		@PathVariable("recommendationId") Long recommendationId
 	) {
-		DietDetailResponse data = dietService.getRecommendedDetail(userId, recommendationId);
+		RecommendationDetailResponse data = dietService.getRecommendedDetail(userId, recommendationId);
 		return ResTemplate.success(HttpStatus.OK, "추천 식단 조회 성공", data);
 	}
 
