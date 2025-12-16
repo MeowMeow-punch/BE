@@ -30,13 +30,13 @@ public class Food extends BaseEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "food_code", length = 50, nullable = false, unique = true)
+	@Column(name = "food_code", length = 50, nullable = true, unique = true)
 	private String foodCode;
 
-	@Column(name = "name", length = 200, nullable = false)
+	@Column(name = "name", length = 200, nullable = false, unique = true)
 	private String name;
 
-	@Column(name = "category", length = 50, nullable = false)
+	@Column(name = "category", length = 50)
 	private String category;
 
 	@Column(name = "base_amount", nullable = false)

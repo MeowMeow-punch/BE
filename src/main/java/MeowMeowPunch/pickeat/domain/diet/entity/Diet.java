@@ -6,7 +6,6 @@ import java.time.LocalTime;
 
 import MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler.DietAggregation;
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
-import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -54,11 +53,6 @@ public class Diet extends BaseEntity {
 	@Column(name = "thumbnail_url", length = 500)
 	private String thumbnailUrl;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "source_type", nullable = false)
-	@Builder.Default
-	private DietSourceType sourceType = DietSourceType.USERINPUT;
-
 	@Column(name = "kcal", precision = 8, scale = 2, nullable = false)
 	private BigDecimal kcal;
 
@@ -99,7 +93,6 @@ public class Diet extends BaseEntity {
 	public static Diet createUserInput(
 		String userId,
 		DietType status,
-		DietSourceType sourceType,
 		LocalDate date,
 		LocalTime time,
 		DietAggregation aggregation
@@ -111,7 +104,6 @@ public class Diet extends BaseEntity {
 			.date(date)
 			.time(time)
 			.thumbnailUrl(aggregation.thumbnailUrl())
-			.sourceType(sourceType)
 			.kcal(aggregation.kcal())
 			.carbs(aggregation.carbs())
 			.protein(aggregation.protein())
@@ -130,7 +122,6 @@ public class Diet extends BaseEntity {
 	// 사용자 입력 식단 수정용 메서드
 	public void updateUserInput(
 		DietType status,
-		DietSourceType sourceType,
 		LocalDate date,
 		LocalTime time,
 		DietAggregation aggregation
@@ -140,7 +131,6 @@ public class Diet extends BaseEntity {
 		this.date = date;
 		this.time = time;
 		this.thumbnailUrl = aggregation.thumbnailUrl();
-		this.sourceType = sourceType;
 		this.kcal = aggregation.kcal();
 		this.carbs = aggregation.carbs();
 		this.protein = aggregation.protein();
