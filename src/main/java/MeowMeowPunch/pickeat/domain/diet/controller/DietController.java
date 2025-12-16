@@ -77,6 +77,16 @@ public class DietController {
 		return ResTemplate.success(HttpStatus.OK, "식단 수정 성공");
 	}
 
+	// 추천 식단 상세 조회 (수정 진입용)
+	@GetMapping("/recommendation/{recommendationId}")
+	public ResTemplate<DietDetailResponse> getRecommendedDietDetail(
+		@RequestParam(name = "userId") String userId,
+		@PathVariable("recommendationId") Long recommendationId
+	) {
+		DietDetailResponse data = dietService.getRecommendedDetail(userId, recommendationId);
+		return ResTemplate.success(HttpStatus.OK, "추천 식단 조회 성공", data);
+	}
+
 	// 식단 삭제
 	@DeleteMapping("/{myDietId}")
 	public ResTemplate<Void> deleteDiet(

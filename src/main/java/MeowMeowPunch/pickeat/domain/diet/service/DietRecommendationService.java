@@ -14,14 +14,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
+import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
+import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDietFood;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietRecommendationSaveException;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
+import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
+import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
+import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
 import MeowMeowPunch.pickeat.global.common.enums.MainMealCategory;
 import MeowMeowPunch.pickeat.global.common.enums.SnackCategory;
+import MeowMeowPunch.pickeat.welstory.entity.RestaurantMapping;
+import MeowMeowPunch.pickeat.welstory.repository.RestaurantMappingRepository;
+import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -48,6 +56,14 @@ public class DietRecommendationService {
 
 	private final DietRecommendationMapper dietRecommendationMapper;
 	private final RecommendedDietRepository recommendedDietRepository;
+	private final RecommendedDietFoodRepository recommendedDietFoodRepository;
+	private final FoodRepository foodRepository;
+	private final RestaurantMappingRepository restaurantMappingRepository;
+	private final WelstoryMenuService welstoryMenuService;
+
+	// TODO: User 테이블 연동 시 제거 예정 (임시 Group 여부/식당명)
+	private final UserStatus mockUserStatus = UserStatus.GROUP;
+	private final String mockRestaurantName = "전기부산";
 
 	/**
 	 * 오늘 날짜와 현재 식사 시간대에 맞춰 추천 TOP5를 산출한다.
@@ -72,6 +88,18 @@ public class DietRecommendationService {
 				.toList();
 		}
 
+		if (isGroupUser(userId) && mealSlot == DietType.LUNCH) {
+			List<FoodRecommendationCandidate> groupLunch = recommendWelstoryLunch(today, purposeType, totals);
+			if (!groupLunch.isEmpty()) {
+				try {
+					saveTopRecommended(userId, today, mealSlot, groupLunch);
+				} catch (Exception e) {
+					throw new DietRecommendationSaveException(e);
+				}
+				return groupLunch;
+			}
+		}
+
 		// 1) 끼니별 목표 영양분 계산
 		BigDecimal targetMealKcal = targetForMeal(GOAL_KCAL, totals.totalKcal(), mealSlot);
 		BigDecimal targetMealCarbs = targetMacroForMeal(GOAL_CARBS, totals.totalCarbs(), mealSlot);
@@ -89,12 +117,12 @@ public class DietRecommendationService {
 			targetMealProtein,
 			targetMealFat,
 			allowedCategories,
-			weight.kcal,
-			weight.carbs,
-			weight.protein,
-			weight.fat,
-			weight.penaltyOverKcal,
-			weight.penaltyOverMacro,
+			weight.kcal(),
+			weight.carbs(),
+			weight.protein(),
+			weight.fat(),
+			weight.penaltyOverKcal(),
+			weight.penaltyOverMacro(),
 			KCAL_TOLERANCE,
 			BASE_UNIT_GRAM,
 			TOP_LIMIT
@@ -110,13 +138,85 @@ public class DietRecommendationService {
 		return candidates;
 	}
 
+	private List<FoodRecommendationCandidate> recommendWelstoryLunch(LocalDate targetDate, Focus focus,
+		NutrientTotals totals) {
+		String restaurantId = restaurantMappingRepository.findByRestaurantName(mockRestaurantName)
+			.map(RestaurantMapping::getRestaurantId)
+			.orElse(null);
+		if (restaurantId == null) {
+			return List.of();
+		}
+
+		int dateYyyymmdd = toYyyymmdd(targetDate);
+		String mealTimeId = "2"; // 점심
+		String mealTimeName = "점심";
+
+		List<FoodRecommendationCandidate> menus = welstoryMenuService.getRecommendationCandidates(
+			restaurantId, dateYyyymmdd, mealTimeId, mealTimeName);
+		if (menus.isEmpty()) {
+			return List.of();
+		}
+
+		// 목표 영양 기반으로 점수화 후 상위 2개 선택
+		BigDecimal targetMealKcal = targetForMeal(GOAL_KCAL, totals.totalKcal(), DietType.LUNCH);
+		BigDecimal targetMealCarbs = targetMacroForMeal(GOAL_CARBS, totals.totalCarbs(), DietType.LUNCH);
+		BigDecimal targetMealProtein = targetMacroForMeal(GOAL_PROTEIN, totals.totalProtein(), DietType.LUNCH);
+		BigDecimal targetMealFat = targetMacroForMeal(GOAL_FAT, totals.totalFat(), DietType.LUNCH);
+		Weight weight = weightByPurpose(focus);
+
+		return menus.stream()
+			.map(m -> scoreCandidate(m, targetMealKcal, targetMealCarbs, targetMealProtein, targetMealFat, weight))
+			.sorted((a, b) -> Double.compare(b.score(), a.score()))
+			.limit(MAX_PICK)
+			.toList();
+	}
+
+	private FoodRecommendationCandidate scoreCandidate(FoodRecommendationCandidate c, BigDecimal targetKcal,
+		BigDecimal targetCarb, BigDecimal targetProtein, BigDecimal targetFat, Weight weight) {
+		double kcalDiff = diff(c.kcal(), targetKcal) * weight.kcal();
+		double carbDiff = diff(c.carbs(), targetCarb) * weight.carbs();
+		double proteinDiff = diff(c.protein(), targetProtein) * weight.protein();
+		double fatDiff = diff(c.fat(), targetFat) * weight.fat();
+
+		double penalty = kcalDiff + carbDiff + proteinDiff + fatDiff;
+		double score = -penalty; // 차이가 작을수록 높은 점수
+
+		return new FoodRecommendationCandidate(
+			c.foodId(),
+			c.name(),
+			c.thumbnailUrl(),
+			c.kcal(),
+			c.carbs(),
+			c.protein(),
+			c.fat(),
+			c.category(),
+			score
+		);
+	}
+
+	private double diff(BigDecimal value, BigDecimal target) {
+		if (value == null || target == null) {
+			return Double.MAX_VALUE / 4;
+		}
+		return value.subtract(target).abs().doubleValue();
+	}
+
+	private boolean isGroupUser(String userId) {
+		return mockUserStatus == UserStatus.GROUP;
+	}
+
+	private int toYyyymmdd(LocalDate date) {
+		return date.getYear() * 10000 + date.getMonthValue() * 100 + date.getDayOfMonth();
+	}
+
 	// RecommendedDiet 테이블에 저장
 	private void saveTopRecommended(String userId, LocalDate date, DietType dietType,
 		List<FoodRecommendationCandidate> picks) {
 		for (FoodRecommendationCandidate c : picks) {
+			Long foodId = resolveFoodId(c);
 			RecommendedDiet entity = RecommendedDiet.builder()
 				.userId(userId)
-				.foodId(c.foodId())
+				.foodId(foodId)
 				.dietType(dietType)
 				.date(date)
 				.title(c.name())
@@ -126,8 +226,50 @@ public class DietRecommendationService {
 				.fat(nullSafe(c.fat()))
 				.thumbnailUrl(c.thumbnailUrl())
 				.build();
-			recommendedDietRepository.save(entity);
+			RecommendedDiet saved = recommendedDietRepository.save(entity);
+			recommendedDietFoodRepository.save(
+				RecommendedDietFood.builder()
+					.recommendedDiet(saved)
+					.foodId(foodId)
+					.quantity(1)
+					.build()
+			);
 		}
+	}
+
+	private Long resolveFoodId(FoodRecommendationCandidate c) {
+		if (c.foodId() != null && c.foodId() > 0) {
+			return c.foodId();
+		}
+		Food existing = foodRepository.findByName(c.name());
+		if (existing != null) {
+			return existing.getId();
+		}
+		Food created = foodRepository.save(
+			Food.builder()
+				.foodCode(null)
+				.name(c.name())
+				.category(null)
+				.baseAmount(200)
+				.baseUnit(FoodBaseUnit.G)
+				.servingSize(null)
+				.servingDesc(null)
+				.kcal(nullSafe(c.kcal()))
+				.carbs(nullSafe(c.carbs()))
+				.protein(nullSafe(c.protein()))
+				.fat(nullSafe(c.fat()))
+				.sugar(BigDecimal.ZERO)
+				.dietaryFiber(BigDecimal.ZERO)
+				.vitA(BigDecimal.ZERO)
+				.vitC(BigDecimal.ZERO)
+				.vitD(BigDecimal.ZERO)
+				.calcium(BigDecimal.ZERO)
+				.iron(BigDecimal.ZERO)
+				.sodium(BigDecimal.ZERO)
+				.thumbnailUrl(c.thumbnailUrl() == null ? "" : c.thumbnailUrl())
+				.build()
+		);
+		return created.getId();
 	}
 
 	// 한 끼 타겟 산출 (음수 방지)
@@ -208,5 +350,9 @@ public class DietRecommendationService {
 		double penaltyOverKcal,
 		double penaltyOverMacro
 	) {
+	}
+
+	private enum UserStatus {
+		SINGLE, GROUP
 	}
 }

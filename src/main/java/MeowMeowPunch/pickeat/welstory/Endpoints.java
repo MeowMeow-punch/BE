@@ -1,32 +1,22 @@
 package MeowMeowPunch.pickeat.welstory;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
+// Welstory API 엔드포인트/쿼리 문자열을 조립하는 유틸
 public final class Endpoints {
 	private Endpoints() {
 	}
 
 	public static final String LOGIN = "/login";
-	public static final String SESSION_REFRESH = "/session";
-
-	public static String searchRestaurant(String query) {
-		return "/api/mypage/rest-list?restaurantName=" +
-			URLEncoder.encode(query, StandardCharsets.UTF_8);
-	}
-
-	public static final String LIST_MY_RESTAURANT = "/api/mypage/rest-my-list";
-	public static final String REGISTER_MY_RESTAURANT = "/api/mypage/rest-regi";
-	public static final String DELETE_MY_RESTAURANT = "/api/mypage/rest-delete";
 
 	public static final String LIST_MEAL_TIME = "/api/menu/getMealTimeList";
 
+	// 특정 날짜·식사시간대의 식단 목록 URI 생성
 	public static String listMeal(int dateYyyymmdd, String mealTimeId, String restaurantId) {
 		return "/api/meal?menuDt=" + dateYyyymmdd +
 			"&menuMealType=" + mealTimeId +
 			"&restaurantCode=" + restaurantId;
 	}
 
+	// 특정 식단의 영양 정보 URI 생성
 	public static String listMealNutrient(
 		int dateYyyymmdd,
 		String mealTimeId,

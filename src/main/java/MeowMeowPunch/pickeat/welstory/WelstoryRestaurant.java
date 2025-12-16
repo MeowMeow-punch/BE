@@ -5,9 +5,10 @@ import java.util.Map;
 
 import org.springframework.core.ParameterizedTypeReference;
 
-import MeowMeowPunch.pickeat.welstory.api.ApiTypes;
-import MeowMeowPunch.pickeat.welstory.api.WelstoryResponse;
+import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
+import MeowMeowPunch.pickeat.welstory.dto.WelstoryResponse;
 
+// 식당 단위로 식사 시간대/식단 목록을 조회하는 Welstory 래퍼
 public class WelstoryRestaurant {
 
 	private final WelstoryClient client;

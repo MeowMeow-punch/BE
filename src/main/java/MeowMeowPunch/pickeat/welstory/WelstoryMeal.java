@@ -5,9 +5,10 @@ import java.util.Map;
 
 import org.springframework.core.ParameterizedTypeReference;
 
-import MeowMeowPunch.pickeat.welstory.api.ApiTypes;
-import MeowMeowPunch.pickeat.welstory.api.WelstoryResponse;
+import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
+import MeowMeowPunch.pickeat.welstory.dto.WelstoryResponse;
 
+// 단일 식사(식당/날짜/시간대/홀/코스)에 대한 영양 정보를 조회하는 래퍼
 public class WelstoryMeal {
 
 	private final WelstoryClient client;
@@ -38,7 +39,8 @@ public class WelstoryMeal {
 
 		var res = client.callWithRetry(
 			() -> client.http().get(
-				Endpoints.listMealNutrient(dateYyyymmdd, normalizedMealTimeId, normalizedHallNo, normalizedMenuCourseType,
+				Endpoints.listMealNutrient(dateYyyymmdd, normalizedMealTimeId, normalizedHallNo,
+					normalizedMenuCourseType,
 					restaurantId),
 				Map.of("Cookie", "cafeteriaActiveId=" + restaurantId),
 				new ParameterizedTypeReference<WelstoryResponse<List<ApiTypes.RawMealMenuData>>>() {

@@ -1,6 +1,6 @@
 package MeowMeowPunch.pickeat.welstory.dto;
 
-// 웰스토리 식단 항목 DTO (사진 URL 조합 포함)
+// 웰스토리 식단 항목 DTO (image URL 조합 포함)
 public record WelstoryMenuItem(
 	String restaurantId,
 	int dateYyyymmdd,

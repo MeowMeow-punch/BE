@@ -4,16 +4,15 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
 import MeowMeowPunch.pickeat.welstory.WelstoryClient;
 import MeowMeowPunch.pickeat.welstory.WelstoryMeal;
 import MeowMeowPunch.pickeat.welstory.WelstoryRestaurant;
-import MeowMeowPunch.pickeat.welstory.api.ApiTypes;
+import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
 import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
-import MeowMeowPunch.pickeat.welstory.api.WelstoryResponse;
 
+// 캐시 없이 Welstory API를 직접 호출하는 게이트웨이 구현체
 @Component
 public class WelstoryMenuGatewayDirect implements WelstoryMenuGateway {
 	private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
