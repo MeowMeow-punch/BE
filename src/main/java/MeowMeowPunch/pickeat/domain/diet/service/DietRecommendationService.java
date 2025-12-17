@@ -219,6 +219,7 @@ public class DietRecommendationService {
 					.foodId(foodId)
 					.dietType(dietType)
 					.date(date)
+					.time(LocalTime.now(KOREA_ZONE))
 					.title(c.name())
 					.kcal(nullSafe(c.kcal()))
 					.carbs(nullSafe(c.carbs()))

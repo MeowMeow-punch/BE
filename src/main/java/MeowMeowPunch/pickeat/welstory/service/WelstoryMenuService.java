@@ -19,6 +19,14 @@ public class WelstoryMenuService {
 
 	private final WelstoryMenuGateway gateway;
 
+	// 웰스토리 식단 리스트 조회 (원본 포맷)
+	public List<WelstoryMenuItem> getMenus(String restaurantId, Integer dateYyyymmdd, String mealTimeId,
+		String mealTimeName) {
+		int targetDate = (dateYyyymmdd != null) ? dateYyyymmdd : 0;
+		String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : "2"; // 기본 점심
+		return gateway.getMeals(restaurantId, targetDate, timeId, mealTimeName);
+	}
+
 	// 웰스토리 식단+영양 정보를 추천 후보 DTO로 변환
 	public List<FoodRecommendationCandidate> getRecommendationCandidates(String restaurantId, Integer dateYyyymmdd,
 		String mealTimeId, String mealTimeName) {

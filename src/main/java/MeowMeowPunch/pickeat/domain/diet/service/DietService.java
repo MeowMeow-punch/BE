@@ -2,7 +2,7 @@ package MeowMeowPunch.pickeat.domain.diet.service;
 
 import static MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler.*;
 
-import java.time.DayOfWeek;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -10,6 +10,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.LinkedHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -44,13 +45,18 @@ import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietDetailItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodDtoMapper;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.Nutrients;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationDetailResponse;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.WeeklyCaloriesInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationDetailResponse;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
+import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
+import MeowMeowPunch.pickeat.welstory.entity.RestaurantMapping;
+import MeowMeowPunch.pickeat.welstory.repository.RestaurantMappingRepository;
+import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -65,6 +71,11 @@ public class DietService {
 	private final FoodRepository foodRepository;
 	private final RecommendedDietRepository recommendedDietRepository;
 	private final RecommendedDietFoodRepository recommendedDietFoodRepository;
+	private final WelstoryMenuService welstoryMenuService;
+	private final RestaurantMappingRepository restaurantMappingRepository;
+
+	// TODO: User 연동 시 제거 (임시 식당명)
+	private final String mockRestaurantName = "전기부산";
 
 	// 메인 페이지 조회 (오늘 기준)
 	public DietHomeResponse getHome(String userId) {
@@ -96,7 +107,12 @@ public class DietService {
 				c.name(),
 				mealSlot(LocalTime.now(KOREA_ZONE)).name(),
 				toThumbnailList(c.thumbnailUrl()),
-				toInt(c.kcal())
+				toInt(c.kcal()),
+				Nutrients.of(
+					toInt(c.carbs()),
+					toInt(c.protein()),
+					toInt(c.fat())
+				)
 			))
 			.toList();
 
@@ -151,17 +167,14 @@ public class DietService {
 			))
 			.toList();
 
-		LocalDate weekStart = targetDate.with(DayOfWeek.MONDAY);
-		LocalDate weekEnd = weekStart.plusDays(6);
-		var calorieSums = dietRecommendationMapper.findDailyCalories(userId, weekStart, weekEnd);
-		List<WeeklyCaloriesInfo> weeklyCaloriesInfo = buildWeeklyCalories(calorieSums, weekStart);
+		Map<String, List<TodayRestaurantMenuInfo>> todayRestaurantMenu = buildTodayRestaurantMenu(targetDate);
 
 		return DailyDietResponse.of(
 			targetDate.toString(),
 			summaryInfo,
 			aiFeedBack,
 			todayDietInfo,
-			weeklyCaloriesInfo
+			todayRestaurantMenu
 		);
 	}
 
@@ -248,7 +261,7 @@ public class DietService {
 		RecommendationInfo info = RecommendationInfo.of(
 			recommended.getId(),
 			recommended.getDietType().name(),
-			"", // 추천 식단에는 time 정보 없음
+			recommended.getTime() != null ? recommended.getTime().toString() : "",
 			recommended.getDate().toString(),
 			items
 		);
@@ -359,5 +372,76 @@ public class DietService {
 			return List.of();
 		}
 		return List.of(thumbnailUrl);
+	}
+
+	// 오늘 시간대에 맞는 웰스토리 식단 목록 조회
+	private Map<String, List<TodayRestaurantMenuInfo>> buildTodayRestaurantMenu(LocalDate targetDate) {
+		RestaurantMapping mapping = restaurantMappingRepository.findByRestaurantName(mockRestaurantName)
+			.orElse(null);
+		if (mapping == null) {
+			return Map.of();
+		}
+
+		int dateYyyymmdd = targetDate.getYear() * 10000 + targetDate.getMonthValue() * 100 + targetDate.getDayOfMonth();
+		Map<String, List<TodayRestaurantMenuInfo>> result = new LinkedHashMap<>();
+
+		for (DietType slot : List.of(DietType.BREAKFAST, DietType.LUNCH, DietType.DINNER)) {
+			String mealTimeId = mealTimeIdForSlot(slot);
+			if (mealTimeId == null) {
+				continue;
+			}
+			var menus = welstoryMenuService.getMenus(mapping.getRestaurantId(), dateYyyymmdd, mealTimeId,
+				slot.name());
+			if (menus.isEmpty()) {
+				continue;
+			}
+			List<TodayRestaurantMenuInfo> infos = menus.stream()
+				.map(menu -> TodayRestaurantMenuInfo.of(
+					menu.name(),
+					toInt(toBigDecimal(menu.kcal())),
+					buildSubName(menu.name(), menu.submenu())
+				))
+				.toList();
+			result.put(slot.name(), infos);
+		}
+
+		return result;
+	}
+
+	private String buildSubName(String mainName, String subMenu) {
+		if (!StringUtils.hasText(subMenu)) {
+			return "";
+		}
+		String[] parts = subMenu.split(",");
+		String joined = java.util.Arrays.stream(parts)
+			.map(String::trim)
+			.filter(s -> !s.isBlank())
+			.filter(s -> !s.equals(mainName))
+			.collect(java.util.stream.Collectors.joining(", "));
+		return joined;
+	}
+
+	private String mealTimeIdForSlot(DietType mealSlot) {
+		return switch (mealSlot) {
+			case BREAKFAST -> "1";
+			case LUNCH -> "2";
+			case DINNER -> "3";
+			case SNACK -> "5"; // 웰스토리 기준 간식 코드 예시
+		};
+	}
+
+	private BigDecimal toBigDecimal(String value) {
+		if (value == null || value.isBlank()) {
+			return BigDecimal.ZERO;
+		}
+		try {
+			String cleaned = value.replace(",", "").trim();
+			if (cleaned.startsWith(".")) {
+				cleaned = "0" + cleaned;
+			}
+			return new BigDecimal(cleaned);
+		} catch (Exception e) {
+			return BigDecimal.ZERO;
+		}
 	}
 }

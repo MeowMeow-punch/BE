@@ -2,6 +2,7 @@ package MeowMeowPunch.pickeat.domain.diet.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
@@ -44,6 +45,9 @@ public class RecommendedDiet extends BaseEntity {
 
 	@Column(name = "date", nullable = false)
 	private LocalDate date;
+
+	@Column(name = "time")
+	private LocalTime time;
 
 	@Column(name = "title", length = 200, nullable = false)
 	private String title;

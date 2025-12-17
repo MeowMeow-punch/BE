@@ -12,6 +12,11 @@ public record RecommendationInfo(
 ) {
 	public static RecommendationInfo of(Long recommendationId, String mealType, String time, String date,
 		List<DietDetailItem> foods) {
-		return new RecommendationInfo(recommendationId, mealType, time, date, foods);
+		String normalizedTime = time;
+		if (normalizedTime != null && normalizedTime.length() > 5) {
+			normalizedTime = normalizedTime.substring(0, 5); // HH:mm 만 남김
+		}
+		return new RecommendationInfo(recommendationId, mealType, normalizedTime == null ? "" : normalizedTime, date,
+			foods);
 	}
 }
