@@ -18,6 +18,8 @@ services:
       SENTRY_DSN: ${SENTRY_DSN}
       SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
       SPRING_DATA_REDIS_PORT: 6379
+      WELSTORY_USERNAME: ${WELSTORY_USERNAME}
+      WELSTORY_PASSWORD: ${WELSTORY_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy

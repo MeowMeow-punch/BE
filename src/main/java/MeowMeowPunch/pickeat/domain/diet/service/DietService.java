@@ -9,6 +9,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,8 @@ import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
+import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
+import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDietFood;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietAccessDeniedException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietDetailNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietFoodNotFoundException;
@@ -36,11 +39,17 @@ import MeowMeowPunch.pickeat.domain.diet.repository.DietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
+import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
+import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietDetailItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodDtoMapper;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.WeeklyCaloriesInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationDetailResponse;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationInfo;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import lombok.RequiredArgsConstructor;
 
@@ -54,6 +63,8 @@ public class DietService {
 	private final DietRepository dietRepository;
 	private final DietFoodRepository dietFoodRepository;
 	private final FoodRepository foodRepository;
+	private final RecommendedDietRepository recommendedDietRepository;
+	private final RecommendedDietFoodRepository recommendedDietFoodRepository;
 
 	// 메인 페이지 조회 (오늘 기준)
 	public DietHomeResponse getHome(String userId) {
@@ -81,7 +92,7 @@ public class DietService {
 		List<RecommendedDietInfo> recommended = recommendedCandidates.stream()
 			.limit(2)
 			.map(c -> RecommendedDietInfo.of(
-				c.foodId(),
+				c.foodId(), // 여기서는 FoodRecommendationCandidate.foodId에 RecommendedDiet ID가 담겨옴
 				c.name(),
 				mealSlot(LocalTime.now(KOREA_ZONE)).name(),
 				toThumbnailList(c.thumbnailUrl()),
@@ -192,6 +203,58 @@ public class DietService {
 		return NutritionResponse.from(DietPageAssembler.buildNutritionInfo(diets));
 	}
 
+	// 추천 식단 상세 조회 (수정 진입용)
+	public RecommendationDetailResponse getRecommendedDetail(String userId, Long recommendationId) {
+		if (!StringUtils.hasText(userId)) {
+			throw new MissingDietUserIdException();
+		}
+		RecommendedDiet recommended = recommendedDietRepository.findById(recommendationId)
+			.orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
+		if (!recommended.getUserId().equals(userId)) {
+			throw new DietAccessDeniedException(recommendationId);
+		}
+
+		List<RecommendedDietFood> links = recommendedDietFoodRepository.findAllByRecommendedDietId(recommendationId);
+		if (links.isEmpty()) {
+			throw new DietFoodNotFoundException(recommendationId);
+		}
+
+		List<Long> foodIds = links.stream()
+			.map(RecommendedDietFood::getFoodId)
+			.filter(Objects::nonNull)
+			.distinct()
+			.toList();
+
+		if (foodIds.isEmpty()) {
+			throw new DietFoodNotFoundException(recommendationId);
+		}
+
+		Map<Long, Food> foodById = foodRepository.findAllById(foodIds).stream()
+			.collect(Collectors.toMap(Food::getId, Function.identity()));
+		validateFoodsExist(foodIds, foodById);
+
+		List<DietDetailItem> items = links.stream()
+			.filter(link -> link.getFoodId() != null && foodById.containsKey(link.getFoodId()))
+			.map(link -> {
+				Food food = foodById.get(link.getFoodId());
+				return DietDetailItem.from(FoodDtoMapper.toFoodItem(food), link.getQuantity());
+			})
+			.toList();
+
+		if (items.isEmpty()) {
+			throw new DietFoodNotFoundException(recommendationId);
+		}
+
+		RecommendationInfo info = RecommendationInfo.of(
+			recommended.getId(),
+			recommended.getDietType().name(),
+			"", // 추천 식단에는 time 정보 없음
+			recommended.getDate().toString(),
+			items
+		);
+		return RecommendationDetailResponse.from(info);
+	}
+
 	// 식단 등록
 	@Transactional
 	public void create(String userId, DietRequest request) {
@@ -207,7 +270,6 @@ public class DietService {
 		Diet diet = Diet.createUserInput(
 			userId,
 			request.mealType(),
-			request.sourceType(),
 			date,
 			time,
 			aggregation
@@ -240,7 +302,6 @@ public class DietService {
 
 		diet.updateUserInput(
 			request.mealType(),
-			request.sourceType(),
 			date,
 			time,
 			aggregation
