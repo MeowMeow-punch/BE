@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
+import MeowMeowPunch.pickeat.domain.diet.dto.HomeRecommendationResult;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.AiFeedBack;
@@ -89,19 +90,17 @@ public class DietService {
 		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, todayDate);
 
 		// 식단 추천 계산 트리거 (이미 있으면 재사용) 후 TOP5 후보 반환
-		List<FoodRecommendationCandidate> recommendedCandidates = dietRecommendationService.recommendTopFoods(userId,
+		HomeRecommendationResult recommendationResult = dietRecommendationService.recommendTopFoods(userId,
 			focus, totals);
 
 		SummaryInfo summaryInfo = buildSummary(totals);
 
-		// TODO: AI 연결 예정
 		AiFeedBack aiFeedBack = AiFeedBack.of(
-			"AI 피드백은 준비 중입니다.",
+			recommendationResult.reason(),
 			LocalDateTime.now(KOREA_ZONE).withNano(0).toString()
 		);
 
-		List<RecommendedDietInfo> recommended = recommendedCandidates.stream()
-			.limit(2)
+		List<RecommendedDietInfo> recommended = recommendationResult.picks().stream()
 			.map(c -> RecommendedDietInfo.of(
 				c.foodId(), // 여기서는 FoodRecommendationCandidate.foodId에 RecommendedDiet ID가 담겨옴
 				c.name(),

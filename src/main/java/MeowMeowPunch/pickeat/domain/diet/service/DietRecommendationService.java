@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
+import MeowMeowPunch.pickeat.domain.diet.dto.HomeRecommendationResult;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
@@ -22,6 +23,7 @@ import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
+import MeowMeowPunch.pickeat.domain.diet.ai.DietAiFacade;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
@@ -61,6 +63,7 @@ public class DietRecommendationService {
 	private final FoodRepository foodRepository;
 	private final RestaurantMappingRepository restaurantMappingRepository;
 	private final WelstoryMenuService welstoryMenuService;
+	private final DietAiFacade dietAiFacade;
 
 	// TODO: User 테이블 연동 시 제거 예정 (임시 Group 여부/식당명)
 	private final UserStatus mockUserStatus = UserStatus.GROUP;
@@ -73,7 +76,7 @@ public class DietRecommendationService {
 	 * - 상위 2개는 추천 테이블에 저장 (추후 AI 선택으로 교체 예정)
 	 */
 	@Transactional
-	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, Focus purposeType,
+	public HomeRecommendationResult recommendTopFoods(String userId, Focus purposeType,
 		NutrientTotals totals) {
 		LocalDate today = LocalDate.now(KOREA_ZONE);
 		LocalTime nowTime = LocalTime.now(KOREA_ZONE);
@@ -84,17 +87,20 @@ public class DietRecommendationService {
 
 		// 오늘 날짜로 DietStatus(아침, 점심, 저녁, 간식) 추천이 1개 이상 있으면 바로 반환
 		if (existing.size() >= MIN_PICK) {
-			return existing.stream()
+			List<FoodRecommendationCandidate> picks = existing.stream()
 				.map(this::toCandidate)
 				.toList();
+			return HomeRecommendationResult.of(picks, "이미 저장된 추천을 반환합니다.", false);
 		}
 
 		if (isGroupUser(userId) && mealSlot == DietType.LUNCH) {
 			List<FoodRecommendationCandidate> groupLunch = recommendWelstoryLunch(today, purposeType, totals);
 			if (!groupLunch.isEmpty()) {
 				try {
-					List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot, groupLunch);
-					return saved.stream().map(this::toCandidate).toList();
+					HomeRecommendationResult aiResult = dietAiFacade.selectHomeRecommendations(groupLunch);
+					List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot, aiResult.picks());
+					List<FoodRecommendationCandidate> picks = saved.stream().map(this::toCandidate).toList();
+					return HomeRecommendationResult.of(picks, aiResult.reason(), aiResult.aiUsed());
 				} catch (Exception e) {
 					throw new DietRecommendationSaveException(e);
 				}
@@ -129,11 +135,11 @@ public class DietRecommendationService {
 			TOP_LIMIT
 		);
 
-		// TODO: AI 선택 연동 후 결과 개수(1~2)에 맞게 저장하도록 수정
 		try {
-			List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot,
-				candidates.stream().limit(MAX_PICK).toList());
-			return saved.stream().map(this::toCandidate).toList();
+			HomeRecommendationResult aiResult = dietAiFacade.selectHomeRecommendations(candidates);
+			List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot, aiResult.picks());
+			List<FoodRecommendationCandidate> picks = saved.stream().map(this::toCandidate).toList();
+			return HomeRecommendationResult.of(picks, aiResult.reason(), aiResult.aiUsed());
 		} catch (Exception e) {
 			throw new DietRecommendationSaveException(e);
 		}
@@ -156,7 +162,7 @@ public class DietRecommendationService {
 			return List.of();
 		}
 
-		// 목표 영양 기반으로 점수화 후 상위 2개 선택
+		// TODO: AI 연동 후 목표 영양 기반으로 결과 개수(1~2)에 맞게 저장하도록 수정
 		BigDecimal targetMealKcal = targetForMeal(GOAL_KCAL, totals.totalKcal(), DietType.LUNCH);
 		BigDecimal targetMealCarbs = targetMacroForMeal(GOAL_CARBS, totals.totalCarbs(), DietType.LUNCH);
 		BigDecimal targetMealProtein = targetMacroForMeal(GOAL_PROTEIN, totals.totalProtein(), DietType.LUNCH);
