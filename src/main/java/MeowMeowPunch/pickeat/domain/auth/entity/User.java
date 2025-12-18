@@ -1,0 +1,147 @@
+package MeowMeowPunch.pickeat.domain.auth.entity;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import MeowMeowPunch.pickeat.global.common.enums.ActivityLevel;
+import MeowMeowPunch.pickeat.global.common.enums.DrinkingStatus;
+import MeowMeowPunch.pickeat.global.common.enums.Focus;
+import MeowMeowPunch.pickeat.global.common.enums.Gender;
+import MeowMeowPunch.pickeat.global.common.enums.MealFrequency;
+import MeowMeowPunch.pickeat.global.common.enums.OAuthProvider;
+import MeowMeowPunch.pickeat.global.common.enums.SmokingStatus;
+import MeowMeowPunch.pickeat.global.common.enums.UserStatus;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/**
+ * [Auth][Entity] User
+ * 소셜 OAuth 식별자와 식습관 프로필을 저장하는 핵심 사용자 엔티티
+ * <p>
+ * [Domain Model]
+ * 
+ * <pre>
+ * ┌───────────────┐
+ * │     User      │
+ * ├───────────────┤
+ * │ - oauthId     │ ← Account Key
+ * │ - nickname    │ ← Display Name
+ * │ - status      │ ← SINGLE / GROUP
+ * │ - focus       │ ← DIET / BULK_UP / BALANCE
+ * │ - profile...  │ ← Height, Weight, Age...
+ * └───────────────┘
+ * </pre>
+ * </p>
+ * - 보안 키워드: OAuthProvider + oauthId 복합키로 계정 식별
+ * - 데이터 모델: 식단 추천을 위한 건강/생활 패턴 속성 포함
+ * - 감사 로그: createdAt/updatedAt을 통해 추후 변경 이력 트래킹 가능
+ */
+@Getter
+@Entity
+@Table(name = "users")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
+public class User {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private OAuthProvider oauthProvider;
+
+	@Column(nullable = false, length = 128)
+	private String oauthId;
+
+	@Column(nullable = false, unique = true, length = 50)
+	private String nickname;
+
+	@Column(nullable = false)
+	private boolean marketingAgreed;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 10)
+	private Gender gender;
+
+	private Integer height;
+
+	private Integer weight;
+
+	private Integer age;
+
+	@ElementCollection
+	@CollectionTable(name = "user_allergies", joinColumns = @JoinColumn(name = "user_id"))
+	@Column(name = "allergy", length = 100)
+	@Builder.Default
+	private List<String> allergies = new ArrayList<>();
+
+	@ElementCollection
+	@CollectionTable(name = "user_diseases", joinColumns = @JoinColumn(name = "user_id"))
+	@Column(name = "disease", length = 100)
+	@Builder.Default
+	private List<String> diseases = new ArrayList<>();
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 10)
+	private UserStatus status;
+
+	private Long groupId;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 10)
+	private Focus focus;
+
+	@Enumerated(EnumType.STRING)
+	@Column(length = 10)
+	private SmokingStatus smokingStatus;
+
+	@Enumerated(EnumType.STRING)
+	@Column(length = 10)
+	private DrinkingStatus drinkingStatus;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 10)
+	private MealFrequency meals;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 10)
+	private ActivityLevel activityLevel;
+
+	private Integer targetWeight;
+
+	@Column(nullable = false)
+	private LocalDateTime createdAt;
+
+	@Column(nullable = false)
+	private LocalDateTime updatedAt;
+
+	/***************** Methods *****************/
+
+	// [LifeCycle] 최초 생성 시 타임스탬프를 자동 세팅
+	public void initializeTimestamp() {
+		this.createdAt = LocalDateTime.now();
+		this.updatedAt = this.createdAt;
+	}
+
+	// [LifeCycle] 사용자 정보 변경 시 수정일시를 갱신
+	public void touchUpdatedAt() {
+		this.updatedAt = LocalDateTime.now();
+	}
+}
