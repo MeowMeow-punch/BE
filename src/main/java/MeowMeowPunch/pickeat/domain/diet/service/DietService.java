@@ -367,13 +367,6 @@ public class DietService {
 			.toList();
 	}
 
-	private List<String> toThumbnailList(String thumbnailUrl) {
-		if (!StringUtils.hasText(thumbnailUrl)) {
-			return List.of();
-		}
-		return List.of(thumbnailUrl);
-	}
-
 	// 오늘 시간대에 맞는 웰스토리 식단 목록 조회
 	private Map<String, List<TodayRestaurantMenuInfo>> buildTodayRestaurantMenu(LocalDate targetDate) {
 		RestaurantMapping mapping = restaurantMappingRepository.findByRestaurantName(mockRestaurantName)
@@ -398,50 +391,13 @@ public class DietService {
 			List<TodayRestaurantMenuInfo> infos = menus.stream()
 				.map(menu -> TodayRestaurantMenuInfo.of(
 					menu.name(),
-					toInt(toBigDecimal(menu.kcal())),
-					buildSubName(menu.name(), menu.submenu())
+					toInt(DietPageAssembler.toBigDecimal(menu.kcal())),
+					DietPageAssembler.buildSubName(menu.name(), menu.submenu())
 				))
 				.toList();
 			result.put(slot.name(), infos);
 		}
 
 		return result;
-	}
-
-	private String buildSubName(String mainName, String subMenu) {
-		if (!StringUtils.hasText(subMenu)) {
-			return "";
-		}
-		String[] parts = subMenu.split(",");
-		String joined = java.util.Arrays.stream(parts)
-			.map(String::trim)
-			.filter(s -> !s.isBlank())
-			.filter(s -> !s.equals(mainName))
-			.collect(java.util.stream.Collectors.joining(", "));
-		return joined;
-	}
-
-	private String mealTimeIdForSlot(DietType mealSlot) {
-		return switch (mealSlot) {
-			case BREAKFAST -> "1";
-			case LUNCH -> "2";
-			case DINNER -> "3";
-			case SNACK -> "5"; // 웰스토리 기준 간식 코드 예시
-		};
-	}
-
-	private BigDecimal toBigDecimal(String value) {
-		if (value == null || value.isBlank()) {
-			return BigDecimal.ZERO;
-		}
-		try {
-			String cleaned = value.replace(",", "").trim();
-			if (cleaned.startsWith(".")) {
-				cleaned = "0" + cleaned;
-			}
-			return new BigDecimal(cleaned);
-		} catch (Exception e) {
-			return BigDecimal.ZERO;
-		}
 	}
 }

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.springframework.util.StringUtils;
 
@@ -141,6 +142,53 @@ public final class DietPageAssembler {
 			diet.getDate().toString(),
 			foods
 		);
+	}
+
+	// 단일 썸네일을 리스트로 래핑
+	public static List<String> toThumbnailList(String thumbnailUrl) {
+		if (!StringUtils.hasText(thumbnailUrl)) {
+			return List.of();
+		}
+		return List.of(thumbnailUrl);
+	}
+
+	// 웰스토리 메뉴 서브명 생성 (메인 메뉴 제외)
+	public static String buildSubName(String mainName, String subMenu) {
+		if (!StringUtils.hasText(subMenu)) {
+			return "";
+		}
+		String joined = Arrays.stream(subMenu.split(","))
+			.map(String::trim)
+			.filter(s -> !s.isBlank())
+			.filter(s -> !s.equals(mainName))
+			.collect(Collectors.joining(", "));
+		return joined;
+	}
+
+	// 웰스토리 mealTimeId 매핑
+	public static String mealTimeIdForSlot(DietType mealSlot) {
+		return switch (mealSlot) {
+			case BREAKFAST -> "1";
+			case LUNCH -> "2";
+			case DINNER -> "3";
+			case SNACK -> "5"; // 웰스토리 기준 간식 코드 예시
+		};
+	}
+
+	// 문자열 수치를 BigDecimal로 안전하게 변환
+	public static BigDecimal toBigDecimal(String value) {
+		if (value == null || value.isBlank()) {
+			return BigDecimal.ZERO;
+		}
+		try {
+			String cleaned = value.replace(",", "").trim();
+			if (cleaned.startsWith(".")) {
+				cleaned = "0" + cleaned;
+			}
+			return new BigDecimal(cleaned);
+		} catch (Exception e) {
+			return BigDecimal.ZERO;
+		}
 	}
 
 	// 특정 날짜에 등록된 식단들의 부가 영양분 합계를 생성
