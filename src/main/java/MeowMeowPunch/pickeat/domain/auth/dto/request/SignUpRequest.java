@@ -44,7 +44,7 @@ public record SignUpRequest(
 		Long groupId,
 		@NotNull(message = "중점 목표는 필수입니다.") Focus focus,
 		SmokingStatus isSmoking,
-		DrinkingStatus isDrink,
+		DrinkingStatus isDrinking,
 		@NotNull(message = "하루 식사 횟수는 필수입니다.") MealFrequency meals,
 		@NotNull(message = "활동량은 필수입니다.") ActivityLevel activityLevel,
 		@Positive(message = "목표 체중은 0보다 커야 합니다.") Integer targetWeight) {
