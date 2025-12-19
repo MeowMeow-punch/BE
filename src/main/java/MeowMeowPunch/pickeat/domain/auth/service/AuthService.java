@@ -13,6 +13,7 @@ import MeowMeowPunch.pickeat.domain.auth.dto.response.AuthTokenResponse;
 import MeowMeowPunch.pickeat.domain.auth.entity.User;
 import MeowMeowPunch.pickeat.domain.auth.exception.AuthNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateNicknameException;
+import MeowMeowPunch.pickeat.domain.auth.exception.InvalidTokenException;
 import MeowMeowPunch.pickeat.domain.auth.exception.TokenNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.repository.RefreshTokenRepository;
 import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
@@ -58,11 +59,43 @@ public class AuthService {
 	 * @param request OAuth 로그인 요청 정보
 	 * @return 액세스/리프레시 토큰 묶음
 	 */
-	@Transactional(readOnly = true)
 	public AuthTokenResponse login(OAuthLoginRequest request) {
 		User user = userRepository.findByOauthProviderAndOauthId(request.oauthProvider(), request.oauthId())
 				.orElseThrow(AuthNotFoundException::userNotFound);
 		return issueTokens(user);
+	}
+
+	/**
+	 * [Refresh] 리프레시 토큰을 이용한 토큰 재발급.
+	 * 
+	 * @param refreshToken 클라이언트 쿠키에서 추출한 리프레시 토큰
+	 * @return 재발급된 Access/Refresh 토큰 묶음
+	 */
+	@Transactional
+	public AuthTokenResponse refresh(String refreshToken) {
+		// 1. 토큰 자체 유효성 검증 (만료, 서명 등)
+		jwtTokenProvider.parseClaims(refreshToken);
+
+		// 2. DB 저장된 토큰과 비교 (Rotation)
+		User user = findUserByToken(refreshToken);
+
+		// 3. 토큰 재발급 및 갱신
+		return issueTokens(user);
+	}
+
+	private User findUserByToken(String refreshToken) {
+		Long userId = Long.valueOf(jwtTokenProvider.parseClaims(refreshToken).getSubject());
+		RefreshToken savedToken = refreshTokenRepository.findById(userId)
+				.orElseThrow(() -> new InvalidTokenException("로그인이 만료되었습니다. 다시 로그인해주세요."));
+
+		if (!savedToken.getTokenValue().equals(refreshToken)) {
+			// 토큰 탈취 가능성 -> 저장된 토큰 삭제 후 재로그인 유도
+			refreshTokenRepository.delete(savedToken);
+			throw new InvalidTokenException("유효하지 않은 토큰입니다. 다시 로그인해주세요.");
+		}
+
+		return userRepository.findById(userId)
+				.orElseThrow(AuthNotFoundException::userNotFound);
 	}
 
 	/**

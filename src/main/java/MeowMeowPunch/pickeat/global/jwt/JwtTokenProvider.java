@@ -103,7 +103,7 @@ public class JwtTokenProvider {
 					.parseSignedClaims(token)
 					.getPayload();
 		} catch (ExpiredJwtException e) {
-			throw new InvalidTokenException("토큰이 만료되었습니다.");
+			throw e; // 만료된 토큰은 Filter에서 처리하기 위해 그대로 던짐
 		} catch (MalformedJwtException | UnsupportedJwtException | IllegalArgumentException e) {
 			throw InvalidTokenException.invalidToken();
 		}
