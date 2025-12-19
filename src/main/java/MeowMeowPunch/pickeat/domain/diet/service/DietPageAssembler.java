@@ -112,7 +112,7 @@ public final class DietPageAssembler {
 		);
 	}
 
-		// 오늘 등록 식단 응답 생성
+	// 오늘 등록 식단 응답 생성
 	public static TodayDietInfo toTodayDietInfo(Diet diet, List<String> thumbnailUrls) {
 		return TodayDietInfo.of(
 			diet.getId(),
@@ -120,6 +120,7 @@ public final class DietPageAssembler {
 			diet.getStatus().name(),
 			toInt(nullSafe(diet.getKcal())),
 			diet.getTime() != null ? diet.getTime().toString() : "",
+			diet.isEditable(),
 			Nutrients.of(
 				toInt(nullSafe(diet.getCarbs())),
 				toInt(nullSafe(diet.getProtein())),
@@ -137,6 +138,7 @@ public final class DietPageAssembler {
 
 		return DietInfo.of(
 			diet.getId(),
+			diet.getTitle(),
 			diet.getStatus().name(),
 			diet.getTime() != null ? diet.getTime().toString() : "",
 			diet.getDate().toString(),

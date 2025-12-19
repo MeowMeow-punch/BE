@@ -72,7 +72,8 @@
                 -- 지방
                 + (-1) * ABS(#{remainingFat} - adj_fat) * #{weightFat}
                 + CASE WHEN adj_fat > #{remainingFat} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
-            ) AS score
+            ) AS score,
+            'FOOD_DB' AS sourceType
         FROM adjusted
         ORDER BY score DESC
         LIMIT #{limit}

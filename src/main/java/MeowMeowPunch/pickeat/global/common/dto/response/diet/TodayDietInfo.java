@@ -8,11 +8,12 @@ public record TodayDietInfo(
 	String mealType,
 	int calorie,
 	String time,
+	boolean isEditable,
 	Nutrients nutrients,
 	List<String> thumbnailUrls
 ) {
 	public static TodayDietInfo of(Long myDietId, String name, String mealType, int calorie, String time,
-		Nutrients nutrients, List<String> thumbnailUrls) {
-		return new TodayDietInfo(myDietId, name, mealType, calorie, time, nutrients, thumbnailUrls);
+		boolean isEditable, Nutrients nutrients, List<String> thumbnailUrls) {
+		return new TodayDietInfo(myDietId, name, mealType, calorie, time, isEditable, nutrients, thumbnailUrls);
 	}
 }

@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationDetailResponse;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -78,14 +78,14 @@ public class DietController {
 		return ResTemplate.success(HttpStatus.OK, "식단 수정 성공");
 	}
 
-	// 추천 식단 상세 조회 (수정 진입용)
-	@GetMapping("/recommendation/{recommendationId}")
-	public ResTemplate<RecommendationDetailResponse> getRecommendedDietDetail(
+	// 추천 식단 바로 등록
+	@PostMapping({"/recommendation/{recommendationId}"})
+	public ResTemplate<DietRegisterResponse> registerRecommendation(
 		@RequestParam(name = "userId") String userId,
 		@PathVariable("recommendationId") Long recommendationId
 	) {
-		RecommendationDetailResponse data = dietService.getRecommendedDetail(userId, recommendationId);
-		return ResTemplate.success(HttpStatus.OK, "추천 식단 조회 성공", data);
+		DietRegisterResponse data = dietService.registerRecommendation(userId, recommendationId);
+		return ResTemplate.success(HttpStatus.OK, "추천 식단 등록 성공", data);
 	}
 
 	// 식단 삭제

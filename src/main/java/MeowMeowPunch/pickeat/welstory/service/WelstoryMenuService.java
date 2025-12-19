@@ -10,6 +10,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
 import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
 import MeowMeowPunch.pickeat.welstory.gateway.WelstoryMenuGateway;
+import MeowMeowPunch.pickeat.global.common.enums.MealSourceType;
 import lombok.RequiredArgsConstructor;
 
 // Welstory 식단, 영양 정보 조회하고 추천 식단 DTO로 가공
@@ -79,7 +80,8 @@ public class WelstoryMenuService {
 			totalProtein,
 			totalFat,
 			menu.course(),
-			0.0
+			0.0,
+			MealSourceType.WELSTORY
 		);
 	}
 

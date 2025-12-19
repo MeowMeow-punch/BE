@@ -2,6 +2,8 @@ package MeowMeowPunch.pickeat.domain.diet.dto;
 
 import java.math.BigDecimal;
 
+import MeowMeowPunch.pickeat.global.common.enums.MealSourceType;
+
 // 음식 추천 후보
 public record FoodRecommendationCandidate(
 	Long foodId,
@@ -12,6 +14,7 @@ public record FoodRecommendationCandidate(
 	BigDecimal protein,
 	BigDecimal fat,
 	String category,
-	double score
+	double score,
+	MealSourceType sourceType
 ) {
 }
