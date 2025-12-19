@@ -61,9 +61,10 @@ public class AuthController {
 		AuthTokenResponse tokens = authService.login(request);
 		ResponseCookie refreshCookie = jwtCookieProvider.createRefreshTokenCookie(tokens.refreshToken());
 
-		return ResponseEntity.status(HttpStatus.OK)
+        HttpStatus status = HttpStatus.OK; // 상황에 따라 변경될 가능성 있음
+		return ResponseEntity.status(status)
 				.header(HttpHeaders.SET_COOKIE, jwtCookieProvider.asHeader(refreshCookie))
-				.body(new ResTemplate<>(HttpStatus.OK, "로그인 성공", tokens));
+				.body(new ResTemplate<>(status, "로그인 성공", tokens));
 	}
 
 	/**
@@ -77,9 +78,10 @@ public class AuthController {
 		AuthTokenResponse tokens = authService.signUp(request);
 		ResponseCookie refreshCookie = jwtCookieProvider.createRefreshTokenCookie(tokens.refreshToken());
 
-		return ResponseEntity.status(HttpStatus.OK)
+        HttpStatus status = HttpStatus.OK; // 상황에 따라 변경될 가능성 있음
+		return ResponseEntity.status(status)
 				.header(HttpHeaders.SET_COOKIE, jwtCookieProvider.asHeader(refreshCookie))
-				.body(new ResTemplate<>(HttpStatus.OK, "회원가입 성공", tokens));
+				.body(new ResTemplate<>(status, "회원가입 성공", tokens));
 	}
 
 	/**
@@ -93,9 +95,10 @@ public class AuthController {
 		authService.logout(principal.getUserId());
 		ResponseCookie deleteCookie = jwtCookieProvider.deleteRefreshTokenCookie();
 
-		return ResponseEntity.status(HttpStatus.OK)
+        HttpStatus status = HttpStatus.OK; // 상황에 따라 변경될 가능성 있음
+		return ResponseEntity.status(status)
 				.header(HttpHeaders.SET_COOKIE, jwtCookieProvider.asHeader(deleteCookie))
-				.body(new ResTemplate<>(HttpStatus.OK, "로그아웃 성공", null));
+				.body(new ResTemplate<>(status, "로그아웃 성공", null));
 	}
 
 	/**
@@ -109,8 +112,9 @@ public class AuthController {
 		authService.deleteUser(principal.getUserId());
 		ResponseCookie deleteCookie = jwtCookieProvider.deleteRefreshTokenCookie();
 
-		return ResponseEntity.status(HttpStatus.OK)
+        HttpStatus status = HttpStatus.OK; // 상황에 따라 변경될 가능성 있음
+		return ResponseEntity.status(status)
 				.header(HttpHeaders.SET_COOKIE, jwtCookieProvider.asHeader(deleteCookie))
-				.body(new ResTemplate<>(HttpStatus.OK, "회원탈퇴 성공", null));
+				.body(new ResTemplate<>(status, "회원탈퇴 성공", null));
 	}
 }
