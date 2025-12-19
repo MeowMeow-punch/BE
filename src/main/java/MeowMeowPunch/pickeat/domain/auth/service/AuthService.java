@@ -169,7 +169,7 @@ public class AuthService {
 				.groupId(request.groupId())
 				.focus(request.focus())
 				.smokingStatus(request.isSmoking())
-				.drinkingStatus(request.isDrink())
+				.drinkingStatus(request.isDrinking())
 				.meals(request.meals())
 				.activityLevel(request.activityLevel())
 				.targetWeight(request.targetWeight())
