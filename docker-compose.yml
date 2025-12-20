@@ -20,6 +20,7 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       WELSTORY_USERNAME: ${WELSTORY_USERNAME}
       WELSTORY_PASSWORD: ${WELSTORY_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,7 +41,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -68,7 +69,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -90,7 +91,14 @@ services:
       FOODS_CSV_PATH: /app/data/foods.csv
     volumes:
       - ./src/main/resources/data:/app/data:ro
-    command: [ "java", "-jar", "app.jar", "--spring.profiles.active=importer", "--foods.csv-path=/app/data/foods.csv" ]
+    command:
+      [
+        "java",
+        "-jar",
+        "app.jar",
+        "--spring.profiles.active=importer",
+        "--foods.csv-path=/app/data/foods.csv",
+      ]
     networks:
       - pickeat-network
 

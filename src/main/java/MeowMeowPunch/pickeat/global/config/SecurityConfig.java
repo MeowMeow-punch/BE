@@ -33,8 +33,10 @@ public class SecurityConfig {
 						.requestMatchers(
 								"/auth/login",
 								"/auth/regist",
+								"/auth/refresh",
 								"/diet/**", // 주윤
-								"/internal/**")
+								"/internal/**",
+								"/error")
 						.permitAll()
 						.anyRequest().authenticated())
 				.exceptionHandling(handler -> handler
