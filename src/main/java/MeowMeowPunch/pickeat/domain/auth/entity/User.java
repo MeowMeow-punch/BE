@@ -88,13 +88,13 @@ public class User extends BaseEntity {
 	private Integer age;
 
 	@ElementCollection
-	@CollectionTable(name = "user_allergies", joinColumns = @JoinColumn(name = "user_id"))
+	@CollectionTable(name = "user_allergies_legacy", joinColumns = @JoinColumn(name = "user_id"))
 	@Column(name = "allergy", length = 100)
 	@Builder.Default
 	private List<String> allergies = new ArrayList<>();
 
 	@ElementCollection
-	@CollectionTable(name = "user_diseases", joinColumns = @JoinColumn(name = "user_id"))
+	@CollectionTable(name = "user_diseases_legacy", joinColumns = @JoinColumn(name = "user_id"))
 	@Column(name = "disease", length = 100)
 	@Builder.Default
 	private List<String> diseases = new ArrayList<>();
