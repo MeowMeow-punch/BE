@@ -1,6 +1,5 @@
 package MeowMeowPunch.pickeat.domain.auth.entity;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 

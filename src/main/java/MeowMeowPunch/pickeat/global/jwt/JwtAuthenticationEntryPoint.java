@@ -2,12 +2,17 @@ package MeowMeowPunch.pickeat.global.jwt;
 
 import java.io.IOException;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 /**
  * <h2>JwtAuthenticationEntryPoint</h2>
@@ -25,16 +30,19 @@ import jakarta.servlet.http.HttpServletResponse;
  * </pre>
  */
 @Component
+@RequiredArgsConstructor
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
+    private final ObjectMapper objectMapper;
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException authException) throws IOException {
-        // try-catch로 잡힌 예외가 속성에 있다면 로그를 남기거나 메시지를 구체화할 수 있음
-        // Exception exception = (Exception) request.getAttribute("exception");
-
         response.setContentType("application/json;charset=UTF-8");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.getWriter().write("{\"code\": \"AUTH_001\", \"message\": \"인증에 실패했습니다.\"}");
+
+        ResTemplate<Void> errorResponse = ResTemplate.error(HttpStatus.UNAUTHORIZED, "인증에 실패했습니다.");
+
+        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 }
