@@ -1,7 +1,5 @@
 package MeowMeowPunch.pickeat.domain.auth.repository;
 
-import java.util.Optional;
-
 import org.springframework.data.repository.CrudRepository;
 
 import MeowMeowPunch.pickeat.global.common.entity.RefreshToken;
@@ -17,5 +15,5 @@ import MeowMeowPunch.pickeat.global.common.entity.RefreshToken;
  * </p>
  */
 public interface RefreshTokenRepository extends CrudRepository<RefreshToken, Long> {
-	Optional<RefreshToken> findById(Long userId);
+
 }

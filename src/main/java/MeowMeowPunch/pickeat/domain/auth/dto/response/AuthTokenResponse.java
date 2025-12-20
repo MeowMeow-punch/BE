@@ -31,14 +31,4 @@ public record AuthTokenResponse(
 		return new AuthTokenResponse(accessToken, refreshToken);
 	}
 
-	/**
-	 * 기존 토큰 값으로부터 새 응답 레코드를 생성.
-	 *
-	 * @param accessToken  액세스 토큰 값
-	 * @param refreshToken 리프레시 토큰 값
-	 * @return AuthTokenResponse 인스턴스
-	 */
-	public static AuthTokenResponse from(String accessToken, String refreshToken) {
-		return new AuthTokenResponse(accessToken, refreshToken);
-	}
 }
