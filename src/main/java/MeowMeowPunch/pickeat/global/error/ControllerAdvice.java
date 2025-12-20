@@ -95,11 +95,43 @@ public class ControllerAdvice {
     }
 
     // 500, InternalServerError (이메일 전송 과정에서 발생하는 오류를 위해 추가)
+    // 500, InternalServerError (이메일 전송 과정에서 발생하는 오류를 위해 추가)
     @ExceptionHandler({ InternalServerErrorGroupException.class })
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResTemplate<?> handleInternalServerError(RuntimeException e, HttpServletRequest request) {
         logError("SYSTEM", HttpStatus.INTERNAL_SERVER_ERROR, e, request);
         return createErrorResponse(e, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // JSON 파싱 에러 (Enum 값 불일치 등)
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    protected ResTemplate<?> handleHttpMessageNotReadableException(
+            org.springframework.http.converter.HttpMessageNotReadableException e,
+            HttpServletRequest request) {
+        String message = "잘못된 요청 형식입니다. JSON 데이터의 구문이나 값을 확인해주세요.";
+
+        // Enum 파싱 오류인 경우 더 구체적인 메시지 제공 시도
+        if (e.getCause() instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException) {
+            com.fasterxml.jackson.databind.exc.InvalidFormatException cause = (com.fasterxml.jackson.databind.exc.InvalidFormatException) e
+                    .getCause();
+            if (cause.getTargetType() != null && cause.getTargetType().isEnum()) {
+                message = String.format("유효하지 않은 Enum 값입니다: '%s'. 허용된 값: %s",
+                        cause.getValue(), java.util.Arrays.toString(cause.getTargetType().getEnumConstants()));
+            }
+        }
+
+        log.warn("jsonParseFailed",
+                kv("logType", LogType.ERROR.name()),
+                kv("errorCategory", "VALIDATION"),
+                kv("errorCode", "HttpMessageNotReadableException"),
+                kv("errorMessage", message),
+                kv("rawMessage", e.getMessage()),
+                kv("httpStatus", HttpStatus.BAD_REQUEST.value()),
+                kv("path", request.getRequestURI()),
+                kv("method", request.getMethod()));
+
+        return ResTemplate.error(HttpStatus.BAD_REQUEST, message);
     }
 
     // 메서드 인자 문제 생겼을 때
