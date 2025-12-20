@@ -124,7 +124,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private String getRefreshTokenFromCookie(HttpServletRequest request) {
 		if (request.getCookies() != null) {
 			for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
-				if ("refresh_token".equals(cookie.getName())) { // JwtProperties의 이름을 참조해야 하지만 편의상 문자열 사용
+				if (jwtTokenProvider.getJwtProperties().getRefreshCookieName().equals(cookie.getName())) {
 					return cookie.getValue();
 				}
 			}
