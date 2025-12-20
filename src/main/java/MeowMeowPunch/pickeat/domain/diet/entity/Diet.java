@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+import MeowMeowPunch.pickeat.domain.diet.exception.DietNotEditableException;
 import MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler.DietAggregation;
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
@@ -137,7 +138,7 @@ public class Diet extends BaseEntity {
 		DietAggregation aggregation
 	) {
 		if (!this.editable) {
-			return;
+			throw new DietNotEditableException(this.id);
 		}
 		this.status = status;
 		this.sourceType = DietSourceType.USER_INPUT;

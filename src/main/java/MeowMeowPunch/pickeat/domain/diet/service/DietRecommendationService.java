@@ -232,13 +232,15 @@ public class DietRecommendationService {
 					.thumbnailUrl(c.thumbnailUrl())
 					.build()
 			);
-			recommendedDietFoodRepository.save(
-				RecommendedDietFood.builder()
-					.recommendedDiet(saved)
-					.foodId(foodId)
-					.quantity(1)
-					.build()
-			);
+			if (foodId != null) {
+				recommendedDietFoodRepository.save(
+					RecommendedDietFood.builder()
+						.recommendedDiet(saved)
+						.foodId(foodId)
+						.quantity(1)
+						.build()
+				);
+			}
 			return saved;
 		}).toList();
 	}
