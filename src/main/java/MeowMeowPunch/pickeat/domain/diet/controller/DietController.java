@@ -16,6 +16,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.RestaurantMenuResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import jakarta.validation.Valid;
@@ -55,6 +56,15 @@ public class DietController {
 	) {
 		NutritionResponse data = dietService.getNutrition(userId, date);
 		return ResTemplate.success(HttpStatus.OK, "식단 상세 조회 성공", data);
+	}
+
+	// 사내 식당 메뉴 조회
+	@GetMapping("/restaurant/menu")
+	public ResTemplate<RestaurantMenuResponse> getRestaurantMenu(
+		@RequestParam(name = "date", required = false) String date
+	) {
+		RestaurantMenuResponse data = dietService.getRestaurantMenus(date);
+		return ResTemplate.success(HttpStatus.OK, "사내 식당 메뉴 조회 성공", data);
 	}
 
 	// 추천 식단 등록

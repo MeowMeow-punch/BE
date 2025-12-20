@@ -48,6 +48,12 @@ public class WelstoryMenuService {
 			.collect(Collectors.toList());
 	}
 
+	// 특정 식단의 영양 정보 조회
+	public List<ApiTypes.RawMealMenuData> getNutrients(String restaurantId, int dateYyyymmdd, String mealTimeId,
+		String hallNo, String menuCourseType) {
+		return gateway.getNutrients(restaurantId, dateYyyymmdd, mealTimeId, hallNo, menuCourseType);
+	}
+
 	private FoodRecommendationCandidate buildCandidate(WelstoryMenuItem menu, String restaurantId, int targetDate,
 		String timeId) {
 		List<ApiTypes.RawMealMenuData> nutrients = List.of();

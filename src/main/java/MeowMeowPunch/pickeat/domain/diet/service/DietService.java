@@ -26,6 +26,8 @@ import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.RestaurantMenuResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.RestaurantMenuResponse;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
@@ -46,12 +48,15 @@ import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
+import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
+import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
 import MeowMeowPunch.pickeat.welstory.entity.RestaurantMapping;
 import MeowMeowPunch.pickeat.welstory.repository.RestaurantMappingRepository;
 import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
@@ -215,6 +220,38 @@ public class DietService {
 		return NutritionResponse.from(DietPageAssembler.buildNutritionInfo(diets));
 	}
 
+	// 특정 날짜 식당 메뉴 조회
+	public RestaurantMenuResponse getRestaurantMenus(String rawDate) {
+		LocalDate targetDate = parseDateOrToday(rawDate);
+		RestaurantMapping mapping = restaurantMappingRepository.findByRestaurantName(mockRestaurantName)
+			.orElse(null);
+		if (mapping == null) {
+			return RestaurantMenuResponse.of(Map.of());
+		}
+
+		int dateYyyymmdd = toYyyymmdd(targetDate);
+		Map<String, List<RestaurantMenuInfo>> menusBySlot = new LinkedHashMap<>();
+
+		for (DietType slot : List.of(DietType.BREAKFAST, DietType.LUNCH, DietType.DINNER, DietType.SNACK)) {
+			String mealTimeId = mealTimeIdForSlot(slot);
+			if (mealTimeId == null) {
+				continue;
+			}
+			List<WelstoryMenuItem> menus = welstoryMenuService.getMenus(mapping.getRestaurantId(), dateYyyymmdd,
+				mealTimeId, slot.name());
+			if (menus.isEmpty()) {
+				menusBySlot.put(slot.name(), List.of());
+				continue;
+			}
+			List<RestaurantMenuInfo> infos = menus.stream()
+				.map(menu -> toRestaurantMenuInfo(mapping.getRestaurantName(), menu))
+				.toList();
+			menusBySlot.put(slot.name(), infos);
+		}
+
+		return RestaurantMenuResponse.of(menusBySlot);
+	}
+
 	// 추천 식단을 바로 등록
 	@Transactional
 	public DietRegisterResponse registerRecommendation(String userId, Long recommendationId) {
@@ -364,6 +401,52 @@ public class DietService {
 
 		dietFoodRepository.deleteAllByDietId(dietId);
 		dietRepository.delete(diet);
+	}
+
+	private RestaurantMenuInfo toRestaurantMenuInfo(String restaurantName, WelstoryMenuItem menu) {
+		List<ApiTypes.RawMealMenuData> rawNutrients = List.of();
+		if (StringUtils.hasText(menu.hallNo()) && StringUtils.hasText(menu.menuCourseType())) {
+			rawNutrients = welstoryMenuService.getNutrients(
+				menu.restaurantId(),
+				menu.dateYyyymmdd(),
+				menu.mealTimeId(),
+				menu.hallNo(),
+				menu.menuCourseType()
+			);
+		}
+
+		BigDecimal totalKcal = BigDecimal.ZERO;
+		BigDecimal totalCarbs = BigDecimal.ZERO;
+		BigDecimal totalProtein = BigDecimal.ZERO;
+		BigDecimal totalFat = BigDecimal.ZERO;
+
+		if (!rawNutrients.isEmpty()) {
+			for (ApiTypes.RawMealMenuData n : rawNutrients) {
+				totalKcal = totalKcal.add(toBigDecimal(n.kcal()));
+				totalCarbs = totalCarbs.add(toBigDecimal(n.totCho()));
+				totalProtein = totalProtein.add(toBigDecimal(n.totProtein()));
+				totalFat = totalFat.add(toBigDecimal(n.totFat()));
+			}
+		} else {
+			totalKcal = toBigDecimal(menu.kcal());
+		}
+
+		return RestaurantMenuInfo.of(
+			menu.name(),
+			restaurantName,
+			toInt(totalKcal),
+			DietPageAssembler.buildSubName(menu.name(), menu.submenu()),
+			Nutrients.of(
+				toInt(totalCarbs),
+				toInt(totalProtein),
+				toInt(totalFat)
+			),
+			DietPageAssembler.toThumbnailList(menu.photoUrl())
+		);
+	}
+
+	private int toYyyymmdd(LocalDate date) {
+		return date.getYear() * 10000 + date.getMonthValue() * 100 + date.getDayOfMonth();
 	}
 
 	// 식단 추가/수정을 위한 집계 사전 작업

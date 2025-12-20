@@ -65,7 +65,7 @@ public class DietRecommendationService {
 
 	// TODO: User 테이블 연동 시 제거 예정 (임시 Group 여부/식당명)
 	private final UserStatus mockUserStatus = UserStatus.GROUP;
-	private final String mockRestaurantName = "전기부산";
+	private final String mockGroupName = "전기부산";
 
 	/**
 	 * 오늘 날짜와 현재 식사 시간대에 맞춰 추천 TOP5를 산출한다.
@@ -142,7 +142,7 @@ public class DietRecommendationService {
 
 	private List<FoodRecommendationCandidate> recommendWelstoryLunch(LocalDate targetDate, Focus focus,
 		NutrientTotals totals) {
-		String restaurantId = restaurantMappingRepository.findByRestaurantName(mockRestaurantName)
+		String restaurantId = restaurantMappingRepository.findByRestaurantName(mockGroupName)
 			.map(RestaurantMapping::getRestaurantId)
 			.orElse(null);
 		if (restaurantId == null) {
