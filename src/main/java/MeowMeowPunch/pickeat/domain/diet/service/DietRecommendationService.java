@@ -22,11 +22,11 @@ import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
+import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
 import MeowMeowPunch.pickeat.global.common.enums.MainMealCategory;
-import MeowMeowPunch.pickeat.global.common.enums.MealSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.SnackCategory;
 import MeowMeowPunch.pickeat.welstory.entity.RestaurantMapping;
 import MeowMeowPunch.pickeat.welstory.repository.RestaurantMappingRepository;
@@ -191,7 +191,7 @@ public class DietRecommendationService {
 			c.fat(),
 			c.category(),
 			score,
-			MealSourceType.WELSTORY
+			DietSourceType.WELSTORY
 		);
 	}
 
@@ -214,8 +214,8 @@ public class DietRecommendationService {
 	private List<RecommendedDiet> saveTopRecommended(String userId, LocalDate date, DietType dietType,
 		List<FoodRecommendationCandidate> picks) {
 		return picks.stream().map(c -> {
-			MealSourceType sourceType = c.sourceType() == null ? MealSourceType.FOOD_DB : c.sourceType();
-			Long foodId = sourceType == MealSourceType.WELSTORY ? null : resolveFoodId(c);
+			DietSourceType sourceType = c.sourceType() == null ? DietSourceType.FOOD_DB : c.sourceType();
+			Long foodId = sourceType == DietSourceType.WELSTORY ? null : resolveFoodId(c);
 			RecommendedDiet saved = recommendedDietRepository.save(
 				RecommendedDiet.builder()
 					.userId(userId)
@@ -334,7 +334,7 @@ public class DietRecommendationService {
 
 	// DB에 저장된 추천을 응답용 후보로 변환
 	private FoodRecommendationCandidate toCandidate(RecommendedDiet r) {
-		MealSourceType source = r.getSourceType() != null ? r.getSourceType() : MealSourceType.FOOD_DB;
+		DietSourceType source = r.getSourceType() != null ? r.getSourceType() : DietSourceType.FOOD_DB;
 		return new FoodRecommendationCandidate(
 			r.getId(), // dietId를 candidate의 id 슬롯으로 전달해 DietService에서 사용
 			r.getTitle(),

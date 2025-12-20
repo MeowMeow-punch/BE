@@ -6,8 +6,8 @@ import java.time.LocalTime;
 
 import MeowMeowPunch.pickeat.domain.diet.service.DietPageAssembler.DietAggregation;
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
+import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
-import MeowMeowPunch.pickeat.global.common.enums.MealSourceType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -44,7 +44,7 @@ public class Diet extends BaseEntity {
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "source_type", nullable = false, length = 20)
-	private MealSourceType sourceType;
+	private DietSourceType sourceType;
 
 	@Column(name = "is_editable", nullable = false)
 	private boolean editable;
@@ -108,7 +108,7 @@ public class Diet extends BaseEntity {
 		return Diet.builder()
 			.userId(userId)
 			.status(status)
-			.sourceType(MealSourceType.USER_INPUT)
+			.sourceType(DietSourceType.USER_INPUT)
 			.editable(true)
 			.title(aggregation.title())
 			.date(date)
@@ -140,7 +140,7 @@ public class Diet extends BaseEntity {
 			return;
 		}
 		this.status = status;
-		this.sourceType = MealSourceType.USER_INPUT;
+		this.sourceType = DietSourceType.USER_INPUT;
 		this.title = aggregation.title();
 		this.date = date;
 		this.time = time;

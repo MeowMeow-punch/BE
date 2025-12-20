@@ -13,14 +13,14 @@ public record DailyDietResponse(
 	SummaryInfo summaryInfo,
 	AiFeedBack aiFeedbackInfo,
 	List<TodayDietInfo> todayDietInfo,
-	Map<String, List<TodayRestaurantMenuInfo>> todayRestaurantMenu
-) implements DietResponse {
+	Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu
+) {
 	public static DailyDietResponse of(
 		String selectedDate,
 		SummaryInfo summaryInfo,
 		AiFeedBack aiFeedbackInfo,
 		List<TodayDietInfo> todayDietInfo,
-		Map<String, List<TodayRestaurantMenuInfo>> todayRestaurantMenu
+		Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu
 	) {
 		return new DailyDietResponse(selectedDate, summaryInfo, aiFeedbackInfo, todayDietInfo, todayRestaurantMenu);
 	}

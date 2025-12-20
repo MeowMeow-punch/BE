@@ -120,7 +120,6 @@ public final class DietPageAssembler {
 			diet.getStatus().name(),
 			toInt(nullSafe(diet.getKcal())),
 			diet.getTime() != null ? diet.getTime().toString() : "",
-			diet.isEditable(),
 			Nutrients.of(
 				toInt(nullSafe(diet.getCarbs())),
 				toInt(nullSafe(diet.getProtein())),
@@ -142,6 +141,7 @@ public final class DietPageAssembler {
 			diet.getStatus().name(),
 			diet.getTime() != null ? diet.getTime().toString() : "",
 			diet.getDate().toString(),
+			diet.isEditable(),
 			foods
 		);
 	}

@@ -7,9 +7,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -25,7 +25,6 @@ import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
@@ -45,15 +44,14 @@ import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodDtoMapper;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
+import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
-import MeowMeowPunch.pickeat.global.common.enums.MealSourceType;
 import MeowMeowPunch.pickeat.welstory.entity.RestaurantMapping;
 import MeowMeowPunch.pickeat.welstory.repository.RestaurantMappingRepository;
 import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
@@ -100,23 +98,18 @@ public class DietService {
 		);
 
 		List<RecommendedDietInfo> recommended = recommendedCandidates.stream()
-			.map(c -> {
-				boolean editable = c.sourceType() != MealSourceType.WELSTORY;
-				return RecommendedDietInfo.of(
-					c.foodId(), // 여기서는 FoodRecommendationCandidate.foodId에 RecommendedDiet ID가 담겨옴
-					c.sourceType(),
-					editable,
-					c.name(),
-					mealSlot(LocalTime.now(KOREA_ZONE)).name(),
-					toThumbnailList(c.thumbnailUrl()),
-					toInt(c.kcal()),
-					Nutrients.of(
-						toInt(c.carbs()),
-						toInt(c.protein()),
-						toInt(c.fat())
-					)
-				);
-			})
+			.map(c -> RecommendedDietInfo.of(
+				c.foodId(), // 여기서는 FoodRecommendationCandidate.foodId에 RecommendedDiet ID가 담겨옴
+				c.name(),
+				mealSlot(LocalTime.now(KOREA_ZONE)).name(),
+				toThumbnailList(c.thumbnailUrl()),
+				toInt(c.kcal()),
+				Nutrients.of(
+					toInt(c.carbs()),
+					toInt(c.protein()),
+					toInt(c.fat())
+				)
+			))
 			.toList();
 
 		return DietHomeResponse.of(summaryInfo, aiFeedBack, recommended);
@@ -170,7 +163,7 @@ public class DietService {
 			))
 			.toList();
 
-		Map<String, List<TodayRestaurantMenuInfo>> todayRestaurantMenu = buildTodayRestaurantMenu(targetDate);
+		Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu = buildTodayRestaurantMenu(targetDate);
 
 		return DailyDietResponse.of(
 			targetDate.toString(),
@@ -235,9 +228,9 @@ public class DietService {
 			throw new DietAccessDeniedException(recommendationId);
 		}
 
-		MealSourceType sourceType = recommended.getSourceType() != null ? recommended.getSourceType()
-			: MealSourceType.FOOD_DB;
-		boolean editable = sourceType != MealSourceType.WELSTORY;
+		DietSourceType sourceType = recommended.getSourceType() != null ? recommended.getSourceType()
+			: DietSourceType.FOOD_DB;
+		boolean editable = sourceType != DietSourceType.WELSTORY;
 		LocalDate date = recommended.getDate();
 		LocalTime time = LocalTime.now(KOREA_ZONE);
 
@@ -267,13 +260,14 @@ public class DietService {
 		Diet saved = dietRepository.save(diet);
 
 		if (editable) {
-			List<RecommendedDietFood> links = recommendedDietFoodRepository.findAllByRecommendedDietId(recommendationId);
+			List<RecommendedDietFood> links = recommendedDietFoodRepository.findAllByRecommendedDietId(
+				recommendationId);
 			if (!links.isEmpty()) {
 				List<DietFood> dietFoods = links.stream()
 					.map(link -> DietFood.builder()
 						.dietId(saved.getId())
 						.foodId(link.getFoodId())
-						.quantity((short) link.getQuantity())
+						.quantity((short)link.getQuantity())
 						.build())
 					.toList();
 				dietFoodRepository.saveAll(dietFoods);
@@ -282,7 +276,7 @@ public class DietService {
 					DietFood.builder()
 						.dietId(saved.getId())
 						.foodId(recommended.getFoodId())
-						.quantity((short) 1)
+						.quantity((short)1)
 						.build()
 				);
 			}
@@ -397,7 +391,7 @@ public class DietService {
 	}
 
 	// 오늘 시간대에 맞는 웰스토리 식단 목록 조회
-	private Map<String, List<TodayRestaurantMenuInfo>> buildTodayRestaurantMenu(LocalDate targetDate) {
+	private Map<String, TodayRestaurantMenuInfo> buildTodayRestaurantMenu(LocalDate targetDate) {
 		RestaurantMapping mapping = restaurantMappingRepository.findByRestaurantName(mockRestaurantName)
 			.orElse(null);
 		if (mapping == null) {
@@ -405,7 +399,7 @@ public class DietService {
 		}
 
 		int dateYyyymmdd = targetDate.getYear() * 10000 + targetDate.getMonthValue() * 100 + targetDate.getDayOfMonth();
-		Map<String, List<TodayRestaurantMenuInfo>> result = new LinkedHashMap<>();
+		Map<String, TodayRestaurantMenuInfo> result = new LinkedHashMap<>();
 
 		for (DietType slot : List.of(DietType.BREAKFAST, DietType.LUNCH, DietType.DINNER)) {
 			String mealTimeId = mealTimeIdForSlot(slot);
@@ -417,14 +411,15 @@ public class DietService {
 			if (menus.isEmpty()) {
 				continue;
 			}
-			List<TodayRestaurantMenuInfo> infos = menus.stream()
-				.map(menu -> TodayRestaurantMenuInfo.of(
-					menu.name(),
-					toInt(DietPageAssembler.toBigDecimal(menu.kcal())),
-					DietPageAssembler.buildSubName(menu.name(), menu.submenu())
-				))
-				.toList();
-			result.put(slot.name(), infos);
+			var primaryMenu = menus.getFirst();
+			int othersNum = Math.max(0, menus.size() - 1);
+			TodayRestaurantMenuInfo info = TodayRestaurantMenuInfo.of(
+				primaryMenu.name(),
+				toInt(DietPageAssembler.toBigDecimal(primaryMenu.kcal())),
+				DietPageAssembler.buildSubName(primaryMenu.name(), primaryMenu.submenu()),
+				othersNum
+			);
+			result.put(slot.name(), info);
 		}
 
 		return result;

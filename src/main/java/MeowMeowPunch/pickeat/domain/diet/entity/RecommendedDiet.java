@@ -5,8 +5,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
+import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
-import MeowMeowPunch.pickeat.global.common.enums.MealSourceType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -46,7 +46,7 @@ public class RecommendedDiet extends BaseEntity {
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "source_type", nullable = false, length = 20)
-	private MealSourceType sourceType;
+	private DietSourceType sourceType;
 
 	@Column(name = "date", nullable = false)
 	private LocalDate date;
