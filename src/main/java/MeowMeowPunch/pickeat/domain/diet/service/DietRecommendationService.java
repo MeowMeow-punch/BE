@@ -12,28 +12,34 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import MeowMeowPunch.pickeat.domain.diet.ai.DietAiFacade;
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
-import MeowMeowPunch.pickeat.domain.diet.dto.HomeRecommendationResult;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDietFood;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietRecommendationSaveException;
+import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
-import MeowMeowPunch.pickeat.domain.diet.ai.DietAiFacade;
+import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
-import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
 import MeowMeowPunch.pickeat.global.common.enums.MainMealCategory;
 import MeowMeowPunch.pickeat.global.common.enums.SnackCategory;
-import MeowMeowPunch.pickeat.welstory.entity.RestaurantMapping;
-import MeowMeowPunch.pickeat.welstory.repository.RestaurantMappingRepository;
+import MeowMeowPunch.pickeat.welstory.entity.GroupMapping;
+import MeowMeowPunch.pickeat.welstory.repository.GroupMappingRepository;
 import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * [Diet][Service] 식단 추천 계산 및 저장 서비스.
+ *
+ * - 그룹/개인 상황에 맞는 추천 후보 조회
+ * - 추천 식단 엔티티 저장 및 스코어링
+ */
 @Service
 @RequiredArgsConstructor
 public class DietRecommendationService {
@@ -50,6 +56,7 @@ public class DietRecommendationService {
 	private static final BigDecimal GOAL_CARBS = BigDecimal.valueOf(280);
 	private static final BigDecimal GOAL_PROTEIN = BigDecimal.valueOf(120);
 	private static final BigDecimal GOAL_FAT = BigDecimal.valueOf(70);
+
 	private static final Map<DietType, BigDecimal> MEAL_RATIO = Map.of(
 		DietType.BREAKFAST, new BigDecimal("0.30"),
 		DietType.LUNCH, new BigDecimal("0.30"),
@@ -61,22 +68,24 @@ public class DietRecommendationService {
 	private final RecommendedDietRepository recommendedDietRepository;
 	private final RecommendedDietFoodRepository recommendedDietFoodRepository;
 	private final FoodRepository foodRepository;
-	private final RestaurantMappingRepository restaurantMappingRepository;
+	private final GroupMappingRepository groupMappingRepository;
 	private final WelstoryMenuService welstoryMenuService;
 	private final DietAiFacade dietAiFacade;
 
 	// TODO: User 테이블 연동 시 제거 예정 (임시 Group 여부/식당명)
 	private final UserStatus mockUserStatus = UserStatus.GROUP;
-	private final String mockRestaurantName = "전기부산";
+	private final String mockGroupName = "전기부산";
 
 	/**
-	 * 오늘 날짜와 현재 식사 시간대에 맞춰 추천 TOP5를 산출한다.
-	 * - 이미 해당 시간대 추천이 저장돼 있으면 DB값을 재사용
-	 * - 없으면 오늘 섭취 합계 → 남은 영양소 → 목적별 가중치로 계산해 TOP5 조회
-	 * - 상위 2개는 추천 테이블에 저장 (추후 AI 선택으로 교체 예정)
+	 * [Recommend] 오늘/현재 식사 슬롯에 맞춰 추천 TOP5 계산
+	 *
+	 * @param userId 사용자 식별자
+	 * @param focus  추천 목적(균형/단백질 등)
+	 * @param totals 오늘 섭취 합계
+	 * @return 추천 후보 리스트
 	 */
 	@Transactional
-	public HomeRecommendationResult recommendTopFoods(String userId, Focus purposeType,
+	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, Focus focus,
 		NutrientTotals totals) {
 		LocalDate today = LocalDate.now(KOREA_ZONE);
 		LocalTime nowTime = LocalTime.now(KOREA_ZONE);
@@ -87,26 +96,24 @@ public class DietRecommendationService {
 
 		// 오늘 날짜로 DietStatus(아침, 점심, 저녁, 간식) 추천이 1개 이상 있으면 바로 반환
 		if (existing.size() >= MIN_PICK) {
-			List<FoodRecommendationCandidate> picks = existing.stream()
+			return existing.stream()
 				.map(this::toCandidate)
 				.toList();
-			return HomeRecommendationResult.of(picks, "이미 저장된 추천을 반환합니다.", false);
 		}
 
 		if (isGroupUser(userId) && mealSlot == DietType.LUNCH) {
-			List<FoodRecommendationCandidate> groupLunch = recommendWelstoryLunch(today, purposeType, totals);
+			List<FoodRecommendationCandidate> groupLunch = recommendWelstoryLunch(today, focus, totals);
 			if (!groupLunch.isEmpty()) {
 				try {
-					HomeRecommendationResult aiResult = dietAiFacade.selectHomeRecommendations(groupLunch);
-					List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot, aiResult.picks());
-					List<FoodRecommendationCandidate> picks = saved.stream().map(this::toCandidate).toList();
-					return HomeRecommendationResult.of(picks, aiResult.reason(), aiResult.aiUsed());
+					List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot, groupLunch);
+					return saved.stream().map(this::toCandidate).toList();
 				} catch (Exception e) {
 					throw new DietRecommendationSaveException(e);
 				}
 			}
 		}
 
+		// FOOD_DB 기반 식단 추천
 		// 1) 끼니별 목표 영양분 계산
 		BigDecimal targetMealKcal = targetForMeal(GOAL_KCAL, totals.totalKcal(), mealSlot);
 		BigDecimal targetMealCarbs = targetMacroForMeal(GOAL_CARBS, totals.totalCarbs(), mealSlot);
@@ -115,7 +122,7 @@ public class DietRecommendationService {
 		List<String> allowedCategories = allowedCategoriesForMeal(mealSlot);
 
 		// 2) 목적별 가중치/패널티 설정
-		Weight weight = weightByPurpose(purposeType);
+		Weight weight = weightByPurpose(focus);
 
 		// 3) 남은 영양분 기반 TOP 후보 생성 (AI가 1~2개 선택 예정)
 		List<FoodRecommendationCandidate> candidates = dietRecommendationMapper.findTopFoodCandidates(
@@ -136,19 +143,26 @@ public class DietRecommendationService {
 		);
 
 		try {
-			HomeRecommendationResult aiResult = dietAiFacade.selectHomeRecommendations(candidates);
-			List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot, aiResult.picks());
-			List<FoodRecommendationCandidate> picks = saved.stream().map(this::toCandidate).toList();
-			return HomeRecommendationResult.of(picks, aiResult.reason(), aiResult.aiUsed());
+			List<RecommendedDiet> saved = saveTopRecommended(userId, today, mealSlot,
+				candidates.stream().limit(MAX_PICK).toList());
+			return saved.stream().map(this::toCandidate).toList();
 		} catch (Exception e) {
 			throw new DietRecommendationSaveException(e);
 		}
 	}
 
+	/**
+	 * [Recommend] 웰스토리 점심 식단 후보 조회 및 점수화
+	 *
+	 * @param targetDate 추천 대상 날짜
+	 * @param focus      추천 목적
+	 * @param totals     누적 섭취량
+	 * @return 웰스토리 추천 후보 리스트
+	 */
 	private List<FoodRecommendationCandidate> recommendWelstoryLunch(LocalDate targetDate, Focus focus,
 		NutrientTotals totals) {
-		String restaurantId = restaurantMappingRepository.findByRestaurantName(mockRestaurantName)
-			.map(RestaurantMapping::getRestaurantId)
+		String restaurantId = groupMappingRepository.findByGroupName(mockGroupName)
+			.map(GroupMapping::getGroupId)
 			.orElse(null);
 		if (restaurantId == null) {
 			return List.of();
@@ -176,6 +190,17 @@ public class DietRecommendationService {
 			.toList();
 	}
 
+	/**
+	 * [Score] 웰스토리 후보와 목표 영양 차이를 가중치로 점수화
+	 *
+	 * @param c             후보
+	 * @param targetKcal    목표 칼로리
+	 * @param targetCarb    목표 탄수화물
+	 * @param targetProtein 목표 단백질
+	 * @param targetFat     목표 지방
+	 * @param weight        가중치
+	 * @return 점수 포함 후보
+	 */
 	private FoodRecommendationCandidate scoreCandidate(FoodRecommendationCandidate c, BigDecimal targetKcal,
 		BigDecimal targetCarb, BigDecimal targetProtein, BigDecimal targetFat, Weight weight) {
 		double kcalDiff = diff(c.kcal(), targetKcal) * weight.kcal();
@@ -195,7 +220,8 @@ public class DietRecommendationService {
 			c.protein(),
 			c.fat(),
 			c.category(),
-			score
+			score,
+			DietSourceType.WELSTORY
 		);
 	}
 
@@ -218,12 +244,14 @@ public class DietRecommendationService {
 	private List<RecommendedDiet> saveTopRecommended(String userId, LocalDate date, DietType dietType,
 		List<FoodRecommendationCandidate> picks) {
 		return picks.stream().map(c -> {
-			Long foodId = resolveFoodId(c);
+			DietSourceType sourceType = c.sourceType() == null ? DietSourceType.FOOD_DB : c.sourceType();
+			Long foodId = sourceType == DietSourceType.WELSTORY ? null : resolveFoodId(c);
 			RecommendedDiet saved = recommendedDietRepository.save(
 				RecommendedDiet.builder()
 					.userId(userId)
 					.foodId(foodId)
 					.dietType(dietType)
+					.sourceType(sourceType)
 					.date(date)
 					.time(LocalTime.now(KOREA_ZONE))
 					.title(c.name())
@@ -234,17 +262,20 @@ public class DietRecommendationService {
 					.thumbnailUrl(c.thumbnailUrl())
 					.build()
 			);
-			recommendedDietFoodRepository.save(
-				RecommendedDietFood.builder()
-					.recommendedDiet(saved)
-					.foodId(foodId)
-					.quantity(1)
-					.build()
-			);
+			if (foodId != null) {
+				recommendedDietFoodRepository.save(
+					RecommendedDietFood.builder()
+						.recommendedDiet(saved)
+						.foodId(foodId)
+						.quantity(2)
+						.build()
+				);
+			}
 			return saved;
 		}).toList();
 	}
 
+	// foodId 반환
 	private Long resolveFoodId(FoodRecommendationCandidate c) {
 		if (c.foodId() != null && c.foodId() > 0) {
 			return c.foodId();
@@ -253,31 +284,7 @@ public class DietRecommendationService {
 		if (existing != null) {
 			return existing.getId();
 		}
-		Food created = foodRepository.save(
-			Food.builder()
-				.foodCode(null)
-				.name(c.name())
-				.category(null)
-				.baseAmount(200)
-				.baseUnit(FoodBaseUnit.G)
-				.servingSize(null)
-				.servingDesc(null)
-				.kcal(nullSafe(c.kcal()))
-				.carbs(nullSafe(c.carbs()))
-				.protein(nullSafe(c.protein()))
-				.fat(nullSafe(c.fat()))
-				.sugar(BigDecimal.ZERO)
-				.dietaryFiber(BigDecimal.ZERO)
-				.vitA(BigDecimal.ZERO)
-				.vitC(BigDecimal.ZERO)
-				.vitD(BigDecimal.ZERO)
-				.calcium(BigDecimal.ZERO)
-				.iron(BigDecimal.ZERO)
-				.sodium(BigDecimal.ZERO)
-				.thumbnailUrl(c.thumbnailUrl() == null ? "" : c.thumbnailUrl())
-				.build()
-		);
-		return created.getId();
+		throw new FoodNotFoundException(c.foodId() != null ? c.foodId() : -1L);
 	}
 
 	// 한 끼 타겟 산출 (음수 방지)
@@ -336,6 +343,7 @@ public class DietRecommendationService {
 
 	// DB에 저장된 추천을 응답용 후보로 변환
 	private FoodRecommendationCandidate toCandidate(RecommendedDiet r) {
+		DietSourceType source = r.getSourceType() != null ? r.getSourceType() : DietSourceType.FOOD_DB;
 		return new FoodRecommendationCandidate(
 			r.getId(), // dietId를 candidate의 id 슬롯으로 전달해 DietService에서 사용
 			r.getTitle(),
@@ -345,7 +353,8 @@ public class DietRecommendationService {
 			nullSafe(r.getProtein()),
 			nullSafe(r.getFat()),
 			null,
-			0.0 // 이미 저장된 추천은 점수 없음
+			0.0, // 이미 저장된 추천은 점수 없음
+			source
 		);
 	}
 
@@ -360,6 +369,7 @@ public class DietRecommendationService {
 	) {
 	}
 
+	// TODO: user 기반시 삭제
 	private enum UserStatus {
 		SINGLE, GROUP
 	}

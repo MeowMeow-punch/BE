@@ -4,9 +4,10 @@ package MeowMeowPunch.pickeat.global.common.dto.response.diet;
 public record TodayRestaurantMenuInfo(
 	String name,
 	int calorie,
-	String subName
+	String subName,
+	int othersNum
 ) {
-	public static TodayRestaurantMenuInfo of(String name, int calorie, String subName) {
-		return new TodayRestaurantMenuInfo(name, calorie, subName);
+	public static TodayRestaurantMenuInfo of(String name, int calorie, String subName, int othersNum) {
+		return new TodayRestaurantMenuInfo(name, calorie, subName, othersNum);
 	}
 }

@@ -3,6 +3,7 @@ package MeowMeowPunch.pickeat.domain.diet.dto.response;
 import java.util.List;
 import java.util.Map;
 
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.AiFeedBack;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
@@ -13,14 +14,14 @@ public record DailyDietResponse(
 	SummaryInfo summaryInfo,
 	AiFeedBack aiFeedbackInfo,
 	List<TodayDietInfo> todayDietInfo,
-	Map<String, List<TodayRestaurantMenuInfo>> todayRestaurantMenu
-) implements DietResponse {
+	Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu
+) {
 	public static DailyDietResponse of(
 		String selectedDate,
 		SummaryInfo summaryInfo,
 		AiFeedBack aiFeedbackInfo,
 		List<TodayDietInfo> todayDietInfo,
-		Map<String, List<TodayRestaurantMenuInfo>> todayRestaurantMenu
+		Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu
 	) {
 		return new DailyDietResponse(selectedDate, summaryInfo, aiFeedbackInfo, todayDietInfo, todayRestaurantMenu);
 	}
