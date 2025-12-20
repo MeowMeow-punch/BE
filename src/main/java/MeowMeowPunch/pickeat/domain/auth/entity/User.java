@@ -51,13 +51,15 @@ import lombok.NoArgsConstructor;
  * - 데이터 모델: 식단 추천을 위한 건강/생활 패턴 속성 포함
  * - 감사 로그: createdAt/updatedAt을 통해 추후 변경 이력 트래킹 가능
  */
+import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
+
 @Getter
 @Entity
 @Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-public class User {
+public class User extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -126,22 +128,4 @@ public class User {
 
 	private Integer targetWeight;
 
-	@Column(nullable = false)
-	private LocalDateTime createdAt;
-
-	@Column(nullable = false)
-	private LocalDateTime updatedAt;
-
-	/***************** Methods *****************/
-
-	// [LifeCycle] 최초 생성 시 타임스탬프를 자동 세팅
-	public void initializeTimestamp() {
-		this.createdAt = LocalDateTime.now();
-		this.updatedAt = this.createdAt;
-	}
-
-	// [LifeCycle] 사용자 정보 변경 시 수정일시를 갱신
-	public void touchUpdatedAt() {
-		this.updatedAt = LocalDateTime.now();
-	}
 }

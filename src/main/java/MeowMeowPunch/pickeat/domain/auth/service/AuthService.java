@@ -114,7 +114,6 @@ public class AuthService {
 		validateGroup(request.status(), request.groupId());
 
 		User user = buildUser(request);
-		user.initializeTimestamp();
 		User savedUser = userRepository.save(user);
 		return issueTokens(savedUser);
 	}
