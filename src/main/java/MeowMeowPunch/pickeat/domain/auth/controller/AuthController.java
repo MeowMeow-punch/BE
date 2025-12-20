@@ -101,7 +101,7 @@ public class AuthController {
 		AuthTokenResponse tokens = authService.signUp(request);
 		ResponseCookie refreshCookie = jwtCookieProvider.createRefreshTokenCookie(tokens.refreshToken());
 
-		HttpStatus status = HttpStatus.OK; // 상황에 따라 변경될 가능성 있음
+		HttpStatus status = HttpStatus.CREATED; // 상황에 따라 변경될 가능성 있음
 		return ResponseEntity.status(status)
 				.header(HttpHeaders.SET_COOKIE, jwtCookieProvider.asHeader(refreshCookie))
 				.body(new ResTemplate<>(status, "회원가입 성공", tokens));
