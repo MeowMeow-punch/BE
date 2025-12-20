@@ -1,6 +1,7 @@
 package MeowMeowPunch.pickeat.global.common.enums;
 
 public enum DietSourceType {
-	USERINPUT,
-	RECOMMENDATION
+	USER_INPUT,
+	FOOD_DB,
+	WELSTORY
 }

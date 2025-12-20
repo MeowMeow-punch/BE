@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
+import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
 import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
 import MeowMeowPunch.pickeat.welstory.gateway.WelstoryMenuGateway;
@@ -18,12 +19,21 @@ import lombok.RequiredArgsConstructor;
 public class WelstoryMenuService {
 
 	private final WelstoryMenuGateway gateway;
+	private static final String DEFAULT_LUNCH_MEAL_TIME_ID = "2";
+
+	// 웰스토리 식단 리스트 조회 (원본 포맷)
+	public List<WelstoryMenuItem> getMenus(String restaurantId, Integer dateYyyymmdd, String mealTimeId,
+		String mealTimeName) {
+		int targetDate = (dateYyyymmdd != null) ? dateYyyymmdd : 0;
+		String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : DEFAULT_LUNCH_MEAL_TIME_ID;
+		return gateway.getMeals(restaurantId, targetDate, timeId, mealTimeName);
+	}
 
 	// 웰스토리 식단+영양 정보를 추천 후보 DTO로 변환
 	public List<FoodRecommendationCandidate> getRecommendationCandidates(String restaurantId, Integer dateYyyymmdd,
 		String mealTimeId, String mealTimeName) {
 		int targetDate = (dateYyyymmdd != null) ? dateYyyymmdd : 0;
-		String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : "2";
+		String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : DEFAULT_LUNCH_MEAL_TIME_ID;
 
 		List<WelstoryMenuItem> menus = gateway.getMeals(restaurantId, targetDate, timeId, mealTimeName);
 
@@ -71,7 +81,8 @@ public class WelstoryMenuService {
 			totalProtein,
 			totalFat,
 			menu.course(),
-			0.0
+			0.0,
+			DietSourceType.WELSTORY
 		);
 	}
 

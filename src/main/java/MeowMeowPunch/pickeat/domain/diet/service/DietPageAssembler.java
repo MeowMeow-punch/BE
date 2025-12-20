@@ -7,11 +7,12 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.springframework.util.StringUtils;
 
@@ -34,7 +35,6 @@ import MeowMeowPunch.pickeat.global.common.dto.response.diet.NutritionDetail;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.NutritionInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.WeeklyCaloriesInfo;
 import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 
@@ -112,26 +112,6 @@ public final class DietPageAssembler {
 		);
 	}
 
-	// 주간 칼로리 응답 생성 (이번주 기준)
-	public static List<WeeklyCaloriesInfo> buildWeeklyCalories(List<DailyCalorieSum> sums, LocalDate start) {
-		Map<LocalDate, Integer> calorieByDate = sums.stream()
-			.collect(Collectors.toMap(
-				DailyCalorieSum::date,
-				d -> toInt(nullSafe(d.totalKcal())),
-				Integer::sum
-			));
-
-		// 해당 날짜에 칼로리 값이 없으면 0으로 처리
-		List<WeeklyCaloriesInfo> result = new ArrayList<>();
-		for (int i = 0; i < 7; i++) {
-			LocalDate date = start.plusDays(i);
-			int kcal = calorieByDate.getOrDefault(date, 0);
-			String dayKey = date.getDayOfWeek().name().substring(0, 3);
-			result.add(WeeklyCaloriesInfo.of(dayKey, kcal));
-		}
-		return result;
-	}
-
 	// 오늘 등록 식단 응답 생성
 	public static TodayDietInfo toTodayDietInfo(Diet diet, List<String> thumbnailUrls) {
 		return TodayDietInfo.of(
@@ -157,11 +137,60 @@ public final class DietPageAssembler {
 
 		return DietInfo.of(
 			diet.getId(),
+			diet.getTitle(),
 			diet.getStatus().name(),
 			diet.getTime() != null ? diet.getTime().toString() : "",
 			diet.getDate().toString(),
+			diet.isEditable(),
 			foods
 		);
+	}
+
+	// 단일 썸네일을 리스트로 래핑
+	public static List<String> toThumbnailList(String thumbnailUrl) {
+		if (!StringUtils.hasText(thumbnailUrl)) {
+			return List.of();
+		}
+		return List.of(thumbnailUrl);
+	}
+
+	// 웰스토리 메뉴 서브명 생성 (메인 메뉴 제외)
+	public static String buildSubName(String mainName, String subMenu) {
+		if (!StringUtils.hasText(subMenu)) {
+			return "";
+		}
+		String joined = Arrays.stream(subMenu.split(","))
+			.map(String::trim)
+			.filter(s -> !s.isBlank())
+			.filter(s -> !s.equals(mainName))
+			.collect(Collectors.joining(", "));
+		return joined;
+	}
+
+	// 웰스토리 mealTimeId 매핑
+	public static String mealTimeIdForSlot(DietType mealSlot) {
+		return switch (mealSlot) {
+			case BREAKFAST -> "1";
+			case LUNCH -> "2";
+			case DINNER -> "3";
+			case SNACK -> "5"; // 웰스토리 기준 간식 코드 예시
+		};
+	}
+
+	// 문자열 수치를 BigDecimal로 안전하게 변환
+	public static BigDecimal toBigDecimal(String value) {
+		if (value == null || value.isBlank()) {
+			return BigDecimal.ZERO;
+		}
+		try {
+			String cleaned = value.replace(",", "").trim();
+			if (cleaned.startsWith(".")) {
+				cleaned = "0" + cleaned;
+			}
+			return new BigDecimal(cleaned);
+		} catch (Exception e) {
+			return BigDecimal.ZERO;
+		}
 	}
 
 	// 특정 날짜에 등록된 식단들의 부가 영양분 합계를 생성

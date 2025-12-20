@@ -22,6 +22,7 @@ import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
+import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import MeowMeowPunch.pickeat.global.common.enums.FoodBaseUnit;
@@ -70,7 +71,7 @@ public class DietRecommendationService {
 	 * 오늘 날짜와 현재 식사 시간대에 맞춰 추천 TOP5를 산출한다.
 	 * - 이미 해당 시간대 추천이 저장돼 있으면 DB값을 재사용
 	 * - 없으면 오늘 섭취 합계 → 남은 영양소 → 목적별 가중치로 계산해 TOP5 조회
-	 * - 상위 2개는 추천 테이블에 저장 (추후 AI 선택으로 교체 예정)
+	 * - 상위 2개는 추천 테이블에 저장
 	 */
 	@Transactional
 	public List<FoodRecommendationCandidate> recommendTopFoods(String userId, Focus purposeType,
@@ -189,7 +190,8 @@ public class DietRecommendationService {
 			c.protein(),
 			c.fat(),
 			c.category(),
-			score
+			score,
+			DietSourceType.WELSTORY
 		);
 	}
 
@@ -212,13 +214,16 @@ public class DietRecommendationService {
 	private List<RecommendedDiet> saveTopRecommended(String userId, LocalDate date, DietType dietType,
 		List<FoodRecommendationCandidate> picks) {
 		return picks.stream().map(c -> {
-			Long foodId = resolveFoodId(c);
+			DietSourceType sourceType = c.sourceType() == null ? DietSourceType.FOOD_DB : c.sourceType();
+			Long foodId = sourceType == DietSourceType.WELSTORY ? null : resolveFoodId(c);
 			RecommendedDiet saved = recommendedDietRepository.save(
 				RecommendedDiet.builder()
 					.userId(userId)
 					.foodId(foodId)
 					.dietType(dietType)
+					.sourceType(sourceType)
 					.date(date)
+					.time(LocalTime.now(KOREA_ZONE))
 					.title(c.name())
 					.kcal(nullSafe(c.kcal()))
 					.carbs(nullSafe(c.carbs()))
@@ -227,13 +232,15 @@ public class DietRecommendationService {
 					.thumbnailUrl(c.thumbnailUrl())
 					.build()
 			);
-			recommendedDietFoodRepository.save(
-				RecommendedDietFood.builder()
-					.recommendedDiet(saved)
-					.foodId(foodId)
-					.quantity(1)
-					.build()
-			);
+			if (foodId != null) {
+				recommendedDietFoodRepository.save(
+					RecommendedDietFood.builder()
+						.recommendedDiet(saved)
+						.foodId(foodId)
+						.quantity(1)
+						.build()
+				);
+			}
 			return saved;
 		}).toList();
 	}
@@ -329,6 +336,7 @@ public class DietRecommendationService {
 
 	// DB에 저장된 추천을 응답용 후보로 변환
 	private FoodRecommendationCandidate toCandidate(RecommendedDiet r) {
+		DietSourceType source = r.getSourceType() != null ? r.getSourceType() : DietSourceType.FOOD_DB;
 		return new FoodRecommendationCandidate(
 			r.getId(), // dietId를 candidate의 id 슬롯으로 전달해 DietService에서 사용
 			r.getTitle(),
@@ -338,7 +346,8 @@ public class DietRecommendationService {
 			nullSafe(r.getProtein()),
 			nullSafe(r.getFat()),
 			null,
-			0.0 // 이미 저장된 추천은 점수 없음
+			0.0, // 이미 저장된 추천은 점수 없음
+			source
 		);
 	}
 

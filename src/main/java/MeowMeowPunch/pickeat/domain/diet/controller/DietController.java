@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendationDetailResponse;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +29,11 @@ public class DietController {
 
 	// 날짜별 식단 페이지 조회
 	@GetMapping
-	public ResTemplate<DietResponse> getDiet(
+	public ResTemplate<DailyDietResponse> getDiet(
 		@RequestParam(name = "userId") String userId,
 		@RequestParam(name = "date") String date
 	) {
-		DietResponse data = dietService.getDaily(userId, date);
+		DailyDietResponse data = dietService.getDaily(userId, date);
 		return ResTemplate.success(HttpStatus.OK, "식단 페이지 조회 성공", data);
 	}
 
@@ -57,6 +57,16 @@ public class DietController {
 		return ResTemplate.success(HttpStatus.OK, "식단 상세 조회 성공", data);
 	}
 
+	// 추천 식단 등록
+	@PostMapping({"/recommendation/{recommendationId}"})
+	public ResTemplate<DietRegisterResponse> registerRecommendation(
+		@RequestParam(name = "userId") String userId,
+		@PathVariable("recommendationId") Long recommendationId
+	) {
+		DietRegisterResponse data = dietService.registerRecommendation(userId, recommendationId);
+		return ResTemplate.success(HttpStatus.OK, "추천 식단 등록 성공", data);
+	}
+
 	// 식단 등록
 	@PostMapping
 	public ResTemplate<Void> createDiet(
@@ -76,16 +86,6 @@ public class DietController {
 	) {
 		dietService.update(userId, myDietId, request);
 		return ResTemplate.success(HttpStatus.OK, "식단 수정 성공");
-	}
-
-	// 추천 식단 상세 조회 (수정 진입용)
-	@GetMapping("/recommendation/{recommendationId}")
-	public ResTemplate<RecommendationDetailResponse> getRecommendedDietDetail(
-		@RequestParam(name = "userId") String userId,
-		@PathVariable("recommendationId") Long recommendationId
-	) {
-		RecommendationDetailResponse data = dietService.getRecommendedDetail(userId, recommendationId);
-		return ResTemplate.success(HttpStatus.OK, "추천 식단 조회 성공", data);
 	}
 
 	// 식단 삭제

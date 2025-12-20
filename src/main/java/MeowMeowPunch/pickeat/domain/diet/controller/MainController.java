@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import MeowMeowPunch.pickeat.domain.diet.dto.response.DietResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import lombok.RequiredArgsConstructor;
@@ -19,10 +19,10 @@ public class MainController {
 
 	// 메인 페이지 조회
 	@GetMapping("/main")
-	public ResTemplate<DietResponse> getDiet(
+	public ResTemplate<DietHomeResponse> getDiet(
 		@RequestParam(name = "userId") String userId
 	) {
-		DietResponse data = dietService.getHome(userId);
+		DietHomeResponse data = dietService.getHome(userId);
 		return ResTemplate.success(HttpStatus.OK, "메인페이지 조회 성공", data);
 	}
 }

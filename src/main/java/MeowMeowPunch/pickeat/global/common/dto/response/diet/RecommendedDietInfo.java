@@ -8,10 +8,11 @@ public record RecommendedDietInfo(
 	String name,
 	String mealType,
 	List<String> thumbnailUrls,
-	int calorie
+	int calorie,
+	Nutrients nutrients
 ) {
-	public static RecommendedDietInfo of(Long recommendationId, String name, String mealType, List<String> thumbnailUrls,
-		int calorie) {
-		return new RecommendedDietInfo(recommendationId, name, mealType, thumbnailUrls, calorie);
+	public static RecommendedDietInfo of(Long recommendationId, String name, String mealType,
+		List<String> thumbnailUrls, int calorie, Nutrients nutrients) {
+		return new RecommendedDietInfo(recommendationId, name, mealType, thumbnailUrls, calorie, nutrients);
 	}
 }
