@@ -319,7 +319,7 @@ public class DietService {
 			}
 		}
 
-		return DietRegisterResponse.of(saved.getId());
+		return DietRegisterResponse.from(saved.getId());
 	}
 
 	// 식단 등록
