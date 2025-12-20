@@ -3,6 +3,7 @@ package MeowMeowPunch.pickeat.domain.diet.dto.response;
 import java.util.List;
 import java.util.Map;
 
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.AiFeedBack;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;

@@ -20,12 +20,12 @@ import org.springframework.util.StringUtils;
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.AiFeedBack;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.RestaurantMenuResponse;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
@@ -43,20 +43,30 @@ import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.AiFeedBack;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
-import MeowMeowPunch.pickeat.welstory.entity.RestaurantMapping;
-import MeowMeowPunch.pickeat.welstory.repository.RestaurantMappingRepository;
+import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
+import MeowMeowPunch.pickeat.welstory.entity.GroupMapping;
+import MeowMeowPunch.pickeat.welstory.repository.GroupMappingRepository;
 import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * [Diet][Service] 식단/식당 메뉴 도메인 서비스.
+ *
+ * - 식단 메인/일자별/상세/영양 조회
+ * - 식단 등록·수정·삭제 및 추천 식단 등록
+ * - 사내 식당 메뉴 조회
+ */
 @Service
 @RequiredArgsConstructor
 public class DietService {
@@ -70,12 +80,17 @@ public class DietService {
 	private final RecommendedDietRepository recommendedDietRepository;
 	private final RecommendedDietFoodRepository recommendedDietFoodRepository;
 	private final WelstoryMenuService welstoryMenuService;
-	private final RestaurantMappingRepository restaurantMappingRepository;
+	private final GroupMappingRepository groupMappingRepository;
 
 	// TODO: User 연동 시 제거 (임시 식당명)
-	private final String mockRestaurantName = "전기부산";
+	private final String mockGroupName = "전기부산";
 
-	// 메인 페이지 조회 (오늘 기준)
+	/**
+	 * [Home] 오늘 기준 식단 메인 정보 조회
+	 *
+	 * @param userId 사용자 식별자
+	 * @return DietHomeResponse (요약, AI 피드백 - 추천 식단 기반, 추천 식단)
+	 */
 	public DietHomeResponse getHome(String userId) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
@@ -115,12 +130,18 @@ public class DietService {
 		return DietHomeResponse.of(summaryInfo, aiFeedBack, recommended);
 	}
 
-	// 특정 날짜 식단 조회
+	/**
+	 * [Daily] 특정 날짜 식단 페이지 조회
+	 *
+	 * @param userId  사용자 식별자
+	 * @param rawDate 조회 날짜(YYYY-MM-DD, null/빈값이면 오늘)
+	 * @return DailyDietResponse (요약, AI 피드백 - 오늘 식단 기반, 오늘 식단, 식당 메뉴)
+	 */
 	public DailyDietResponse getDaily(String userId, String rawDate) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
 		}
-		Focus focus = Focus.BALANCE; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
+
 		LocalDate targetDate = parseDateOrToday(rawDate);
 
 		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, targetDate);
@@ -163,7 +184,12 @@ public class DietService {
 			))
 			.toList();
 
-		Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu = buildTodayRestaurantMenu(targetDate);
+		Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu = buildTodayRestaurantMenu(
+			targetDate,
+			mockGroupName,
+			groupMappingRepository,
+			welstoryMenuService
+		);
 
 		return DailyDietResponse.of(
 			targetDate.toString(),
@@ -174,7 +200,13 @@ public class DietService {
 		);
 	}
 
-	// 식단 상세 조회
+	/**
+	 * [Detail] 단일 식단 상세 조회
+	 *
+	 * @param userId 사용자 식별자
+	 * @param dietId 식단 ID
+	 * @return DietDetailResponse(식단명, 식사 시간대, 시간, 날짜, 수정 가능 여부, 칼로리, 영양분, 음식 데이터)
+	 */
 	public DietDetailResponse getDetail(String userId, Long dietId) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
@@ -184,6 +216,8 @@ public class DietService {
 			.orElseThrow(() -> new DietDetailNotFoundException(dietId));
 
 		List<DietFood> dietFoods = dietFoodRepository.findAllByDietId(diet.getId());
+
+		// WELSTORY 추천 식단일 경우 food 데이터를 보내지 않음
 		if (dietFoods.isEmpty() && !diet.isEditable()) {
 			DietInfo dietInfo = DietPageAssembler.toDietInfo(diet, List.of(), Map.of());
 			return DietDetailResponse.from(dietInfo);
@@ -203,7 +237,13 @@ public class DietService {
 		return DietDetailResponse.from(dietInfo);
 	}
 
-	// 특정 날짜의 상세 영양분 조회
+	/**
+	 * [Nutrition] 특정 날짜 영양 합계 조회
+	 *
+	 * @param userId  사용자 식별자
+	 * @param rawDate 조회 날짜(YYYY-MM-DD, null/빈값이면 오늘)
+	 * @return NutritionResponse(8개의 영양분 섭취량)
+	 */
 	public NutritionResponse getNutrition(String userId, String rawDate) {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
@@ -215,7 +255,50 @@ public class DietService {
 		return NutritionResponse.from(DietPageAssembler.buildNutritionInfo(diets));
 	}
 
-	// 추천 식단을 바로 등록
+	/**
+	 * [RestaurantMenu] 특정 날짜 사내 식당 메뉴 조회
+	 *
+	 * @param rawDate 조회 날짜(YYYY-MM-DD, null/빈값이면 오늘)
+	 * @return RestaurantMenuResponse (식사시간대별 메뉴 리스트)
+	 */
+	public RestaurantMenuResponse getRestaurantMenus(String rawDate) {
+		LocalDate targetDate = parseDateOrToday(rawDate);
+		GroupMapping mapping = groupMappingRepository.findByGroupName(mockGroupName)
+			.orElse(null);
+		if (mapping == null) {
+			return RestaurantMenuResponse.from(Map.of());
+		}
+
+		int dateYyyymmdd = toYyyymmdd(targetDate);
+		Map<String, List<RestaurantMenuInfo>> menusBySlot = new LinkedHashMap<>();
+
+		for (DietType slot : List.of(DietType.BREAKFAST, DietType.LUNCH, DietType.DINNER, DietType.SNACK)) {
+			String mealTimeId = mealTimeIdForSlot(slot);
+			if (mealTimeId == null) {
+				continue;
+			}
+			List<WelstoryMenuItem> menus = welstoryMenuService.getMenus(mapping.getGroupId(), dateYyyymmdd,
+				mealTimeId, slot.name());
+			if (menus.isEmpty()) {
+				menusBySlot.put(slot.name(), List.of());
+				continue;
+			}
+			List<RestaurantMenuInfo> infos = menus.stream()
+				.map(menu -> toRestaurantMenuInfo(menu, welstoryMenuService))
+				.toList();
+			menusBySlot.put(slot.name(), infos);
+		}
+
+		return RestaurantMenuResponse.from(menusBySlot);
+	}
+
+	/**
+	 * [Register] 추천 식단을 내 식단으로 등록
+	 *
+	 * @param userId            사용자 식별자
+	 * @param recommendationId  추천 식단 ID
+	 * @return DietRegisterResponse (등록된 식단 ID)
+	 */
 	@Transactional
 	public DietRegisterResponse registerRecommendation(String userId, Long recommendationId) {
 		if (!StringUtils.hasText(userId)) {
@@ -224,6 +307,7 @@ public class DietService {
 
 		RecommendedDiet recommended = recommendedDietRepository.findById(recommendationId)
 			.orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
+
 		if (!recommended.getUserId().equals(userId)) {
 			throw new DietAccessDeniedException(recommendationId);
 		}
@@ -276,16 +360,20 @@ public class DietService {
 					DietFood.builder()
 						.dietId(saved.getId())
 						.foodId(recommended.getFoodId())
-						.quantity((short)1)
+						.quantity((short)2)
 						.build()
 				);
 			}
 		}
-
 		return DietRegisterResponse.from(saved.getId());
 	}
 
-	// 식단 등록
+	/**
+	 * [Create] 사용자 입력 식단 등록
+	 *
+	 * @param userId  사용자 식별자
+	 * @param request 식단 등록 요청
+	 */
 	@Transactional
 	public void create(String userId, DietRequest request) {
 		if (!StringUtils.hasText(userId)) {
@@ -295,7 +383,7 @@ public class DietService {
 		LocalDate date = parseDateOrToday(request.date());
 		LocalTime time = parseTime(request.time());
 
-		DietAggregation aggregation = prepareAggregation(request);
+		DietAggregation aggregation = prepareAggregation(request, foodRepository);
 
 		Diet diet = Diet.createUserInput(
 			userId,
@@ -311,7 +399,13 @@ public class DietService {
 		dietFoodRepository.saveAll(dietFoods);
 	}
 
-	// 식단 수정
+	/**
+	 * [Update] 사용자 입력 식단 수정
+	 *
+	 * @param userId  사용자 식별자
+	 * @param dietId  식단 ID
+	 * @param request 수정 요청
+	 */
 	@Transactional
 	public void update(String userId, Long dietId, DietRequest request) {
 		if (!StringUtils.hasText(userId)) {
@@ -331,7 +425,7 @@ public class DietService {
 		LocalDate date = parseDateOrToday(request.date());
 		LocalTime time = parseTime(request.time());
 
-		DietAggregation aggregation = prepareAggregation(request);
+		DietAggregation aggregation = prepareAggregation(request, foodRepository);
 
 		diet.updateUserInput(
 			request.mealType(),
@@ -345,7 +439,12 @@ public class DietService {
 		dietFoodRepository.saveAll(dietFoods);
 	}
 
-	// 식단 삭제
+	/**
+	 * [Delete] 사용자 입력 식단 삭제
+	 *
+	 * @param userId 사용자 식별자
+	 * @param dietId 식단 ID
+	 */
 	@Transactional
 	public void delete(String userId, Long dietId) {
 		if (!StringUtils.hasText(userId)) {
@@ -364,64 +463,5 @@ public class DietService {
 
 		dietFoodRepository.deleteAllByDietId(dietId);
 		dietRepository.delete(diet);
-	}
-
-	// 식단 추가/수정을 위한 집계 사전 작업
-	private DietAggregation prepareAggregation(DietRequest request) {
-		List<Long> requestedFoodIds = request.foods().stream()
-			.map(DietRequest.FoodQuantity::foodId)
-			.toList();
-
-		Map<Long, Food> foodById = foodRepository.findAllById(requestedFoodIds).stream()
-			.collect(Collectors.toMap(Food::getId, Function.identity()));
-		validateFoodsExist(requestedFoodIds, foodById);
-
-		return aggregateFoods(request.foods(), foodById);
-	}
-
-	// 식단 추가/수정을 위한 식단-음식 중간 테이블 필드 생성
-	private List<DietFood> buildDietFoods(Long dietId, DietRequest request) {
-		return request.foods().stream()
-			.map(f -> DietFood.builder()
-				.dietId(dietId)
-				.foodId(f.foodId())
-				.quantity(toQuantity(f.quantity()))
-				.build())
-			.toList();
-	}
-
-	// 오늘 시간대에 맞는 웰스토리 식단 목록 조회
-	private Map<String, TodayRestaurantMenuInfo> buildTodayRestaurantMenu(LocalDate targetDate) {
-		RestaurantMapping mapping = restaurantMappingRepository.findByRestaurantName(mockRestaurantName)
-			.orElse(null);
-		if (mapping == null) {
-			return Map.of();
-		}
-
-		int dateYyyymmdd = targetDate.getYear() * 10000 + targetDate.getMonthValue() * 100 + targetDate.getDayOfMonth();
-		Map<String, TodayRestaurantMenuInfo> result = new LinkedHashMap<>();
-
-		for (DietType slot : List.of(DietType.BREAKFAST, DietType.LUNCH, DietType.DINNER)) {
-			String mealTimeId = mealTimeIdForSlot(slot);
-			if (mealTimeId == null) {
-				continue;
-			}
-			var menus = welstoryMenuService.getMenus(mapping.getRestaurantId(), dateYyyymmdd, mealTimeId,
-				slot.name());
-			if (menus.isEmpty()) {
-				continue;
-			}
-			var primaryMenu = menus.getFirst();
-			int othersNum = Math.max(0, menus.size() - 1);
-			TodayRestaurantMenuInfo info = TodayRestaurantMenuInfo.of(
-				primaryMenu.name(),
-				toInt(DietPageAssembler.toBigDecimal(primaryMenu.kcal())),
-				DietPageAssembler.buildSubName(primaryMenu.name(), primaryMenu.submenu()),
-				othersNum
-			);
-			result.put(slot.name(), info);
-		}
-
-		return result;
 	}
 }

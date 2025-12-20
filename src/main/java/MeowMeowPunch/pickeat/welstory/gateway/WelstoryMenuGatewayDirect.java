@@ -38,6 +38,7 @@ public class WelstoryMenuGatewayDirect implements WelstoryMenuGateway {
 				mealTimeName != null ? mealTimeName : m.menuMealTypeTxt(),
 				m.menuName(),
 				m.courseTxt(),
+				firstNonBlank(m.menuCourseName(), m.courseTxt(), m.setMenuName()),
 				m.subMenuTxt(),
 				m.sumKcal(),
 				buildPhoto(m.photoUrl(), m.photoCd()),
@@ -64,5 +65,14 @@ public class WelstoryMenuGatewayDirect implements WelstoryMenuGateway {
 			return null;
 		}
 		return photoUrl + photoCd;
+	}
+
+	private String firstNonBlank(String... values) {
+		for (String v : values) {
+			if (v != null && !v.isBlank()) {
+				return v.trim();
+			}
+		}
+		return null;
 	}
 }

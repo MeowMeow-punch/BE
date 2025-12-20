@@ -11,13 +11,29 @@ import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * [Diet][Controller] MainController
+ *
+ * 메인 페이지(오늘 식단/추천) 조회 API 제공
+ *
+ * <pre>
+ * Client ▶ MainController ▶ DietService ▶ Repository/Assembler
+ * </pre>
+ *
+ * - 응답은 ResTemplate(code/message/data) 일관 포맷
+ */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/diet")
 public class MainController {
 	private final DietService dietService;
 
-	// 메인 페이지 조회
+	/**
+	 * [API] 메인 페이지 조회
+	 *
+	 * @param userId 사용자 식별자
+	 * @return DietHomeResponse
+	 */
 	@GetMapping("/main")
 	public ResTemplate<DietHomeResponse> getDiet(
 		@RequestParam(name = "userId") String userId
