@@ -16,7 +16,7 @@ public record RestaurantMenuResponse(
 		return menus;
 	}
 
-	public static RestaurantMenuResponse of(Map<String, List<RestaurantMenuInfo>> menus) {
+	public static RestaurantMenuResponse from(Map<String, List<RestaurantMenuInfo>> menus) {
 		return new RestaurantMenuResponse(menus);
 	}
 }

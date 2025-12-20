@@ -8,6 +8,7 @@ public record WelstoryMenuItem(
 	String mealTimeName,
 	String name,
 	String course,
+	String courseName,
 	String submenu,
 	String kcal,
 	String photoUrl,
@@ -15,9 +16,9 @@ public record WelstoryMenuItem(
 	String menuCourseType
 ) {
 	public static WelstoryMenuItem of(String restaurantId, int dateYyyymmdd, String mealTimeId, String mealTimeName,
-		String name, String course, String submenu, String kcal, String photoUrl, String hallNo,
+		String name, String course, String courseName, String submenu, String kcal, String photoUrl, String hallNo,
 		String menuCourseType) {
-		return new WelstoryMenuItem(restaurantId, dateYyyymmdd, mealTimeId, mealTimeName, name, course, submenu, kcal,
-			photoUrl, hallNo, menuCourseType);
+		return new WelstoryMenuItem(restaurantId, dateYyyymmdd, mealTimeId, mealTimeName, name, course, courseName,
+			submenu, kcal, photoUrl, hallNo, menuCourseType);
 	}
 }

@@ -2,6 +2,7 @@ package MeowMeowPunch.pickeat.domain.diet.dto.response;
 
 import java.util.List;
 
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.AiFeedBack;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 
