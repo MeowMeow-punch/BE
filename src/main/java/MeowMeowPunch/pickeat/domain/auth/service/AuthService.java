@@ -74,7 +74,11 @@ public class AuthService {
 	@Transactional
 	public AuthTokenResponse refresh(String refreshToken) {
 		// 1. 토큰 자체 유효성 검증 (만료, 서명 등)
-		jwtTokenProvider.parseClaims(refreshToken);
+		try {
+			jwtTokenProvider.parseClaims(refreshToken);
+		} catch (io.jsonwebtoken.ExpiredJwtException e) {
+			throw InvalidTokenException.expired();
+		}
 
 		// 2. DB 저장된 토큰과 비교 (Rotation)
 		User user = findUserByToken(refreshToken);

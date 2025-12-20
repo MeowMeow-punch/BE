@@ -23,4 +23,8 @@ public class InvalidTokenException extends AuthGroupException {
 	public static InvalidTokenException invalidToken() {
 		return new InvalidTokenException("유효하지 않은 토큰입니다.");
 	}
+
+	public static InvalidTokenException expired() {
+		return new InvalidTokenException("만료된 리프레시 토큰입니다. 다시 로그인해주세요.");
+	}
 }
