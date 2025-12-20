@@ -2,6 +2,7 @@ package MeowMeowPunch.pickeat.domain.auth.entity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import MeowMeowPunch.pickeat.global.common.enums.ActivityLevel;
 import MeowMeowPunch.pickeat.global.common.enums.DrinkingStatus;
@@ -18,7 +19,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
+
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
@@ -60,9 +61,21 @@ import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 @Builder
 public class User extends BaseEntity {
 
+	/**
+	 * [Identity] UUID v7 Strategy
+	 * <p>
+	 * - <b>GenerationType.UUID</b>: 기본적으로 무작위(v4) 방식을 사용하면 DB Insert 성능 저하(Index
+	 * Fragmentation) 문제가 발생함.
+	 * - <b>UuidGenerator (Time-based)</b>: 이를 해결하기 위해 타임스탬프가 포함된 <b>UUID v7</b> 방식을
+	 * 적용.
+	 * - 효과: 생성 시간순 정렬이 보장되어 Clustered Index 성능이 최적화됨.
+	 * </p>
+	 */
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	@GeneratedValue
+	@org.hibernate.annotations.UuidGenerator(style = org.hibernate.annotations.UuidGenerator.Style.TIME)
+	@Column(columnDefinition = "BINARY(16)")
+	private UUID id;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
