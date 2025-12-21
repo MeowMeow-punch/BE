@@ -1,6 +1,7 @@
 package MeowMeowPunch.pickeat.global.jwt;
 
 import java.io.IOException;
+import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -112,7 +113,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	}
 
 	private void setAuthentication(String userId, HttpServletRequest request) {
-		UserPrincipal principal = new UserPrincipal(Long.parseLong(userId));
+		UserPrincipal principal = new UserPrincipal(UUID.fromString(userId));
 		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
 				principal,
 				null,

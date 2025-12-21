@@ -1,19 +1,17 @@
 package MeowMeowPunch.pickeat.domain.auth.repository;
 
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
 
 import MeowMeowPunch.pickeat.global.common.entity.RefreshToken;
 
 /**
  * [Auth][Repository] RefreshTokenRepository
- * 리프레시 토큰의 발급/회수/회전을 담당하는 저장소.
  * <p>
- * [Features]
- * - Key: UserId (Long)
- * - Value: RefreshToken (Redis Hash / Database Entity)
- * - TTL: 토큰 만료 시간과 동일하게 설정됨
+ * - JPA CrudRepository 인터페이스를 통해 RefreshToken 엔티티에 대한 데이터 접근을 추상화
+ * - Redis에 저장된 RefreshToken을 조회하고 삭제하는 기능 제공
  * </p>
  */
-public interface RefreshTokenRepository extends CrudRepository<RefreshToken, Long> {
-
+@Repository
+public interface RefreshTokenRepository extends CrudRepository<RefreshToken, String> {
 }

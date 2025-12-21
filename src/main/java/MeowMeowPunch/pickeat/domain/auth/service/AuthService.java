@@ -3,6 +3,8 @@ package MeowMeowPunch.pickeat.domain.auth.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,18 +90,27 @@ public class AuthService {
 	}
 
 	private User findUserByToken(String refreshToken) {
-		Long userId = Long.valueOf(jwtTokenProvider.parseClaims(refreshToken).getSubject());
-		RefreshToken savedToken = refreshTokenRepository.findById(userId)
+		UUID userId;
+		try {
+			// UUID 형식 검증
+			userId = UUID.fromString(jwtTokenProvider.parseClaims(refreshToken).getSubject());
+		} catch (IllegalArgumentException e) {
+			// 401 Invalid Token
+			throw new InvalidTokenException("잘못된 토큰 형식입니다.");
+		}
+
+		// Redis 토큰 조회 (Rotation Check)
+		RefreshToken savedToken = refreshTokenRepository.findById(Objects.requireNonNull(userId.toString()))
 				.orElseThrow(() -> new InvalidTokenException("로그인이 만료되었습니다. 다시 로그인해주세요."));
 
+		// 토큰 탈취 감지 (값 불일치)
 		if (!savedToken.getTokenValue().equals(refreshToken)) {
-			// 토큰 탈취 가능성 -> 저장된 토큰 삭제 후 재로그인 유도
+			// 탈취된 토큰 삭제 및 재로그인 유도
 			refreshTokenRepository.delete(savedToken);
 			throw new InvalidTokenException("유효하지 않은 토큰입니다. 다시 로그인해주세요.");
 		}
 
-		return userRepository.findById(userId)
-				.orElseThrow(AuthNotFoundException::userNotFound);
+		return userRepository.findById(userId).orElseThrow(AuthNotFoundException::userNotFound);
 	}
 
 	/**
@@ -122,11 +133,11 @@ public class AuthService {
 	 * [Logout] 리프레시 토큰 폐기.
 	 */
 	@Transactional
-	public void logout(Long userId) {
+	public void logout(UUID userId) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(AuthNotFoundException::userNotFound);
 
-		refreshTokenRepository.findById(user.getId())
+		refreshTokenRepository.findById(user.getId().toString())
 				.ifPresentOrElse(
 						refreshTokenRepository::delete,
 						() -> {
@@ -139,11 +150,11 @@ public class AuthService {
 	 * [Withdraw] 회원 탈퇴 시 사용자 및 리프레시 토큰 제거.
 	 */
 	@Transactional
-	public void deleteUser(Long userId) {
+	public void deleteUser(UUID userId) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(AuthNotFoundException::userNotFound);
 
-		refreshTokenRepository.deleteById(userId);
+		refreshTokenRepository.deleteById(userId.toString());
 		userRepository.delete(user);
 		log.info("[WITHDRAW] userId={} removed", userId);
 	}
@@ -158,14 +169,14 @@ public class AuthService {
 		Instant refreshExpiry = Instant.now().plusSeconds(jwtProperties.getRefreshTokenValidityInSeconds());
 		long refreshTtl = jwtProperties.getRefreshTokenValidityInSeconds();
 
-		refreshTokenRepository.findById(user.getId())
+		refreshTokenRepository.findById(user.getId().toString())
 				.ifPresentOrElse(
 						existing -> {
 							existing.rotate(refreshToken, refreshExpiry, refreshTtl);
 							refreshTokenRepository.save(existing);
 						},
 						() -> refreshTokenRepository.save(RefreshToken.builder()
-								.id(user.getId())
+								.id(user.getId().toString())
 								.tokenValue(refreshToken)
 								.expiryAt(refreshExpiry)
 								.ttlSeconds(refreshTtl)
