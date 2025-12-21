@@ -8,14 +8,16 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.util.StringUtils;
 
-import MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
@@ -25,6 +27,7 @@ import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietDateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietFoodQuantityException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietTimeException;
+import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietDetailItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodDtoMapper;
@@ -32,13 +35,26 @@ import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.NutritionDetail;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.NutritionInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.WeeklyCaloriesInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.enums.DietStatus;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
+import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
+import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
+import MeowMeowPunch.pickeat.welstory.entity.GroupMapping;
+import MeowMeowPunch.pickeat.welstory.repository.GroupMappingRepository;
+import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
 
 // 식단 페이지 공통 계산, 포매팅 헬퍼
+/**
+ * [Diet][Assembler] 식단/식당 메뉴 응답 조립 및 포맷 변환 유틸.
+ *
+ * - 식단/영양 응답 DTO 생성
+ * - 웰스토리 메뉴/영양 변환
+ * - 날짜/시간 파싱, 수치 변환 헬퍼
+ */
 public final class DietPageAssembler {
 
 	private DietPageAssembler() {
@@ -112,26 +128,6 @@ public final class DietPageAssembler {
 		);
 	}
 
-	// 주간 칼로리 응답 생성 (이번주 기준)
-	public static List<WeeklyCaloriesInfo> buildWeeklyCalories(List<DailyCalorieSum> sums, LocalDate start) {
-		Map<LocalDate, Integer> calorieByDate = sums.stream()
-			.collect(Collectors.toMap(
-				DailyCalorieSum::date,
-				d -> toInt(nullSafe(d.totalKcal())),
-				Integer::sum
-			));
-
-		// 해당 날짜에 칼로리 값이 없으면 0으로 처리
-		List<WeeklyCaloriesInfo> result = new ArrayList<>();
-		for (int i = 0; i < 7; i++) {
-			LocalDate date = start.plusDays(i);
-			int kcal = calorieByDate.getOrDefault(date, 0);
-			String dayKey = date.getDayOfWeek().name().substring(0, 3);
-			result.add(WeeklyCaloriesInfo.of(dayKey, kcal));
-		}
-		return result;
-	}
-
 	// 오늘 등록 식단 응답 생성
 	public static TodayDietInfo toTodayDietInfo(Diet diet, List<String> thumbnailUrls) {
 		return TodayDietInfo.of(
@@ -157,11 +153,66 @@ public final class DietPageAssembler {
 
 		return DietInfo.of(
 			diet.getId(),
+			diet.getTitle(),
 			diet.getStatus().name(),
 			diet.getTime() != null ? diet.getTime().toString() : "",
 			diet.getDate().toString(),
+			diet.isEditable(),
+			toInt(nullSafe(diet.getKcal())),
+			Nutrients.of(
+				toInt(nullSafe(diet.getCarbs())),
+				toInt(nullSafe(diet.getProtein())),
+				toInt(nullSafe(diet.getFat()))
+			),
 			foods
 		);
+	}
+
+	// 단일 썸네일을 리스트로 래핑
+	public static List<String> toThumbnailList(String thumbnailUrl) {
+		if (!StringUtils.hasText(thumbnailUrl)) {
+			return List.of();
+		}
+		return List.of(thumbnailUrl);
+	}
+
+	// 웰스토리 메뉴 서브명 생성 (메인 메뉴 제외)
+	public static String buildSubName(String mainName, String subMenu) {
+		if (!StringUtils.hasText(subMenu)) {
+			return "";
+		}
+		String joined = Arrays.stream(subMenu.split(","))
+			.map(String::trim)
+			.filter(s -> !s.isBlank())
+			.filter(s -> !s.equals(mainName))
+			.collect(Collectors.joining(", "));
+		return joined;
+	}
+
+	// 웰스토리 mealTimeId 매핑
+	public static String mealTimeIdForSlot(DietType mealSlot) {
+		return switch (mealSlot) {
+			case BREAKFAST -> "1";
+			case LUNCH -> "2";
+			case DINNER -> "3";
+			case SNACK -> "4";
+		};
+	}
+
+	// 문자열 수치를 BigDecimal로 안전하게 변환
+	public static BigDecimal toBigDecimal(String value) {
+		if (value == null || value.isBlank()) {
+			return BigDecimal.ZERO;
+		}
+		try {
+			String cleaned = value.replace(",", "").trim();
+			if (cleaned.startsWith(".")) {
+				cleaned = "0" + cleaned;
+			}
+			return new BigDecimal(cleaned);
+		} catch (Exception e) {
+			return BigDecimal.ZERO;
+		}
 	}
 
 	// 특정 날짜에 등록된 식단들의 부가 영양분 합계를 생성
@@ -355,5 +406,128 @@ public final class DietPageAssembler {
 		BigDecimal dietaryFiber,
 		BigDecimal sodium
 	) {
+	}
+
+	public static RestaurantMenuInfo toRestaurantMenuInfo(WelstoryMenuItem menu,
+		WelstoryMenuService welstoryMenuService) {
+		List<ApiTypes.RawMealMenuData> rawNutrients = List.of();
+		if (StringUtils.hasText(menu.hallNo()) && StringUtils.hasText(menu.menuCourseType())) {
+			rawNutrients = welstoryMenuService.getNutrients(
+				menu.restaurantId(),
+				menu.dateYyyymmdd(),
+				menu.mealTimeId(),
+				menu.hallNo(),
+				menu.menuCourseType()
+			);
+		}
+
+		BigDecimal totalKcal = BigDecimal.ZERO;
+		BigDecimal totalCarbs = BigDecimal.ZERO;
+		BigDecimal totalProtein = BigDecimal.ZERO;
+		BigDecimal totalFat = BigDecimal.ZERO;
+
+		if (!rawNutrients.isEmpty()) {
+			for (ApiTypes.RawMealMenuData n : rawNutrients) {
+				totalKcal = totalKcal.add(toBigDecimal(n.kcal()));
+				totalCarbs = totalCarbs.add(toBigDecimal(n.totCho()));
+				totalProtein = totalProtein.add(toBigDecimal(n.totProtein()));
+				totalFat = totalFat.add(toBigDecimal(n.totFat()));
+			}
+		} else {
+			totalKcal = toBigDecimal(menu.kcal());
+		}
+
+		String restaurantName = menu.courseName() == null ? "" : menu.courseName();
+		return RestaurantMenuInfo.of(
+			menu.name(),
+			restaurantName,
+			toInt(totalKcal),
+			DietPageAssembler.buildSubName(menu.name(), menu.submenu()),
+			Nutrients.of(
+				toInt(totalCarbs),
+				toInt(totalProtein),
+				toInt(totalFat)
+			),
+			DietPageAssembler.toThumbnailList(menu.photoUrl())
+		);
+	}
+
+	public static String resolveRestaurantName(WelstoryMenuItem menu, String fallback) {
+		if (StringUtils.hasText(menu.courseName())) {
+			return normalizeBracket(menu.courseName());
+		}
+		return fallback;
+	}
+
+	public static String normalizeBracket(String s) {
+		String t = s.trim();
+		if (t.startsWith("[") && t.endsWith("]") && t.length() > 2) {
+			return t.substring(1, t.length() - 1).trim();
+		}
+		return t;
+	}
+
+	public static int toYyyymmdd(LocalDate date) {
+		return date.getYear() * 10000 + date.getMonthValue() * 100 + date.getDayOfMonth();
+	}
+
+	// 식단 추가/수정을 위한 집계 사전 작업
+	public static DietAggregation prepareAggregation(DietRequest request, FoodRepository foodRepository) {
+		List<Long> requestedFoodIds = request.foods().stream()
+			.map(DietRequest.FoodQuantity::foodId)
+			.toList();
+
+		Map<Long, Food> foodById = foodRepository.findAllById(requestedFoodIds).stream()
+			.collect(Collectors.toMap(Food::getId, Function.identity()));
+		validateFoodsExist(requestedFoodIds, foodById);
+
+		return aggregateFoods(request.foods(), foodById);
+	}
+
+	// 식단 추가/수정을 위한 식단-음식 중간 테이블 필드 생성
+	public static List<DietFood> buildDietFoods(Long dietId, DietRequest request) {
+		return request.foods().stream()
+			.map(f -> DietFood.builder()
+				.dietId(dietId)
+				.foodId(f.foodId())
+				.quantity(toQuantity(f.quantity()))
+				.build())
+			.toList();
+	}
+
+	// 오늘 시간대에 맞는 웰스토리 식단 목록 조회
+	public static Map<String, TodayRestaurantMenuInfo> buildTodayRestaurantMenu(LocalDate targetDate,
+		String groupName, GroupMappingRepository groupMappingRepository, WelstoryMenuService welstoryMenuService) {
+		GroupMapping mapping = groupMappingRepository.findByGroupName(groupName)
+			.orElse(null);
+		if (mapping == null) {
+			return Map.of();
+		}
+
+		int dateYyyymmdd = targetDate.getYear() * 10000 + targetDate.getMonthValue() * 100 + targetDate.getDayOfMonth();
+		Map<String, TodayRestaurantMenuInfo> result = new LinkedHashMap<>();
+
+		for (DietType slot : List.of(DietType.BREAKFAST, DietType.LUNCH, DietType.DINNER)) {
+			String mealTimeId = mealTimeIdForSlot(slot);
+			if (mealTimeId == null) {
+				continue;
+			}
+			var menus = welstoryMenuService.getMenus(mapping.getGroupId(), dateYyyymmdd, mealTimeId,
+				slot.name());
+			if (menus.isEmpty()) {
+				continue;
+			}
+			var primaryMenu = menus.getFirst();
+			int othersNum = Math.max(0, menus.size() - 1);
+			TodayRestaurantMenuInfo info = TodayRestaurantMenuInfo.of(
+				primaryMenu.name(),
+				toInt(DietPageAssembler.toBigDecimal(primaryMenu.kcal())),
+				DietPageAssembler.buildSubName(primaryMenu.name(), primaryMenu.submenu()),
+				othersNum
+			);
+			result.put(slot.name(), info);
+		}
+
+		return result;
 	}
 }

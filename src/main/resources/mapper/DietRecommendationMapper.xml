@@ -19,60 +19,61 @@
     <!-- 구간별 일간 칼로리 합계 (주간 차트용) -->
     <select id="findDailyCalories" resultType="MeowMeowPunch.pickeat.domain.diet.dto.DailyCalorieSum">
         SELECT
-            date AS date,
-            COALESCE(SUM(kcal), 0) AS totalKcal
+        date AS date,
+        COALESCE(SUM(kcal), 0) AS totalKcal
         FROM my_diets
         WHERE user_id = #{userId}
-          AND date BETWEEN #{start} AND #{end}
+        AND date BETWEEN #{start} AND #{end}
         GROUP BY date
         ORDER BY date ASC
     </select>
 
-    <!-- 남은 섭취량 기준 스코어 계산: TOP N (base_unit G만) -->
+    <!-- 남은 섭취량 기준 스코어 계산: TOP N (base_unit G면서 허용된 카테고리일 경우) -->
     <select id="findTopFoodCandidates" resultType="MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate">
         WITH adjusted AS (
-            SELECT
-                f.id AS foodId,
-                f.name AS name,
-                f.category AS category,
-                f.thumbnail_url AS thumbnailUrl,
-                f.kcal    AS adj_kcal,
-                f.carbs   AS adj_carbs,
-                f.protein AS adj_protein,
-                f.fat     AS adj_fat
-            FROM foods f
-            WHERE f.base_unit = #{baseUnit}
-            AND f.kcal BETWEEN (#{remainingKcal} - #{kcalTolerance}) AND (#{remainingKcal} + #{kcalTolerance})
-            <if test="allowedCategories != null and allowedCategories.size() > 0">
-                AND f.category IN
-                <foreach collection="allowedCategories" item="cat" open="(" close=")" separator=",">
-                    #{cat}
-                </foreach>
-            </if>
+        SELECT
+        f.id AS foodId,
+        f.name AS name,
+        f.category AS category,
+        f.thumbnail_url AS thumbnailUrl,
+        f.kcal AS adj_kcal,
+        f.carbs AS adj_carbs,
+        f.protein AS adj_protein,
+        f.fat AS adj_fat
+        FROM foods f
+        WHERE f.base_unit = #{baseUnit}
+        AND f.kcal BETWEEN (#{remainingKcal} - #{kcalTolerance}) AND (#{remainingKcal} + #{kcalTolerance})
+        <if test="allowedCategories != null and allowedCategories.size() > 0">
+            AND f.category IN
+            <foreach collection="allowedCategories" item="cat" open="(" close=")" separator=",">
+                #{cat}
+            </foreach>
+        </if>
         )
         SELECT
-            foodId,
-            name,
-            thumbnailUrl,
-            adj_kcal AS kcal,
-            adj_carbs AS carbs,
-            adj_protein AS protein,
-            adj_fat AS fat,
-            category,
-            (
-                -- kcal 맞춤 점수 및 초과 패널티
-                (-1) * ABS(#{remainingKcal} - adj_kcal) * #{weightKcal}
-                + CASE WHEN adj_kcal > #{remainingKcal} THEN (-1) * #{penaltyOverKcal} ELSE 0 END
-                -- 탄수화물
-                + (-1) * ABS(#{remainingCarbs} - adj_carbs) * #{weightCarbs}
-                + CASE WHEN adj_carbs > #{remainingCarbs} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
-                -- 단백질
-                + (-1) * ABS(#{remainingProtein} - adj_protein) * #{weightProtein}
-                + CASE WHEN adj_protein > #{remainingProtein} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
-                -- 지방
-                + (-1) * ABS(#{remainingFat} - adj_fat) * #{weightFat}
-                + CASE WHEN adj_fat > #{remainingFat} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
-            ) AS score
+        foodId,
+        name,
+        thumbnailUrl,
+        adj_kcal AS kcal,
+        adj_carbs AS carbs,
+        adj_protein AS protein,
+        adj_fat AS fat,
+        category,
+        (
+        -- kcal 맞춤 점수 및 초과 패널티
+        (-1) * ABS(#{remainingKcal} - adj_kcal) * #{weightKcal}
+        + CASE WHEN adj_kcal > #{remainingKcal} THEN (-1) * #{penaltyOverKcal} ELSE 0 END
+        -- 탄수화물
+        + (-1) * ABS(#{remainingCarbs} - adj_carbs) * #{weightCarbs}
+        + CASE WHEN adj_carbs > #{remainingCarbs} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
+        -- 단백질
+        + (-1) * ABS(#{remainingProtein} - adj_protein) * #{weightProtein}
+        + CASE WHEN adj_protein > #{remainingProtein} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
+        -- 지방
+        + (-1) * ABS(#{remainingFat} - adj_fat) * #{weightFat}
+        + CASE WHEN adj_fat > #{remainingFat} THEN (-1) * #{penaltyOverMacro} ELSE 0 END
+        ) AS score,
+        'FOOD_DB' AS sourceType
         FROM adjusted
         ORDER BY score DESC
         LIMIT #{limit}

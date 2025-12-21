@@ -23,6 +23,7 @@ public final class ApiTypes {
 		String hallNo,
 		String menuName,
 		String courseTxt,
+		String menuCourseName,
 		String menuCourseType,
 		String setMenuName,
 		String subMenuTxt,

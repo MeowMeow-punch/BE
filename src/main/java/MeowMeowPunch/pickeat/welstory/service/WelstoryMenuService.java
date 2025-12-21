@@ -7,23 +7,54 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
+import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
 import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
 import MeowMeowPunch.pickeat.welstory.gateway.WelstoryMenuGateway;
 import lombok.RequiredArgsConstructor;
 
-// Welstory 식단, 영양 정보 조회하고 추천 식단 DTO로 가공
+/**
+ * [Welstory][Service] 식단/영양 조회 및 추천 변환
+ *
+ * - 웰스토리 식단/영양 조회
+ * - 추천 후보 DTO 변환
+ */
 @Service
 @RequiredArgsConstructor
 public class WelstoryMenuService {
 
 	private final WelstoryMenuGateway gateway;
+	private static final String DEFAULT_LUNCH_MEAL_TIME_ID = "2";
 
-	// 웰스토리 식단+영양 정보를 추천 후보 DTO로 변환
+	/**
+	 * 웰스토리 식단 리스트 조회 (원본 포맷).
+	 *
+	 * @param restaurantId 식당 ID
+	 * @param dateYyyymmdd 날짜(YYYYMMDD, null 시 0)
+	 * @param mealTimeId   식사 시간대 ID
+	 * @param mealTimeName 식사 시간대 이름
+	 * @return 메뉴 리스트
+	 */
+	public List<WelstoryMenuItem> getMenus(String restaurantId, Integer dateYyyymmdd, String mealTimeId,
+		String mealTimeName) {
+		int targetDate = (dateYyyymmdd != null) ? dateYyyymmdd : 0;
+		String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : DEFAULT_LUNCH_MEAL_TIME_ID;
+		return gateway.getMeals(restaurantId, targetDate, timeId, mealTimeName);
+	}
+
+	/**
+	 * 웰스토리 식단+영양을 추천 후보 DTO로 변환.
+	 *
+	 * @param restaurantId 식당 ID
+	 * @param dateYyyymmdd 날짜
+	 * @param mealTimeId   식사 시간대 ID
+	 * @param mealTimeName 식사 시간대 이름
+	 * @return 추천 후보 리스트
+	 */
 	public List<FoodRecommendationCandidate> getRecommendationCandidates(String restaurantId, Integer dateYyyymmdd,
 		String mealTimeId, String mealTimeName) {
 		int targetDate = (dateYyyymmdd != null) ? dateYyyymmdd : 0;
-		String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : "2";
+		String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : DEFAULT_LUNCH_MEAL_TIME_ID;
 
 		List<WelstoryMenuItem> menus = gateway.getMeals(restaurantId, targetDate, timeId, mealTimeName);
 
@@ -37,6 +68,21 @@ public class WelstoryMenuService {
 		return targets.stream()
 			.map(menu -> buildCandidate(menu, restaurantId, targetDate, timeId))
 			.collect(Collectors.toList());
+	}
+
+	/**
+	 * 특정 식단의 영양 정보 조회.
+	 *
+	 * @param restaurantId 식당 ID
+	 * @param dateYyyymmdd 날짜
+	 * @param mealTimeId   식사 시간대 ID
+	 * @param hallNo       홀 번호
+	 * @param menuCourseType 코스 타입
+	 * @return 원본 영양 데이터
+	 */
+	public List<ApiTypes.RawMealMenuData> getNutrients(String restaurantId, int dateYyyymmdd, String mealTimeId,
+		String hallNo, String menuCourseType) {
+		return gateway.getNutrients(restaurantId, dateYyyymmdd, mealTimeId, hallNo, menuCourseType);
 	}
 
 	private FoodRecommendationCandidate buildCandidate(WelstoryMenuItem menu, String restaurantId, int targetDate,
@@ -71,7 +117,8 @@ public class WelstoryMenuService {
 			totalProtein,
 			totalFat,
 			menu.course(),
-			0.0
+			0.0,
+			DietSourceType.WELSTORY
 		);
 	}
 

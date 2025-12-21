@@ -1,5 +1,6 @@
-package MeowMeowPunch.pickeat.domain.diet.dto.response;
+package MeowMeowPunch.pickeat.global.common.dto.response.diet;
 
+// AI 메시지 응답 DTO
 public record AiFeedBack(
 	String message,
 	String timestamp
