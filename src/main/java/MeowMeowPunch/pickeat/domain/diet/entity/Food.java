@@ -33,7 +33,7 @@ public class Food extends BaseEntity {
 	@Column(name = "food_code", length = 50, nullable = true, unique = true)
 	private String foodCode;
 
-	@Column(name = "name", length = 200, nullable = false)
+	@Column(name = "name", length = 200, nullable = false, unique = true)
 	private String name;
 
 	@Column(name = "category", length = 50)
