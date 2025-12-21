@@ -91,7 +91,7 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(AuthNotFoundException::userNotFound);
 
-        // 1. Group Name
+        // 1. 그룹(웰스토리 회사명) 조회
         String groupName = null;
         if (user.getGroupId() != null) {
             groupName = groupMappingRepository.findById(user.getGroupId())
@@ -99,19 +99,19 @@ public class UserService {
                     .orElse(null);
         }
 
-        // 2. Activity Summary - Streak
+        // 2. Activity Summary - 스트릭 날짜 계산
         long totalRecordedDays = dietRepository.countByUserId(userId.toString());
         List<LocalDate> distinctDates = dietRepository.findDistinctDatesByUserId(userId.toString());
         int currentStreak = calculateCurrentStreak(distinctDates);
 
-        // 3. Activity Summary - Weekly Diet
+        // 3. Activity Summary - 주간 식단 기록
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
 
         long weeklyRecordedCount = dietRepository.countByUserIdAndDateBetween(
                 userId.toString(), startOfWeek, endOfWeek);
-        int weeklyTargetCount = user.getMeals().getCount() * 7;
+        int weeklyTargetCount = user.getMeals().getCount() * 7; // 사용자가 먹는 끼니 * 7
 
         MyPageResponse.UserProfile userProfile = MyPageResponse.UserProfile.from(user, groupName);
 

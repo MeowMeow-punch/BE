@@ -28,6 +28,8 @@ public record MyPageResponse(
                                 .build();
         }
 
+        // 아직 아래 record들은 타 response에 쓰임새가 없기에 따로 분리하진 않았음
+        // => 공통되는 response가 생길 경우 분리 예정
         @Builder
         public record UserProfile(
                         UUID userId,

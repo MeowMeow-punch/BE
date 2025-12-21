@@ -3,7 +3,6 @@ package MeowMeowPunch.pickeat.domain.user.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -44,10 +43,9 @@ public class UserController {
      * @return 사용 가능 여부 메시지
      */
     @GetMapping("/nickname")
-    public ResponseEntity<ResTemplate<Void>> checkNickname(@RequestParam String nickname) {
+    public ResTemplate<Void> checkNickname(@RequestParam String nickname) {
         userService.checkNickname(nickname);
-        return ResponseEntity.ok(
-                new ResTemplate<>(HttpStatus.OK, "해당 닉네임은 사용가능합니다.", null));
+        return ResTemplate.success(HttpStatus.OK, "해당 닉네임은 사용가능합니다.");
     }
 
     /**
@@ -63,11 +61,9 @@ public class UserController {
      * @return 검색된 그룹 리스트 (빈 리스트 포함)
      */
     @GetMapping("/groupSearch")
-    public ResponseEntity<ResTemplate<List<UserGroupResponse>>> searchGroups(@RequestParam String keyword) {
+    public ResTemplate<List<UserGroupResponse>> searchGroups(@RequestParam String keyword) {
         List<UserGroupResponse> groups = userService.searchGroups(keyword);
-
-        return ResponseEntity.ok(
-                new ResTemplate<>(HttpStatus.OK, "그룹명 조회 성공", groups));
+        return ResTemplate.success(HttpStatus.OK, "그룹명 조회 성공", groups);
     }
 
     /**
@@ -83,9 +79,8 @@ public class UserController {
      * @return 마이페이지 응답 정보
      */
     @GetMapping
-    public ResponseEntity<ResTemplate<MyPageResponse>> getMyPage(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+    public ResTemplate<MyPageResponse> getMyPage(@AuthenticationPrincipal UserPrincipal userPrincipal) {
         MyPageResponse response = userService.getMyPage(userPrincipal.getUserId());
-        return ResponseEntity.ok(
-                new ResTemplate<>(HttpStatus.OK, "마이페이지 조회 성공", response));
+        return ResTemplate.success(HttpStatus.OK, "마이페이지 조회 성공", response);
     }
 }

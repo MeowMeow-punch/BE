@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import org.springframework.stereotype.Repository;
@@ -48,6 +50,6 @@ public interface DietRepository extends JpaRepository<Diet, Long> {
 	 * @param userId 사용자 식별자
 	 * @return 식단 기록 날짜 리스트
 	 */
-	@org.springframework.data.jpa.repository.Query("SELECT DISTINCT d.date FROM Diet d WHERE d.userId = :userId ORDER BY d.date DESC")
-	List<LocalDate> findDistinctDatesByUserId(@org.springframework.data.repository.query.Param("userId") String userId);
+	@Query("SELECT DISTINCT d.date FROM Diet d WHERE d.userId = :userId ORDER BY d.date DESC")
+	List<LocalDate> findDistinctDatesByUserId(@Param("userId") String userId);
 }
