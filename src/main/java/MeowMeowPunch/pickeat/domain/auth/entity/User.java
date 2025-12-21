@@ -2,6 +2,7 @@ package MeowMeowPunch.pickeat.domain.auth.entity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import MeowMeowPunch.pickeat.global.common.enums.ActivityLevel;
 import MeowMeowPunch.pickeat.global.common.enums.DrinkingStatus;
@@ -18,7 +19,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
+import org.hibernate.annotations.UuidGenerator;
+
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
@@ -60,9 +62,21 @@ import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 @Builder
 public class User extends BaseEntity {
 
+	/**
+	 * [Identity] UUID v7 Strategy
+	 * <p>
+	 * - <b>GenerationType.UUID</b>: 기본적으로 무작위(v4) 방식을 사용하면 DB Insert 성능 저하(Index
+	 * Fragmentation) 문제가 발생함 그래서 단순 GenerationType은 사용 안함
+	 * - <b>UuidGenerator (Time-based)</b>: 이를 해결하기 위해 타임스탬프가 포함된 <b>UUID v7</b> 방식을
+	 * 적용.
+	 * - 효과: 생성 시간순 정렬이 보장되어 Clustered Index 성능이 최적화된다 카드라..!!!
+	 * </p>
+	 */
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	@GeneratedValue
+	@UuidGenerator(style = UuidGenerator.Style.TIME)
+	@Column
+	private UUID id;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
@@ -88,13 +102,13 @@ public class User extends BaseEntity {
 	private Integer age;
 
 	@ElementCollection
-	@CollectionTable(name = "user_allergies", joinColumns = @JoinColumn(name = "user_id"))
+	@CollectionTable(name = "user_allergies_legacy", joinColumns = @JoinColumn(name = "user_id"))
 	@Column(name = "allergy", length = 100)
 	@Builder.Default
 	private List<String> allergies = new ArrayList<>();
 
 	@ElementCollection
-	@CollectionTable(name = "user_diseases", joinColumns = @JoinColumn(name = "user_id"))
+	@CollectionTable(name = "user_diseases_legacy", joinColumns = @JoinColumn(name = "user_id"))
 	@Column(name = "disease", length = 100)
 	@Builder.Default
 	private List<String> diseases = new ArrayList<>();

@@ -363,17 +363,16 @@ public class DietRecommendationService {
 	private FoodRecommendationCandidate toCandidate(RecommendedDiet r) {
 		DietSourceType source = r.getSourceType() != null ? r.getSourceType() : DietSourceType.FOOD_DB;
 		return new FoodRecommendationCandidate(
-			r.getId(), // dietId를 candidate의 id 슬롯으로 전달해 DietService에서 사용
-			r.getTitle(),
-			r.getThumbnailUrl(),
-			nullSafe(r.getKcal()),
-			nullSafe(r.getCarbs()),
-			nullSafe(r.getProtein()),
-			nullSafe(r.getFat()),
-			null,
-			0.0, // 이미 저장된 추천은 점수 없음
-			source
-		);
+				r.getId(), // dietId를 candidate의 id 슬롯으로 전달해 DietService에서 사용
+				r.getTitle(),
+				r.getThumbnailUrl(),
+				nullSafe(r.getKcal()),
+				nullSafe(r.getCarbs()),
+				nullSafe(r.getProtein()),
+				nullSafe(r.getFat()),
+				null,
+				0.0, // 이미 저장된 추천은 점수 없음
+				source);
 	}
 
 	/**
@@ -421,13 +420,12 @@ public class DietRecommendationService {
 
 	// 가중치 dto
 	private record Weight(
-		double kcal,
-		double carbs,
-		double protein,
-		double fat,
-		double penaltyOverKcal,
-		double penaltyOverMacro
-	) {
+			double kcal,
+			double carbs,
+			double protein,
+			double fat,
+			double penaltyOverKcal,
+			double penaltyOverMacro) {
 	}
 
 	// TODO: user 기반시 삭제

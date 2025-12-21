@@ -1,5 +1,8 @@
 package MeowMeowPunch.pickeat.domain.auth.service;
 
+import java.util.Objects;
+import java.util.UUID;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -27,7 +30,7 @@ import lombok.RequiredArgsConstructor;
  *          ◀─────────────────── [User Entity]
  *          │
  *          ▼
- *[UserPrincipal] (UserDetails)
+ * [UserPrincipal] (UserDetails)
  * </pre>
  * </p>
  * - 사용처: Spring Security 인증 과정에서 사용자 정보를 로드할 때 사용.
@@ -41,7 +44,15 @@ public class CustomUserDetailsService implements UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String userId) throws UsernameNotFoundException {
-		User user = userRepository.findById(Long.parseLong(userId))
+		UUID uuid;
+		try {
+			// UUID 형식이 아닌 경우 예외 처리
+			uuid = UUID.fromString(userId);
+		} catch (IllegalArgumentException e) {
+			throw AuthNotFoundException.userNotFound();
+		}
+
+		User user = userRepository.findById(Objects.requireNonNull(uuid))
 				.orElseThrow(AuthNotFoundException::userNotFound);
 		return UserPrincipal.from(user);
 	}
