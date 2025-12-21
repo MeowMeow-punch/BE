@@ -1,16 +1,16 @@
 package MeowMeowPunch.pickeat.domain.auth.exception;
 
-import MeowMeowPunch.pickeat.global.error.exception.InvalidGroupException;
+import MeowMeowPunch.pickeat.global.error.exception.ConflictGroupException;
 
 /**
  * [Auth][Exception] DuplicateNicknameException
  * 이미 등록된 닉네임으로 회원가입을 시도할 때 발생.
  * <p>
  * [HTTP Status]
- * - 400 Bad Request
+ * - 409 Conflict
  * </p>
  */
-public class DuplicateNicknameException extends InvalidGroupException {
+public class DuplicateNicknameException extends ConflictGroupException {
 	public DuplicateNicknameException(String message) {
 		super(message);
 	}

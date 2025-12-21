@@ -19,4 +19,12 @@ public interface GroupMappingRepository extends JpaRepository<GroupMapping, Long
 	 * @return 그룹 매핑 정보 (Optional)
 	 */
 	Optional<GroupMapping> findByGroupName(String groupName);
+
+	/**
+	 * 그룹 이름에 키워드가 포함된 그룹 목록 조회.
+	 *
+	 * @param keyword 검색 키워드
+	 * @return 포함된 그룹 리스트
+	 */
+	java.util.List<GroupMapping> findByGroupNameContaining(String keyword);
 }
