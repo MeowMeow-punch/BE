@@ -4,12 +4,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import MeowMeowPunch.pickeat.domain.user.dto.request.UserUpdateRequest;
 import MeowMeowPunch.pickeat.domain.user.dto.response.MyPageResponse;
 import MeowMeowPunch.pickeat.domain.user.dto.response.UserGroupResponse;
 import MeowMeowPunch.pickeat.domain.user.service.UserService;
@@ -82,5 +85,24 @@ public class UserController {
     public ResTemplate<MyPageResponse> getMyPage(@AuthenticationPrincipal UserPrincipal userPrincipal) {
         MyPageResponse response = userService.getMyPage(userPrincipal.getUserId());
         return ResTemplate.success(HttpStatus.OK, "마이페이지 조회 성공", response);
+    }
+
+    /**
+     * 개인정보 수정 API
+     * <p>
+     * - PATCH /user
+     * - 닉네임, 소속, 신체정보 등을 수정합니다.
+     * </p>
+     *
+     * @param userPrincipal 인증된 사용자
+     * @param request       수정할 정보 (Optional fields)
+     * @return 수정 성공 메시지
+     */
+    @PatchMapping
+    public ResTemplate<Void> updateUser(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody @jakarta.validation.Valid UserUpdateRequest request) {
+        userService.updateUser(userPrincipal.getUserId(), request);
+        return ResTemplate.success(HttpStatus.OK, "수정 성공");
     }
 }

@@ -141,4 +141,33 @@ public class User extends BaseEntity {
 
 	private Integer targetWeight;
 
+	// --- Business Logic Methods ---
+
+	/**
+	 * 프로필 정보를 업데이트합니다.
+	 * null이 아닌 값만 변경됩니다.
+	 */
+	public void updateProfile(String nickname, Long groupId, Gender gender,
+			Integer height, Integer weight, Integer age,
+			List<String> allergies, Boolean marketingAgreed) {
+		if (nickname != null)
+			this.nickname = nickname;
+		if (groupId != null) {
+			this.groupId = groupId;
+		}
+		if (gender != null)
+			this.gender = gender;
+		if (height != null)
+			this.height = height;
+		if (weight != null)
+			this.weight = weight;
+		if (age != null)
+			this.age = age;
+		if (allergies != null) {
+			this.allergies.clear();
+			this.allergies.addAll(allergies);
+		}
+		if (marketingAgreed != null)
+			this.marketingAgreed = marketingAgreed;
+	}
 }

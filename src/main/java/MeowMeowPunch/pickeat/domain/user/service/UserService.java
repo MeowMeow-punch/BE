@@ -17,6 +17,7 @@ import MeowMeowPunch.pickeat.domain.auth.exception.AuthNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateNicknameException;
 import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
+import MeowMeowPunch.pickeat.domain.user.dto.request.UserUpdateRequest;
 import MeowMeowPunch.pickeat.domain.user.dto.response.MyPageResponse;
 import MeowMeowPunch.pickeat.domain.user.dto.response.UserGroupResponse;
 import MeowMeowPunch.pickeat.domain.user.exception.InvalidKeywordException;
@@ -150,5 +151,47 @@ public class UserService {
             }
         }
         return streak;
+    }
+
+    /**
+     * 사용자 정보를 수정합니다.
+     * <p>
+     * - 닉네임 변경 시 중복 체크 수행
+     * - 각 필드가 null이 아닌 경우에만 수정
+     * </p>
+     *
+     * @param userId  사용자 식별자
+     * @param request 수정할 정보
+     */
+    @Transactional
+    public void updateUser(UUID userId, UserUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(AuthNotFoundException::userNotFound);
+
+        // 닉네임 변경 시 중복 체크
+        if (request.nickname() != null && !request.nickname().equals(user.getNickname())) {
+            checkNickname(request.nickname());
+        }
+
+        Long parsedGroupId = null;
+        if (request.groupId() != null) {
+            try {
+                parsedGroupId = Long.parseLong(request.groupId());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("잘못된 그룹 ID 형식입니다.");
+            }
+        }
+
+        user.updateProfile(
+                request.nickname(),
+                parsedGroupId,
+                request.gender(),
+                request.height(),
+                request.weight(),
+                request.age(),
+                request.allergies(),
+                request.isMarketing());
+
+        // save 없어도 변경 감지로 자동 저장됨미다
     }
 }
