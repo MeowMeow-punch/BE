@@ -322,11 +322,11 @@ public class DietRecommendationService {
 					200, // kcal 초과 패널티
 					50 // 탄단지 초과 패널티
 				);
-			case BULK_UP -> new Weight(
+			case MUSCLE -> new Weight(
 					1.0, 0.9, 1.5, 0.9,
 					80,
 					40);
-			case BALANCE -> new Weight(
+			case HEALTHY -> new Weight(
 					1.0, 1.0, 1.0, 1.0,
 					100,
 					50);

@@ -43,7 +43,7 @@ import lombok.NoArgsConstructor;
  * │ - oauthId     │ ← Account Key
  * │ - nickname    │ ← Display Name
  * │ - status      │ ← SINGLE / GROUP
- * │ - focus       │ ← DIET / BULK_UP / BALANCE
+ * │ - focus       │ ← DIET / MUSCLE / HEALTHY
  * │ - profile...  │ ← Height, Weight, Age...
  * └───────────────┘
  * </pre>
@@ -141,11 +141,10 @@ public class User extends BaseEntity {
 
 	private Integer targetWeight;
 
-	// --- Business Logic Methods ---
+	// ==================== Methods ====================
 
 	/**
-	 * 프로필 정보를 업데이트합니다.
-	 * null이 아닌 값만 변경됩니다.
+	 * 프로필 정보를 업데이트
 	 */
 	public void updateProfile(String nickname, Long groupId, Gender gender,
 			Integer height, Integer weight, Integer age,
