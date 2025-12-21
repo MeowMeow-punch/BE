@@ -17,6 +17,7 @@ import MeowMeowPunch.pickeat.domain.auth.exception.AuthNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateNicknameException;
 import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
+import MeowMeowPunch.pickeat.domain.user.dto.request.FocusUpdateRequest;
 import MeowMeowPunch.pickeat.domain.user.dto.request.UserUpdateRequest;
 import MeowMeowPunch.pickeat.domain.user.dto.response.MyPageResponse;
 import MeowMeowPunch.pickeat.domain.user.dto.response.UserGroupResponse;
@@ -191,6 +192,29 @@ public class UserService {
                 request.age(),
                 request.allergies(),
                 request.isMarketing());
+
+        // save 없어도 변경 감지로 자동 저장됨미다
+    }
+
+    /**
+     * 식단 중점 목표(Focus) 및 관련 정보를 수정합니다.
+     *
+     * @param userId  사용자 식별자
+     * @param request 수정할 정보 (Focus 필수)
+     */
+    @Transactional
+    public void updateDietFocus(UUID userId, FocusUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(AuthNotFoundException::userNotFound);
+
+        user.updateDietFocus(
+                request.focus(),
+                request.meals(),
+                request.activityLevel(),
+                request.targetWeight(),
+                request.diseases(),
+                request.isSmoking(),
+                request.isDrinking());
 
         // save 없어도 변경 감지로 자동 저장됨미다
     }

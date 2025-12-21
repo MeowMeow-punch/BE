@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import MeowMeowPunch.pickeat.domain.user.dto.request.FocusUpdateRequest;
 import MeowMeowPunch.pickeat.domain.user.dto.request.UserUpdateRequest;
 import MeowMeowPunch.pickeat.domain.user.dto.response.MyPageResponse;
 import MeowMeowPunch.pickeat.domain.user.dto.response.UserGroupResponse;
@@ -19,6 +20,7 @@ import MeowMeowPunch.pickeat.domain.user.service.UserService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jakarta.validation.Valid;
 
 /**
  * [User][Controller] UserController
@@ -101,8 +103,27 @@ public class UserController {
     @PatchMapping
     public ResTemplate<Void> updateUser(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @RequestBody @jakarta.validation.Valid UserUpdateRequest request) {
+            @RequestBody @Valid UserUpdateRequest request) {
         userService.updateUser(userPrincipal.getUserId(), request);
         return ResTemplate.success(HttpStatus.OK, "수정 성공");
+    }
+
+    /**
+     * 식단 중점 수정 API
+     * <p>
+     * - PATCH /user/diet
+     * - 식단 목표(Focus) 및 관련 건강 정보를 수정합니다.
+     * </p>
+     *
+     * @param userPrincipal 인증된 사용자
+     * @param request       수정할 정보 (Focus 필수)
+     * @return 수정 성공 메시지
+     */
+    @PatchMapping("/diet")
+    public ResTemplate<Void> updateDietFocus(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody @Valid FocusUpdateRequest request) {
+        userService.updateDietFocus(userPrincipal.getUserId(), request);
+        return ResTemplate.success(HttpStatus.OK, "식단 중점 설정 수정 성공");
     }
 }

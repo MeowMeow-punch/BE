@@ -169,4 +169,46 @@ public class User extends BaseEntity {
 		if (marketingAgreed != null)
 			this.marketingAgreed = marketingAgreed;
 	}
+
+	/**
+	 * 식단 중점 목표 및 관련 정보를 업데이트합니다.
+	 * Focus 타입에 따라 갱신되는 필드가 다릅니다.
+	 */
+	public void updateDietFocus(Focus focus, MealFrequency meals, ActivityLevel activityLevel,
+			Integer targetWeight, List<String> diseases,
+			SmokingStatus smokingStatus, DrinkingStatus drinkingStatus) {
+
+		this.focus = focus;
+
+		// 공통 필드
+		if (meals != null)
+			this.meals = meals;
+		if (activityLevel != null)
+			this.activityLevel = activityLevel;
+
+		// Focus 별 분기 처리
+		if (focus == Focus.HEALTHY) {
+			if (diseases != null) {
+				this.diseases.clear();
+				this.diseases.addAll(diseases);
+			}
+			if (smokingStatus != null)
+				this.smokingStatus = smokingStatus;
+			if (drinkingStatus != null)
+				this.drinkingStatus = drinkingStatus;
+
+			// HEALTHY 모드에서는 목표 몸무게가 불필요하므로 초기화 (데이터 정합성 유지)
+			this.targetWeight = null;
+		} else {
+			// DIET or MUSCLE
+			if (targetWeight != null)
+				this.targetWeight = targetWeight;
+
+			// DIET/MUSCLE 모드에서는 질병, 흡연, 음주 정보가 불필요하거나
+			// UI상 입력받지 않으므로 초기화하여 혼동 방지
+			this.diseases.clear();
+			this.smokingStatus = null;
+			this.drinkingStatus = null;
+		}
+	}
 }
