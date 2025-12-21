@@ -98,7 +98,7 @@ public class DietAiFacade {
 			);
 
 			LlmResponse res = llmClient.generate(req);
-			String jsonText = sanitizeJson(res.jsonText());
+			String jsonText = res.jsonText();
 
 			// 4. 응답 파싱
 			AiRecommendationOutput output = objectMapper.readValue(jsonText, AiRecommendationOutput.class);
@@ -139,8 +139,9 @@ public class DietAiFacade {
 				// Cold Start: 지난 기록 활용
 				inputJson.put("lastDietRecord", Map.of(
 					"totalKcal", lastRecord.totalKcal(),
+					"totalCarbs", lastRecord.totalCarbs(),
 					"totalProtein", lastRecord.totalProtein(),
-					"totalSodium", "TODO" // NutrientTotals에 나트륨이 없다면 생략 혹은 추가 필요
+					"totalFat", lastRecord.totalFat()
 				));
 			} else if (balance != null) {
 				// Today Balance Logic
@@ -170,11 +171,11 @@ public class DietAiFacade {
 			);
 
 			LlmResponse res = llmClient.generate(req);
-			return res.jsonText(); // String response
+			return res.jsonText().trim(); // String response
 
 		} catch (Exception e) {
 			log.error("AI Daily Feedback Failed", e);
-			return "영양 밸런스를 맞춰 건강한 하루 보내세요!";
+			throw new MeowMeowPunch.pickeat.global.llm.exception.LlmException("일일 피드백 생성 실패", e);
 		}
 	}
 
@@ -191,25 +192,6 @@ public class DietAiFacade {
 			&& llmProperties.openai() != null
 			&& llmProperties.openai().apiKey() != null
 			&& llmProperties.openai().model() != null;
-	}
-
-	private String sanitizeJson(String raw) {
-		if (raw == null) {
-			return "";
-		}
-		String trimmed = raw.trim();
-		// LLM이 ```json ... ``` 형태로 감싼 경우 제거
-		if (trimmed.startsWith("```")) {
-			int firstNewline = trimmed.indexOf('\n');
-			if (firstNewline > 0) {
-				trimmed = trimmed.substring(firstNewline + 1);
-			}
-			if (trimmed.endsWith("```")) {
-				trimmed = trimmed.substring(0, trimmed.length() - 3);
-			}
-			trimmed = trimmed.trim();
-		}
-		return trimmed;
 	}
 
 	private LlmProperties.Generation safeGeneration() {

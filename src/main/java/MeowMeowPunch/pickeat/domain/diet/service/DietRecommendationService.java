@@ -21,6 +21,7 @@ import MeowMeowPunch.pickeat.domain.diet.entity.AiFeedBack;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDietFood;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietFeedbackGenerateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietRecommendationSaveException;
 import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.repository.AiFeedBackRepository;
@@ -363,16 +364,16 @@ public class DietRecommendationService {
 	private FoodRecommendationCandidate toCandidate(RecommendedDiet r) {
 		DietSourceType source = r.getSourceType() != null ? r.getSourceType() : DietSourceType.FOOD_DB;
 		return new FoodRecommendationCandidate(
-				r.getId(), // dietId를 candidate의 id 슬롯으로 전달해 DietService에서 사용
-				r.getTitle(),
-				r.getThumbnailUrl(),
-				nullSafe(r.getKcal()),
-				nullSafe(r.getCarbs()),
-				nullSafe(r.getProtein()),
-				nullSafe(r.getFat()),
-				null,
-				0.0, // 이미 저장된 추천은 점수 없음
-				source);
+			r.getId(), // dietId를 candidate의 id 슬롯으로 전달해 DietService에서 사용
+			r.getTitle(),
+			r.getThumbnailUrl(),
+			nullSafe(r.getKcal()),
+			nullSafe(r.getCarbs()),
+			nullSafe(r.getProtein()),
+			nullSafe(r.getFat()),
+			null,
+			0.0, // 이미 저장된 추천은 점수 없음
+			source);
 	}
 
 	/**
@@ -412,20 +413,18 @@ public class DietRecommendationService {
 			aiFeedBackRepository.save(aiFeedBack);
 
 		} catch (Exception e) {
-			// 비동기 실행 중 에러는 로그만 남기고 무시 (메인 트랜잭션 영향 X)
-			// log.error("Faild to generate daily feedback", e);
-			System.err.println("Failed to generate daily feedback: " + e.getMessage());
+			throw new DietFeedbackGenerateException("일일 피드백 생성 실패", e);
 		}
 	}
 
 	// 가중치 dto
 	private record Weight(
-			double kcal,
-			double carbs,
-			double protein,
-			double fat,
-			double penaltyOverKcal,
-			double penaltyOverMacro) {
+		double kcal,
+		double carbs,
+		double protein,
+		double fat,
+		double penaltyOverKcal,
+		double penaltyOverMacro) {
 	}
 
 	// TODO: user 기반시 삭제
