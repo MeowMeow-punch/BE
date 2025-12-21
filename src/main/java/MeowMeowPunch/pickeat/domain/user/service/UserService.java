@@ -5,11 +5,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import MeowMeowPunch.pickeat.domain.auth.entity.User;
+import MeowMeowPunch.pickeat.domain.auth.exception.AuthNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateNicknameException;
 import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
+import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
+import MeowMeowPunch.pickeat.domain.user.dto.response.MyPageResponse;
 import MeowMeowPunch.pickeat.domain.user.dto.response.UserGroupResponse;
 import MeowMeowPunch.pickeat.domain.user.exception.InvalidKeywordException;
 import MeowMeowPunch.pickeat.welstory.entity.GroupMapping;
@@ -27,6 +35,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final GroupMappingRepository groupMappingRepository;
+    private final DietRepository dietRepository;
 
     /**
      * 닉네임 중복 여부를 확인합니다.
@@ -65,5 +74,81 @@ public class UserService {
         return groups.stream()
                 .map(UserGroupResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 마이페이지 정보를 조회합니다.
+     * <p>
+     * - 사용자 프로필 (닉네임, 소속 등)
+     * - 활동 요약 (스트릭, 주간 식단 기록)
+     * - 건강/신체 정보 (키, 몸무게, 알러지 등)
+     * </p>
+     *
+     * @param userId 사용자 식별자 (UUID)
+     * @return 마이페이지 응답 DTO
+     */
+    public MyPageResponse getMyPage(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(AuthNotFoundException::userNotFound);
+
+        // 1. Group Name
+        String groupName = null;
+        if (user.getGroupId() != null) {
+            groupName = groupMappingRepository.findById(user.getGroupId())
+                    .map(GroupMapping::getGroupName)
+                    .orElse(null);
+        }
+
+        // 2. Activity Summary - Streak
+        long totalRecordedDays = dietRepository.countByUserId(userId.toString());
+        List<LocalDate> distinctDates = dietRepository.findDistinctDatesByUserId(userId.toString());
+        int currentStreak = calculateCurrentStreak(distinctDates);
+
+        // 3. Activity Summary - Weekly Diet
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+
+        long weeklyRecordedCount = dietRepository.countByUserIdAndDateBetween(
+                userId.toString(), startOfWeek, endOfWeek);
+        int weeklyTargetCount = user.getMeals().getCount() * 7;
+
+        MyPageResponse.UserProfile userProfile = MyPageResponse.UserProfile.from(user, groupName);
+
+        MyPageResponse.ActivitySummary activitySummary = MyPageResponse.ActivitySummary.of(
+                currentStreak,
+                totalRecordedDays,
+                weeklyRecordedCount,
+                weeklyTargetCount);
+
+        MyPageResponse.BasicInfo basicInfo = MyPageResponse.BasicInfo.from(user);
+
+        return MyPageResponse.of(userProfile, activitySummary, basicInfo);
+    }
+
+    private int calculateCurrentStreak(List<LocalDate> dates) {
+        if (dates.isEmpty())
+            return 0;
+
+        int streak = 0;
+        LocalDate checkDate = LocalDate.now();
+
+        LocalDate latest = dates.get(0);
+        // 가장 최근 기록이 오늘 또는 어제여야 스트릭이 유효 (연속성 판단 기준)
+        if (!latest.equals(checkDate) && !latest.equals(checkDate.minusDays(1))) {
+            return 0;
+        }
+
+        LocalDate current = latest;
+
+        for (LocalDate date : dates) {
+            if (date.equals(current)) {
+                streak++;
+                current = current.minusDays(1);
+            } else {
+                break; // 연속되지 않음
+            }
+        }
+        return streak;
     }
 }

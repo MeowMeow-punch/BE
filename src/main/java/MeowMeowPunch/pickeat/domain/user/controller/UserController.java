@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import MeowMeowPunch.pickeat.domain.user.dto.response.MyPageResponse;
 import MeowMeowPunch.pickeat.domain.user.dto.response.UserGroupResponse;
 import MeowMeowPunch.pickeat.domain.user.service.UserService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
+import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 /**
  * [User][Controller] UserController
@@ -65,5 +68,24 @@ public class UserController {
 
         return ResponseEntity.ok(
                 new ResTemplate<>(HttpStatus.OK, "그룹명 조회 성공", groups));
+    }
+
+    /**
+     * [API] 마이페이지(내 정보) 조회
+     * <p>
+     * 로그인한 사용자의 프로필, 활동 요약, 건강 정보를 조회합니다.
+     * </p>
+     * <ul>
+     * <li>성공: 200 OK와 사용자 정보 반환</li>
+     * </ul>
+     *
+     * @param userPrincipal 인증된 사용자 정보
+     * @return 마이페이지 응답 정보
+     */
+    @GetMapping
+    public ResponseEntity<ResTemplate<MyPageResponse>> getMyPage(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        MyPageResponse response = userService.getMyPage(userPrincipal.getUserId());
+        return ResponseEntity.ok(
+                new ResTemplate<>(HttpStatus.OK, "마이페이지 조회 성공", response));
     }
 }
