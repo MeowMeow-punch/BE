@@ -12,7 +12,13 @@ import MeowMeowPunch.pickeat.welstory.WelstoryRestaurant;
 import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
 import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
 
-// 캐시 없이 Welstory API를 직접 호출하는 게이트웨이 구현체
+/**
+ * [Welstory][Gateway] 직접 호출 구현체.
+ *
+ * <pre>
+ * [GatewayDirect] ──▶ [WelstoryClient] ──▶ API
+ * </pre>
+ */
 @Component
 public class WelstoryMenuGatewayDirect implements WelstoryMenuGateway {
 	private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");

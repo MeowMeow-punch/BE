@@ -2,7 +2,9 @@ package MeowMeowPunch.pickeat.global.llm.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-// JSON 직렬화/역직렬화 보조 유틸 (필요 시 확장)
+/**
+ * [Global][LLM] JSON 유틸리티
+ */
 public final class JsonUtils {
 	private static final ObjectMapper mapper = new ObjectMapper();
 

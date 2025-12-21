@@ -14,15 +14,28 @@ import MeowMeowPunch.pickeat.domain.diet.dto.HomeRecommendationResult;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
+import MeowMeowPunch.pickeat.global.common.enums.LlmUseCase;
 import MeowMeowPunch.pickeat.global.llm.config.LlmProperties;
-import MeowMeowPunch.pickeat.global.llm.core.LlmClient;
-import MeowMeowPunch.pickeat.global.llm.core.LlmRequest;
-import MeowMeowPunch.pickeat.global.llm.core.LlmRequestOptions;
-import MeowMeowPunch.pickeat.global.llm.core.LlmResponse;
-import MeowMeowPunch.pickeat.global.llm.core.LlmUseCase;
+import MeowMeowPunch.pickeat.global.llm.dto.LlmClient;
+import MeowMeowPunch.pickeat.global.llm.dto.LlmRequest;
+import MeowMeowPunch.pickeat.global.llm.dto.LlmRequestOptions;
+import MeowMeowPunch.pickeat.global.llm.dto.LlmResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * [Diet][AI] AI 식단 추천 및 피드백 파사드.
+ *
+ * <pre>
+ * Client
+ *   │
+ *   ▼
+ * [DietService] ──▶ [DietRecommendationService] ──▶ [DietAiFacade] ──▶ [LlmClient] ──▶ (OpenAI)
+ * </pre>
+ *
+ * - 홈 화면 식단 추천 (Score + Context)
+ * - 일일 영양 피드백 (Cold Start / Daily Balance)
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -34,11 +47,22 @@ public class DietAiFacade {
 
 	/**
 	 * [Home] AI 추천 선택 및 이유 생성
+	 *
+	 * @param focus      사용자 영양 목표 (HEALTH, DIET, MUSCLE)
+	 * @param mealSlot   식사 시간대 (BREAKFAST, LUNCH, DINNER)
+	 * @param candidates 추천 후보 식단 리스트
+	 * @return HomeRecommendationResult (선택된 식단 인덱스 및 이유)
 	 */
 	public HomeRecommendationResult recommendHome(Focus focus, DietType mealSlot,
 		List<FoodRecommendationCandidate> candidates) {
 		if (candidates == null || candidates.isEmpty()) {
 			return HomeRecommendationResult.empty("추천 후보가 없습니다.");
+		}
+
+		if (!hasLlmConfig()) {
+			log.warn("LLM 설정이 비어 있어 AI 추천을 건너뜁니다. openai={}, generation={}", llmProperties.openai(),
+				llmProperties.generation());
+			return fallback(candidates, "AI 설정이 없어 점수 기반으로 추천했어요.");
 		}
 
 		try {
@@ -52,7 +76,7 @@ public class DietAiFacade {
 				1. Score (50%): 서버가 계산한 영양 적합도 점수가 높은 메뉴를 우선 고려합니다.
 				2. Context (50%): 사용자의 질환, 목표 등 미묘한 상황을 판단합니다.
 				    - Healthy: 질환(고혈압 등)에 해로운 영양소 회피
-				    - Diet/Muscle: 목표 달성을 위한 칼로리/단백질 준수
+				    - Diet/Muscle: 목표 달성을 위한 칼로리/탄수화물/단백질/지방 준수
 								
 				Output JSON Format:
 				{
@@ -74,7 +98,7 @@ public class DietAiFacade {
 			);
 
 			LlmResponse res = llmClient.generate(req);
-			String jsonText = res.jsonText();
+			String jsonText = sanitizeJson(res.jsonText());
 
 			// 4. 응답 파싱
 			AiRecommendationOutput output = objectMapper.readValue(jsonText, AiRecommendationOutput.class);
@@ -98,23 +122,13 @@ public class DietAiFacade {
 		}
 	}
 
-	private HomeRecommendationResult fallback(List<FoodRecommendationCandidate> candidates, String reason) {
-		List<FoodRecommendationCandidate> fallbackPicks = candidates.stream()
-			.limit(2)
-			.toList();
-		return HomeRecommendationResult.of(fallbackPicks, reason);
-	}
-
-	private LlmProperties.Generation safeGeneration() {
-		LlmProperties.Generation gen = llmProperties.generation();
-		if (gen == null) {
-			return new LlmProperties.Generation(0.7, 256);
-		}
-		return gen;
-	}
-
 	/**
 	 * [Daily] 일일 영양 피드백 생성
+	 *
+	 * @param isFirstMeal 오늘 첫 끼니 여부
+	 * @param balance     오늘 영양 섭취 요약 (과잉/부족 등)
+	 * @param lastRecord  (Cold Start) 최근 식사 기록
+	 * @return AI가 생성한 한 줄 피드백
 	 */
 	public String feedbackDaily(boolean isFirstMeal, NutrientTotals balance, NutrientTotals lastRecord) {
 		try {
@@ -165,6 +179,46 @@ public class DietAiFacade {
 	}
 
 	// --- Private Helpers ---
+	private HomeRecommendationResult fallback(List<FoodRecommendationCandidate> candidates, String reason) {
+		List<FoodRecommendationCandidate> fallbackPicks = candidates.stream()
+			.limit(2)
+			.toList();
+		return HomeRecommendationResult.of(fallbackPicks, reason);
+	}
+
+	private boolean hasLlmConfig() {
+		return llmProperties != null
+			&& llmProperties.openai() != null
+			&& llmProperties.openai().apiKey() != null
+			&& llmProperties.openai().model() != null;
+	}
+
+	private String sanitizeJson(String raw) {
+		if (raw == null) {
+			return "";
+		}
+		String trimmed = raw.trim();
+		// LLM이 ```json ... ``` 형태로 감싼 경우 제거
+		if (trimmed.startsWith("```")) {
+			int firstNewline = trimmed.indexOf('\n');
+			if (firstNewline > 0) {
+				trimmed = trimmed.substring(firstNewline + 1);
+			}
+			if (trimmed.endsWith("```")) {
+				trimmed = trimmed.substring(0, trimmed.length() - 3);
+			}
+			trimmed = trimmed.trim();
+		}
+		return trimmed;
+	}
+
+	private LlmProperties.Generation safeGeneration() {
+		LlmProperties.Generation gen = llmProperties.generation();
+		if (gen == null) {
+			return new LlmProperties.Generation(0.7, 256);
+		}
+		return gen;
+	}
 
 	private Map<String, Object> buildHomePromptInput(Focus focus, DietType mealSlot,
 		List<FoodRecommendationCandidate> candidates) {
@@ -197,7 +251,8 @@ public class DietAiFacade {
 					"name", c.name(),
 					"nutrients", Map.of(
 						"kcal", c.kcal(),
-						"sodium", "TODO_SODIUM", // Candidate에 나트륨 필드 없음, 필요시 추가
+						"carbs", c.carbs(),
+						"fat", c.fat(),
 						"protein", c.protein()
 					),
 					"score", c.score()

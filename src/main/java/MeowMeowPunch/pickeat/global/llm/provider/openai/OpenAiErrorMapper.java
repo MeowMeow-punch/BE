@@ -2,7 +2,9 @@ package MeowMeowPunch.pickeat.global.llm.provider.openai;
 
 import MeowMeowPunch.pickeat.global.llm.exception.LlmUpstreamException;
 
-// OpenAI 예외를 도메인 예외로 변환
+/**
+ * [Global][LLM][OpenAI] 에러 매퍼
+ */
 public final class OpenAiErrorMapper {
 	private OpenAiErrorMapper() {
 	}

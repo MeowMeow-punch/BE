@@ -14,7 +14,11 @@ import MeowMeowPunch.pickeat.welstory.gateway.WelstoryMenuGateway;
 import lombok.RequiredArgsConstructor;
 
 /**
- * [Welstory][Service] 식단/영양 조회 및 추천 변환
+ * [Welstory][Service] 식단/영양 조회 및 추천 변환.
+ *
+ * <pre>
+ * Client ──▶ [DietService] ──▶ [WelstoryMenuService] ──▶ [WelstoryClient] ──▶ Welstory
+ * </pre>
  *
  * - 웰스토리 식단/영양 조회
  * - 추천 후보 DTO 변환

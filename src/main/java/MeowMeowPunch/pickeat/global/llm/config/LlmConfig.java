@@ -5,9 +5,19 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import MeowMeowPunch.pickeat.global.llm.core.LlmClient;
+import MeowMeowPunch.pickeat.global.llm.dto.LlmClient;
 import MeowMeowPunch.pickeat.global.llm.provider.openai.OpenAiLlmClient;
 
+/**
+ * [Global][LLM] LLM 설정 클래스
+ *
+ * <pre>
+ * [LlmProperties] ──▶ [LlmConfig] ──▶ [WebClient] / [LlmClient]
+ * </pre>
+ *
+ * - WebClient 빈 등록
+ * - LlmClient 빈 등록
+ */
 @Configuration
 @EnableConfigurationProperties(LlmProperties.class)
 public class LlmConfig {

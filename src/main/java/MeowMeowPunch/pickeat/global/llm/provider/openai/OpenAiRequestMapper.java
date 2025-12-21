@@ -4,9 +4,11 @@ import static MeowMeowPunch.pickeat.global.llm.provider.openai.OpenAiApiModels.*
 
 import java.util.List;
 
-import MeowMeowPunch.pickeat.global.llm.core.LlmRequest;
+import MeowMeowPunch.pickeat.global.llm.dto.LlmRequest;
 
-// LlmRequest -> OpenAI ChatRequest 변환
+/**
+ * [Global][LLM][OpenAI] 요청 변환기
+ */
 public final class OpenAiRequestMapper {
 	private OpenAiRequestMapper() {
 	}

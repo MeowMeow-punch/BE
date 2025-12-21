@@ -1,6 +1,8 @@
-package MeowMeowPunch.pickeat.global.llm.core;
+package MeowMeowPunch.pickeat.global.llm.dto;
 
-// LLM 응답 모델(원문 + JSON 추출본)
+/**
+ * [Global][LLM] LLM 응답 모델
+ */
 public record LlmResponse(
 	String rawText,
 	String jsonText
