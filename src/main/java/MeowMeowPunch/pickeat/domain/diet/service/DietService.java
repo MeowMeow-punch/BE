@@ -316,6 +316,10 @@ public class DietService {
 		RecommendedDiet recommended = recommendedDietRepository.findById(recommendationId)
 			.orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
 
+		if (!recommended.getUserId().equals(userId)) {
+			throw new DietAccessDeniedException(recommendationId);
+		}
+
 		DietSourceType sourceType = recommended.getSourceType() != null ? recommended.getSourceType()
 			: DietSourceType.FOOD_DB;
 		boolean editable = sourceType != DietSourceType.WELSTORY;
