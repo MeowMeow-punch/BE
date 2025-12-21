@@ -26,17 +26,17 @@ public class OpenAiLlmClient implements LlmClient {
 
 	@Override
 	public LlmResponse generate(LlmRequest request) {
-		ChatRequest body = OpenAiRequestMapper.toChatRequest(props.model(), request);
+		ChatRequest body = OpenAiRequestMapper.toChatRequest(props.openai().model(), request);
 
 		try {
 			ChatResponse res = webClient.post()
 				.uri("/chat/completions")
 				.contentType(MediaType.APPLICATION_JSON)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + props.apiKey())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + props.openai().apiKey())
 				.bodyValue(body)
 				.retrieve()
 				.bodyToMono(ChatResponse.class)
-				.timeout(Duration.ofMillis(props.timeoutMs()))
+				.timeout(Duration.ofMillis(props.timeoutMs() > 0 ? props.timeoutMs() : 30000))
 				.block();
 
 			return OpenAiResponseMapper.toLlmResponse(res);

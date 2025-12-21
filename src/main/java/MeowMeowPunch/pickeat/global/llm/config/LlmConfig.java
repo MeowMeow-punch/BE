@@ -14,8 +14,9 @@ public class LlmConfig {
 
 	@Bean
 	public WebClient llmWebClient(LlmProperties props) {
+		String baseUrl = props.openai() != null ? props.openai().baseUrl() : "";
 		return WebClient.builder()
-			.baseUrl(props.baseUrl())
+			.baseUrl(baseUrl)
 			.build();
 	}
 

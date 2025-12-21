@@ -2,19 +2,18 @@ package MeowMeowPunch.pickeat.domain.diet.dto;
 
 import java.util.List;
 
-/**
- * 홈 추천 결과(선택된 후보 + 한 줄 이유)
- */
+import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
+
+// 홈 추천 결과 DTO
 public record HomeRecommendationResult(
 	List<FoodRecommendationCandidate> picks,
-	String reason,
-	boolean aiUsed
+	String reason
 ) {
-	public static HomeRecommendationResult of(List<FoodRecommendationCandidate> picks, String reason, boolean aiUsed) {
-		return new HomeRecommendationResult(picks, reason, aiUsed);
+	public static HomeRecommendationResult of(List<FoodRecommendationCandidate> picks, String reason) {
+		return new HomeRecommendationResult(picks, reason);
 	}
 
 	public static HomeRecommendationResult empty(String reason) {
-		return new HomeRecommendationResult(List.of(), reason, false);
+		return new HomeRecommendationResult(List.of(), reason);
 	}
 }

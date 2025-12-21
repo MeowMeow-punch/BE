@@ -5,12 +5,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "llm")
 public record LlmProperties(
 	String provider,     // 예: "openai"
-	String model,        // 예: "gpt-4o-mini"
-	String baseUrl,
-	String apiKey,
-	long timeoutMs,
-	Generation generation
+	OpenAi openai,       // Nested Config
+	Generation generation,
+	long timeoutMs
 ) {
-	public record Generation(double temperature, int maxOutputTokens) {
-	}
+	public record OpenAi(String apiKey, String model, String baseUrl) {}
+	public record Generation(double temperature, int maxOutputTokens) {}
 }
