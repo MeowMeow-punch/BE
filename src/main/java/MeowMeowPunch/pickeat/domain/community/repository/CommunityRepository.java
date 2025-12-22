@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import MeowMeowPunch.pickeat.domain.community.entity.Community;
@@ -44,4 +45,21 @@ public interface CommunityRepository extends JpaRepository<Community, Long> {
 	 */
 	@Query("SELECT c FROM Community c WHERE c.category = :category AND c.id <> :id ORDER BY c.id DESC")
 	List<Community> findTop3ByCategoryAndIdNot(@Param("category") CommunityCategory category, @Param("id") Long id, Pageable pageable);
+
+	/**
+	 * 제목 또는 본문에 키워드가 포함된 게시글을 조회합니다 (최신순).
+	 *
+	 * @param titleKeyword   제목 검색어
+	 * @param contentKeyword 본문 검색어
+	 * @return 검색된 게시글 목록
+	 */
+	List<Community> findByTitleContainingOrContentContainingOrderByIdDesc(String titleKeyword, String contentKeyword);
+
+	@Modifying
+	@Query("UPDATE Community c SET c.likes = c.likes + 1 WHERE c.id = :id")
+	void increaseLikeCount(@Param("id") Long id);
+
+	@Modifying
+	@Query("UPDATE Community c SET c.likes = c.likes - 1 WHERE c.id = :id AND c.likes > 0")
+	void decreaseLikeCount(@Param("id") Long id);
 }

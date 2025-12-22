@@ -29,4 +29,11 @@ public interface CommunityLikeRepository extends JpaRepository<CommunityLike, Lo
 	 * @return CommunityLike 엔티티 (Optional)
 	 */
 	Optional<CommunityLike> findByUserIdAndCommunityId(String userId, Long communityId);
+	/**
+	 * 특정 사용자의 특정 게시글 좋아요를 삭제합니다.
+	 *
+	 * @param userId      사용자 식별자
+	 * @param communityId 게시글 식별자
+	 */
+	void deleteByUserIdAndCommunityId(String userId, Long communityId);
 }

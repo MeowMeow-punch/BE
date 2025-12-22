@@ -9,9 +9,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.validation.Valid;
 
+import MeowMeowPunch.pickeat.domain.community.dto.request.CommunityLikeRequest;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityDetailResponse;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityListResponse;
+import MeowMeowPunch.pickeat.domain.community.dto.response.CommunitySearchResponse;
 import MeowMeowPunch.pickeat.domain.community.service.CommunityService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
@@ -65,5 +70,37 @@ public class CommunityController {
 	) {
 		CommunityDetailResponse response = communityService.getCommunityDetail(communityId, principal);
 		return ResponseEntity.ok(ResTemplate.success(HttpStatus.OK, "컨텐츠 상세 조회 성공", response));
+	}
+
+	/**
+	 * 커뮤니티 게시글 검색
+	 *
+	 * @param keyword 검색어 (제목 or 본문 포함)
+	 * @return 검색 결과 (게시글 리스트 + 개수)
+	 */
+	@GetMapping("/search")
+	public ResponseEntity<ResTemplate<CommunitySearchResponse>> getCommunitySearch(
+		@RequestParam(name = "keyword") String keyword
+	) {
+		CommunitySearchResponse response = communityService.searchCommunity(keyword);
+		return ResponseEntity.ok(ResTemplate.success(HttpStatus.OK, "컨텐츠 검색 성공", response));
+	}
+
+	/**
+	 * 커뮤니티 게시글 좋아요 상태 변경 (토글 아님, 상태 동기화)
+	 *
+	 * @param communityId 게시글 ID
+	 * @param principal   요청 사용자 정보 (Required)
+	 * @param request     변경할 좋아요 상태 (isLiked)
+	 * @return 성공 메시지
+	 */
+	@PostMapping("/{communityId:\\d+}/likes")
+	public ResponseEntity<ResTemplate<Void>> updateLikeStatus(
+		@PathVariable(name = "communityId") Long communityId,
+		@AuthenticationPrincipal UserPrincipal principal,
+		@Valid @RequestBody CommunityLikeRequest request
+	) {
+		communityService.updateLikeStatus(communityId, principal, request);
+		return ResponseEntity.ok(ResTemplate.success(HttpStatus.OK, "좋아요 상태변경 성공"));
 	}
 }
