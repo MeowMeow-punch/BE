@@ -1,29 +1,20 @@
 package MeowMeowPunch.pickeat.domain.community.dto.response;
 
 import java.util.List;
-import org.springframework.data.domain.Page;
+import MeowMeowPunch.pickeat.global.common.dto.PageInfo;
 
 /**
  * [Community][Response] CommunityListResponse
- * 커뮤니티 게시글 목록 조회 결과 (Paging 포함)
+ * 커뮤니티 게시글 목록 조회 결과 (Cursor Pagination)
  *
- * @param contents   조회된 게시글 요약 목록
- * @param totalPages 전체 페이지 수
- * @param totalElements 전체 게시글 수
- * @param currentPage 현재 페이지 번호 (0-based)
+ * @param posts    조회된 게시글 요약 목록
+ * @param pageInfo 페이지네이션 메타 정보 (다음 커서, 다음 페이지 여부)
  */
 public record CommunityListResponse(
-	List<CommunitySummaryDto> contents,
-	int totalPages,
-	long totalElements,
-	int currentPage
+	List<CommunitySummaryDto> posts,
+	PageInfo pageInfo
 ) {
-	public static CommunityListResponse of(Page<CommunitySummaryDto> page) {
-		return new CommunityListResponse(
-			page.getContent(),
-			page.getTotalPages(),
-			page.getTotalElements(),
-			page.getNumber()
-		);
+	public static CommunityListResponse of(List<CommunitySummaryDto> posts, String nextCursor, boolean hasNext) {
+		return new CommunityListResponse(posts, new PageInfo(nextCursor, hasNext));
 	}
 }

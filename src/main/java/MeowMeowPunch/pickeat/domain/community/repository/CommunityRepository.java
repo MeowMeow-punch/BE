@@ -1,6 +1,6 @@
 package MeowMeowPunch.pickeat.domain.community.repository;
 
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import MeowMeowPunch.pickeat.domain.community.entity.Community;
@@ -14,11 +14,21 @@ import MeowMeowPunch.pickeat.global.common.enums.CommunityCategory;
  */
 public interface CommunityRepository extends JpaRepository<Community, Long> {
 	/**
-	 * 특정 카테고리에 속한 커뮤니티 게시글 목록을 조회합니다.
+	 * 특정 카테고리에 속한 커뮤니티 게시글 목록을 조회합니다 (첫 페이지용).
 	 *
 	 * @param category 조회할 커뮤니티 카테고리
-	 * @param pageable 페이징 정보 (page, size, sort)
-	 * @return 해당 카테고리의 게시글 페이지 객체
+	 * @param pageable 페이징 정보 (limit)
+	 * @return 해당 카테고리의 게시글 Slice 객체
 	 */
-	Page<Community> findByCategory(CommunityCategory category, Pageable pageable);
+	Slice<Community> findByCategoryOrderByIdDesc(CommunityCategory category, Pageable pageable);
+
+	/**
+	 * 특정 게시글(cursor) 이전의 게시글 목록을 조회합니다 (커서 이후 조회용).
+	 *
+	 * @param category 조회할 커뮤니티 카테고리
+	 * @param id       커서 ID (이 ID보다 작은 게시글 조회)
+	 * @param pageable 페이징 정보 (limit)
+	 * @return 해당 카테고리의 게시글 Slice 객체
+	 */
+	Slice<Community> findByCategoryAndIdLessThanOrderByIdDesc(CommunityCategory category, Long id, Pageable pageable);
 }

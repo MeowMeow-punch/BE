@@ -11,9 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Slice;
+
 import MeowMeowPunch.pickeat.domain.community.entity.Community;
 import MeowMeowPunch.pickeat.global.common.enums.CommunityCategory;
 import MeowMeowPunch.pickeat.domain.community.entity.CommunityLike;
@@ -91,13 +91,13 @@ class CommunityRepositoryTest {
 		communityRepository.save(c3);
 
 		// when
-		Page<Community> result = communityRepository.findByCategory(
+		Slice<Community> result = communityRepository.findByCategoryOrderByIdDesc(
 			CommunityCategory.EXERCISE,
-			PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
+			PageRequest.of(0, 10)
 		);
 
 		// then
-		assertThat(result.getTotalElements()).isEqualTo(2);
+		assertThat(result.getContent()).hasSize(2);
 		assertThat(result.getContent()).extracting("title")
 			.containsExactlyInAnyOrder("Exercise 1", "Exercise 2");
 	}
