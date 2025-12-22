@@ -98,45 +98,19 @@ public class DietService {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
 		}
-<<<<<<< HEAD
 		Focus focus = Focus.HEALTHY; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
-=======
-		Focus focus = Focus.HEALTH; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
->>>>>>> 3385e8908db2d07057da13f550f62efba30f6718
 		LocalDate todayDate = LocalDate.now(KOREA_ZONE);
 
 		// 오늘 섭취 합계 (쿼리 1회)
 		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, todayDate);
 
 		// 식단 추천 계산 트리거 (이미 있으면 재사용) 후 TOP5 후보 반환
-<<<<<<< HEAD
-		List<FoodRecommendationCandidate> recommendedCandidates = dietRecommendationService.recommendTopFoods(userId,
-				focus, totals);
-=======
 		HomeRecommendationResult recommendationResult = dietRecommendationService.recommendTopFoods(userId,
 			focus, totals);
->>>>>>> 3385e8908db2d07057da13f550f62efba30f6718
 
 		SummaryInfo summaryInfo = buildSummary(totals);
 
 		AiFeedBack aiFeedBack = AiFeedBack.of(
-<<<<<<< HEAD
-				"AI 피드백은 준비 중입니다.",
-				LocalDateTime.now(KOREA_ZONE).withNano(0).toString());
-
-		List<RecommendedDietInfo> recommended = recommendedCandidates.stream()
-				.map(c -> RecommendedDietInfo.of(
-						c.foodId(), // 여기서는 FoodRecommendationCandidate.foodId에 RecommendedDiet ID가 담겨옴
-						c.name(),
-						mealSlot(LocalTime.now(KOREA_ZONE)).name(),
-						toThumbnailList(c.thumbnailUrl()),
-						toInt(c.kcal()),
-						Nutrients.of(
-								toInt(c.carbs()),
-								toInt(c.protein()),
-								toInt(c.fat()))))
-				.toList();
-=======
 			recommendationResult.reason(),
 			LocalDateTime.now(KOREA_ZONE).withNano(0).toString()
 		);
@@ -156,7 +130,6 @@ public class DietService {
 				)
 			))
 			.toList();
->>>>>>> 3385e8908db2d07057da13f550f62efba30f6718
 
 		return DietHomeResponse.of(summaryInfo, aiFeedBack, recommended);
 	}
@@ -184,14 +157,9 @@ public class DietService {
 			.orElse("AI 피드백은 준비 중입니다.");
 
 		AiFeedBack aiFeedBack = AiFeedBack.of(
-<<<<<<< HEAD
-				"AI 피드백은 준비 중입니다.",
-				targetDate.atStartOfDay().toString());
-=======
 			feedbackContent,
 			targetDate.atStartOfDay().toString()
 		);
->>>>>>> 3385e8908db2d07057da13f550f62efba30f6718
 
 		// 오늘의 식단 - 시간순으로 정렬
 		List<Diet> diets = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate);

@@ -343,35 +343,20 @@ public class DietRecommendationService {
 	private Weight weightByPurpose(Focus focus) {
 		return switch (focus) {
 			case DIET -> new Weight(
-<<<<<<< HEAD
-					1.5, 1.0, 0.9, 0.8, // kcal, carbs, protein, fat 가중치
-					200, // kcal 초과 패널티
-					50 // 탄단지 초과 패널티
-				);
-			case MUSCLE -> new Weight(
-					1.0, 0.9, 1.5, 0.9,
-					80,
-					40);
-			case HEALTHY -> new Weight(
-					1.0, 1.0, 1.0, 1.0,
-					100,
-					50);
-=======
 				1.5, 1.0, 0.9, 0.8, // kcal, carbs, protein, fat 가중치
 				200, // kcal 초과 패널티
 				50   // 탄단지 초과 패널티
 			);
-			case BULK_UP -> new Weight(
+			case MUSCLE -> new Weight(
 				1.0, 0.9, 1.5, 0.9,
 				80,
 				40
 			);
-			case HEALTH -> new Weight(
+			case HEALTHY -> new Weight(
 				1.0, 1.0, 1.0, 1.0,
 				100,
 				50
 			);
->>>>>>> 3385e8908db2d07057da13f550f62efba30f6718
 		};
 	}
 

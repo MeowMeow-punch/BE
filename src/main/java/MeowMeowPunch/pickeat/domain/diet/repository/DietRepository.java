@@ -26,7 +26,6 @@ public interface DietRepository extends JpaRepository<Diet, Long> {
 	 */
 	List<Diet> findAllByUserIdAndDateOrderByTimeAsc(String userId, LocalDate date);
 
-<<<<<<< HEAD
 	/**
 	 * 특정 기간 동안의 사용자 식단 기록 수 조회.
 	 *
@@ -54,7 +53,6 @@ public interface DietRepository extends JpaRepository<Diet, Long> {
 	 */
 	@Query("SELECT DISTINCT d.date FROM Diet d WHERE d.userId = :userId ORDER BY d.date DESC")
 	List<LocalDate> findDistinctDatesByUserId(@Param("userId") String userId);
-=======
+
 	Optional<Diet> findTopByUserIdAndDateLessThanOrderByDateDesc(String userId, LocalDate date);
->>>>>>> 3385e8908db2d07057da13f550f62efba30f6718
 }
