@@ -2,6 +2,7 @@ package MeowMeowPunch.pickeat.domain.diet.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -22,4 +23,6 @@ public interface DietRepository extends JpaRepository<Diet, Long> {
 	 * @return 해당 날짜의 식단 리스트 (아침->점심->저녁 순)
 	 */
 	List<Diet> findAllByUserIdAndDateOrderByTimeAsc(String userId, LocalDate date);
+
+	Optional<Diet> findTopByUserIdAndDateLessThanOrderByDateDesc(String userId, LocalDate date);
 }

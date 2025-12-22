@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
+import MeowMeowPunch.pickeat.domain.diet.dto.HomeRecommendationResult;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
@@ -37,6 +37,7 @@ import MeowMeowPunch.pickeat.domain.diet.exception.DietFoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietNotEditableException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.MissingDietUserIdException;
+import MeowMeowPunch.pickeat.domain.diet.repository.AiFeedBackRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
@@ -53,6 +54,7 @@ import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
+import MeowMeowPunch.pickeat.global.common.enums.FeedBackType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
 import MeowMeowPunch.pickeat.welstory.entity.GroupMapping;
@@ -81,6 +83,7 @@ public class DietService {
 	private final RecommendedDietFoodRepository recommendedDietFoodRepository;
 	private final WelstoryMenuService welstoryMenuService;
 	private final GroupMappingRepository groupMappingRepository;
+	private final AiFeedBackRepository aiFeedBackRepository;
 
 	// TODO: User 연동 시 제거 (임시 식당명)
 	private final String mockGroupName = "전기부산";
@@ -95,24 +98,25 @@ public class DietService {
 		if (!StringUtils.hasText(userId)) {
 			throw new MissingDietUserIdException();
 		}
-		Focus focus = Focus.BALANCE; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
+		Focus focus = Focus.HEALTH; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
 		LocalDate todayDate = LocalDate.now(KOREA_ZONE);
 
 		// 오늘 섭취 합계 (쿼리 1회)
 		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, todayDate);
 
 		// 식단 추천 계산 트리거 (이미 있으면 재사용) 후 TOP5 후보 반환
-		List<FoodRecommendationCandidate> recommendedCandidates = dietRecommendationService.recommendTopFoods(userId,
+		HomeRecommendationResult recommendationResult = dietRecommendationService.recommendTopFoods(userId,
 			focus, totals);
 
 		SummaryInfo summaryInfo = buildSummary(totals);
 
 		AiFeedBack aiFeedBack = AiFeedBack.of(
-			"AI 피드백은 준비 중입니다.",
+			recommendationResult.reason(),
 			LocalDateTime.now(KOREA_ZONE).withNano(0).toString()
 		);
 
-		List<RecommendedDietInfo> recommended = recommendedCandidates.stream()
+		List<RecommendedDietInfo> recommended = recommendationResult.picks().stream()
+
 			.map(c -> RecommendedDietInfo.of(
 				c.foodId(), // 여기서는 FoodRecommendationCandidate.foodId에 RecommendedDiet ID가 담겨옴
 				c.name(),
@@ -148,8 +152,12 @@ public class DietService {
 
 		SummaryInfo summaryInfo = buildSummary(totals);
 
+		String feedbackContent = aiFeedBackRepository.findByUserIdAndDateAndType(userId, targetDate, FeedBackType.DAILY)
+			.map(MeowMeowPunch.pickeat.domain.diet.entity.AiFeedBack::getContent)
+			.orElse("AI 피드백은 준비 중입니다.");
+
 		AiFeedBack aiFeedBack = AiFeedBack.of(
-			"AI 피드백은 준비 중입니다.",
+			feedbackContent,
 			targetDate.atStartOfDay().toString()
 		);
 
@@ -397,6 +405,8 @@ public class DietService {
 
 		List<DietFood> dietFoods = buildDietFoods(saved.getId(), request);
 		dietFoodRepository.saveAll(dietFoods);
+
+		dietRecommendationService.generateDailyFeedback(userId, date);
 	}
 
 	/**
@@ -437,6 +447,8 @@ public class DietService {
 		dietFoodRepository.deleteAllByDietId(dietId);
 		List<DietFood> dietFoods = buildDietFoods(dietId, request);
 		dietFoodRepository.saveAll(dietFoods);
+
+		dietRecommendationService.generateDailyFeedback(userId, date);
 	}
 
 	/**
@@ -463,5 +475,7 @@ public class DietService {
 
 		dietFoodRepository.deleteAllByDietId(dietId);
 		dietRepository.delete(diet);
+
+		dietRecommendationService.generateDailyFeedback(userId, diet.getDate());
 	}
 }
