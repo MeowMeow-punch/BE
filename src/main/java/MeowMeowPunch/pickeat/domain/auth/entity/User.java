@@ -141,6 +141,8 @@ public class User extends BaseEntity {
 
 	private Integer targetWeight;
 
+	// TODO: 목표 영양소 넣기, DietPageAssembler 상단 참조
+
 	// ==================== Methods ====================
 
 	/**

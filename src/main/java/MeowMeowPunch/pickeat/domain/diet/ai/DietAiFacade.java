@@ -214,7 +214,7 @@ public class DietAiFacade {
 
 		// User Profile (Mock / TODO: 실제 User 정보 연동)
 		Map<String, Object> profile = new HashMap<>();
-		if (focus == Focus.HEALTH) {
+		if (focus == Focus.HEALTHY) {
 			profile.put("diseases", List.of("HYPERTENSION")); // TODO
 			profile.put("lifestyle", Map.of("isSmoking", false, "isDrink", true));
 		} else {
