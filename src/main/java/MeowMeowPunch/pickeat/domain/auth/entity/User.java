@@ -117,7 +117,7 @@ public class User extends BaseEntity {
 	@Column(nullable = false, length = 10)
 	private UserStatus status;
 
-	private Long groupId;
+	private String groupId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 10)
@@ -141,14 +141,12 @@ public class User extends BaseEntity {
 
 	private Integer targetWeight;
 
-	// TODO: 목표 영양소 넣기, DietPageAssembler 상단 참조
-
 	// ==================== Methods ====================
 
 	/**
 	 * 프로필 정보를 업데이트
 	 */
-	public void updateProfile(String nickname, Long groupId, Gender gender,
+	public void updateProfile(String nickname, String groupId, Gender gender,
 			Integer height, Integer weight, Integer age,
 			List<String> allergies, Boolean isMarketing) {
 		if (nickname != null) {

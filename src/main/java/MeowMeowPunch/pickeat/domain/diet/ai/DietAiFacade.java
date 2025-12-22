@@ -222,7 +222,7 @@ public class DietAiFacade {
 
 		// User Profile
 		Map<String, Object> profile = new HashMap<>();
-		if (focus == Focus.HEALTH) {
+		if (focus == Focus.HEALTHY) {
 			profile.put("diseases", user.getDiseases());
 			profile.put("lifestyle", Map.of("isSmoking", user.getSmokingStatus().name(), "isDrink", user.getDrinkingStatus().name()));
 		} else {

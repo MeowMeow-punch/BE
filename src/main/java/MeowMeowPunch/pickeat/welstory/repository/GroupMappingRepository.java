@@ -17,8 +17,18 @@ public interface GroupMappingRepository extends JpaRepository<GroupMapping, Long
 	 *
 	 * @param groupName 그룹명 (Exact Match)
 	 * @return 그룹 매핑 정보 (Optional)
+     *
 	 */
 	Optional<GroupMapping> findByGroupName(String groupName);
+
+    /**
+     * 그룹 Id로 정확히 일치하는 그룹 정보 조회.
+     *
+     * @param groupId 그룹명 (Exact Match)
+     * @return 그룹 매핑 정보 (Optional)
+     *
+     */
+    Optional<GroupMapping> findByGroupId(String groupId);
 
 	/**
 	 * 그룹 이름에 키워드가 포함된 그룹 목록 조회.

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
@@ -24,6 +25,7 @@ import lombok.RequiredArgsConstructor;
  * - 추천 후보 DTO 변환
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class WelstoryMenuService {
 
@@ -39,12 +41,15 @@ public class WelstoryMenuService {
 	 * @param mealTimeName 식사 시간대 이름
 	 * @return 메뉴 리스트
 	 */
-	public List<WelstoryMenuItem> getMenus(String restaurantId, Integer dateYyyymmdd, String mealTimeId,
-		String mealTimeName) {
-		int targetDate = (dateYyyymmdd != null) ? dateYyyymmdd : 0;
-		String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : DEFAULT_LUNCH_MEAL_TIME_ID;
-		return gateway.getMeals(restaurantId, targetDate, timeId, mealTimeName);
-	}
+    public List<WelstoryMenuItem> getMenus(String restaurantId, Integer dateYyyymmdd, String mealTimeId,
+            String mealTimeName) {
+        int targetDate = (dateYyyymmdd != null) ? dateYyyymmdd : 0;
+        String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : DEFAULT_LUNCH_MEAL_TIME_ID;
+        List<WelstoryMenuItem> menus = gateway.getMeals(restaurantId, targetDate, timeId, mealTimeName);
+        log.info("[Welstory][getMenus] fetched: restaurantId={}, date={}, timeId={}, mealTimeName={}, count={}",
+                restaurantId, targetDate, timeId, mealTimeName, menus.size());
+        return menus;
+    }
 
 	/**
 	 * 웰스토리 식단+영양을 추천 후보 DTO로 변환.
@@ -55,12 +60,14 @@ public class WelstoryMenuService {
 	 * @param mealTimeName 식사 시간대 이름
 	 * @return 추천 후보 리스트
 	 */
-	public List<FoodRecommendationCandidate> getRecommendationCandidates(String restaurantId, Integer dateYyyymmdd,
-		String mealTimeId, String mealTimeName) {
-		int targetDate = (dateYyyymmdd != null) ? dateYyyymmdd : 0;
-		String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : DEFAULT_LUNCH_MEAL_TIME_ID;
+    public List<FoodRecommendationCandidate> getRecommendationCandidates(String restaurantId, Integer dateYyyymmdd,
+            String mealTimeId, String mealTimeName) {
+        int targetDate = (dateYyyymmdd != null) ? dateYyyymmdd : 0;
+        String timeId = (mealTimeId != null && !mealTimeId.isBlank()) ? mealTimeId : DEFAULT_LUNCH_MEAL_TIME_ID;
 
-		List<WelstoryMenuItem> menus = gateway.getMeals(restaurantId, targetDate, timeId, mealTimeName);
+        List<WelstoryMenuItem> menus = gateway.getMeals(restaurantId, targetDate, timeId, mealTimeName);
+        log.info("[Welstory][getRecommendationCandidates] menus fetched: restaurantId={}, date={}, timeId={}, count={}",
+                restaurantId, targetDate, timeId, menus.size());
 
 		if (menus.isEmpty()) {
 			return List.of();
@@ -84,17 +91,22 @@ public class WelstoryMenuService {
 	 * @param menuCourseType 코스 타입
 	 * @return 원본 영양 데이터
 	 */
-	public List<ApiTypes.RawMealMenuData> getNutrients(String restaurantId, int dateYyyymmdd, String mealTimeId,
-		String hallNo, String menuCourseType) {
-		return gateway.getNutrients(restaurantId, dateYyyymmdd, mealTimeId, hallNo, menuCourseType);
-	}
+    public List<ApiTypes.RawMealMenuData> getNutrients(String restaurantId, int dateYyyymmdd, String mealTimeId,
+            String hallNo, String menuCourseType) {
+        List<ApiTypes.RawMealMenuData> res = gateway.getNutrients(restaurantId, dateYyyymmdd, mealTimeId, hallNo, menuCourseType);
+        log.info("[Welstory][getNutrients] fetched: restaurantId={}, date={}, timeId={}, hallNo={}, courseType={}, count={}",
+                restaurantId, dateYyyymmdd, mealTimeId, hallNo, menuCourseType, res.size());
+        return res;
+    }
 
 	private FoodRecommendationCandidate buildCandidate(WelstoryMenuItem menu, String restaurantId, int targetDate,
 		String timeId) {
 		List<ApiTypes.RawMealMenuData> nutrients = List.of();
-		if (!isBlank(menu.hallNo()) && !isBlank(menu.menuCourseType())) {
-			nutrients = gateway.getNutrients(restaurantId, targetDate, timeId, menu.hallNo(), menu.menuCourseType());
-		}
+        if (!isBlank(menu.hallNo()) && !isBlank(menu.menuCourseType())) {
+            nutrients = gateway.getNutrients(restaurantId, targetDate, timeId, menu.hallNo(), menu.menuCourseType());
+            log.info("[Welstory][buildCandidate] nutrients fetched: restaurantId={}, date={}, timeId={}, hallNo={}, courseType={}, count={}",
+                    restaurantId, targetDate, timeId, menu.hallNo(), menu.menuCourseType(), nutrients.size());
+        }
 
 		BigDecimal totalKcal = BigDecimal.ZERO;
 		BigDecimal totalCarbs = BigDecimal.ZERO;

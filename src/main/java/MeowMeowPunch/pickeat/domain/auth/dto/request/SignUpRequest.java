@@ -41,7 +41,7 @@ public record SignUpRequest(
 		List<String> allergies,
 		List<String> diseases,
 		@NotNull(message = "사용자 구분은 필수입니다.") UserStatus status,
-		Long groupId,
+		String groupId,
 		@NotNull(message = "중점 목표는 필수입니다.") Focus focus,
 		SmokingStatus smokingStatus,
 		DrinkingStatus drinkingStatus,
