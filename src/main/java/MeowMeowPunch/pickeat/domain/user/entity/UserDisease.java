@@ -1,7 +1,6 @@
 package MeowMeowPunch.pickeat.domain.user.entity;
 
 import MeowMeowPunch.pickeat.domain.auth.entity.User;
-import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -19,19 +18,18 @@ import lombok.NoArgsConstructor;
 
 /**
  * [User][Entity] UserDisease
- * 사용자와 질환 간의 다대다 관계를 해소하는 중계 엔티티
+ * 사용자와 질환 간의 다대다 관계를 중계하는 엔티티
  * <p>
  * [Domain Model]
  * 
  * <pre>
- * ┌───────────────┐       ┌───────────────┐
- * │     User      │   N:1 │  UserDisease  │ 1:N   ┌───────────────┐
- * │   (users)     │ ◀──── │(user_diseases)│ ────▶ │    Disease    │
- * └───────────────┘       └───────────────┘       │  (diseases)   │
- *                                                 └───────────────┘
+ * ┌───────────────┐       ┌────────────────┐       ┌───────────────┐
+ * │     User      │   N:1 │  UserDisease   │  1:N  │    Disease    │
+ * │   (users)     │ ◀──── │(user_diseases) │ ────▶ │  (diseases)   │
+ * └───────────────┘       └────────────────┘       └───────────────┘
  * </pre>
  * </p>
- * - 관계 매핑: 사용자(1) - 질환(N)
+ * - 관계 매핑: 사용자(N) - 질환(N)
  * - 데이터 모델: 별도의 속성 없이 관계만을 정의함
  */
 @Getter
@@ -40,7 +38,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-public class UserDisease extends BaseEntity {
+public class UserDisease {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

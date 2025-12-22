@@ -1,7 +1,6 @@
 package MeowMeowPunch.pickeat.domain.user.entity;
 
 import MeowMeowPunch.pickeat.domain.auth.entity.User;
-import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -24,11 +23,10 @@ import lombok.NoArgsConstructor;
  * [Domain Model]
  * 
  * <pre>
- * ┌───────────────┐       ┌───────────────┐
- * │     User      │   N:1 │  UserAllergy  │ 1:N   ┌───────────────┐
- * │   (users)     │ ◀──── │(user_allergies)│ ────▶ │    Allergy    │
- * └───────────────┘       └───────────────┘       │  (allergies)  │
- *                                                 └───────────────┘
+ * ┌───────────────┐       ┌────────────────┐       ┌───────────────┐
+ * │     User      │  N:1  │  UserAllergy   │  1:N  │    Allergy    │
+ * │   (users)     │ ◀──── │(user_allergies)│ ────▶ │  (allergies)  │
+ * └───────────────┘       └────────────────┘       └───────────────┘
  * </pre>
  * </p>
  * - 관계 매핑: 사용자(1) - 알러지(N)
@@ -40,7 +38,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-public class UserAllergy extends BaseEntity {
+public class UserAllergy {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

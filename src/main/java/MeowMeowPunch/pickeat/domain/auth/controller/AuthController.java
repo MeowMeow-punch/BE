@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import MeowMeowPunch.pickeat.domain.auth.dto.request.OAuthLoginRequest;
 import MeowMeowPunch.pickeat.domain.auth.dto.request.SignUpRequest;
 import MeowMeowPunch.pickeat.domain.auth.dto.response.AuthTokenResponse;
+import MeowMeowPunch.pickeat.domain.auth.exception.TokenNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.service.AuthService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import MeowMeowPunch.pickeat.global.jwt.JwtCookieProvider;
@@ -75,10 +77,10 @@ public class AuthController {
 	 */
 	@PostMapping("/refresh")
 	public ResponseEntity<ResTemplate<AuthTokenResponse>> refresh(
-			@org.springframework.web.bind.annotation.CookieValue(value = "refresh_token", required = false) String refreshToken) {
+			@CookieValue(value = "refresh_token", required = false) String refreshToken) {
 
 		if (refreshToken == null) {
-			throw MeowMeowPunch.pickeat.domain.auth.exception.TokenNotFoundException.tokenNotFound();
+			throw TokenNotFoundException.tokenNotFound();
 		}
 
 		AuthTokenResponse tokens = authService.refresh(refreshToken);

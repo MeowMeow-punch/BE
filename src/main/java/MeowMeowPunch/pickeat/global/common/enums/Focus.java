@@ -6,6 +6,6 @@ package MeowMeowPunch.pickeat.global.common.enums;
  */
 public enum Focus {
 	DIET,
-	BULK_UP,
-	HEALTH
+	MUSCLE,
+	HEALTHY
 }
