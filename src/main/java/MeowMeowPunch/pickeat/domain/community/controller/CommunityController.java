@@ -7,8 +7,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
+import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityDetailResponse;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityListResponse;
 import MeowMeowPunch.pickeat.domain.community.service.CommunityService;
+import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
+import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -40,5 +46,24 @@ public class CommunityController {
 	) {
 		CommunityListResponse response = communityService.getCommunityList(category, cursorId, size);
 		return ResponseEntity.ok(response);
+	}
+
+	/**
+	 * 커뮤니티 게시글 상세 조회
+	 * <p>
+	 * {communityId}가 숫자일 경우 이 메서드가 우선 매핑됩니다.
+	 * </p>
+	 *
+	 * @param communityId 게시글 ID
+	 * @param principal   요청 사용자 정보 (Nullable)
+	 * @return 게시글 상세 정보 (ResTemplate Wrapped)
+	 */
+	@GetMapping("/{communityId:\\d+}")
+	public ResponseEntity<ResTemplate<CommunityDetailResponse>> getCommunityDetail(
+		@PathVariable(name = "communityId") Long communityId,
+		@AuthenticationPrincipal UserPrincipal principal
+	) {
+		CommunityDetailResponse response = communityService.getCommunityDetail(communityId, principal);
+		return ResponseEntity.ok(ResTemplate.success(HttpStatus.OK, "컨텐츠 상세 조회 성공", response));
 	}
 }

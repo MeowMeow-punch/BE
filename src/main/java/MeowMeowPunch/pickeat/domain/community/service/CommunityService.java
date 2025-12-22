@@ -9,10 +9,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityListResponse;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunitySummaryDto;
+import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityDetailResponse;
+import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityDetailResponse.RelatedPostResponse;
 import MeowMeowPunch.pickeat.domain.community.entity.Community;
+import MeowMeowPunch.pickeat.domain.community.exception.CommunityNotFoundException;
 import MeowMeowPunch.pickeat.domain.community.exception.InvalidCategoryException;
+import MeowMeowPunch.pickeat.domain.community.repository.CommunityLikeRepository;
 import MeowMeowPunch.pickeat.domain.community.repository.CommunityRepository;
 import MeowMeowPunch.pickeat.global.common.enums.CommunityCategory;
+import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -25,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class CommunityService {
 
 	private final CommunityRepository communityRepository;
+	private final CommunityLikeRepository communityLikeRepository;
 
 	/**
 	 * 커뮤니티 게시글 목록을 조회합니다. (Cursor Pagination)
@@ -65,5 +71,35 @@ public class CommunityService {
 		}
 
 		return CommunityListResponse.of(posts, nextCursor, communitySlice.hasNext());
+	}
+
+	/**
+	 * 커뮤니티 게시글 상세 조회
+	 *
+	 * @param communityId 게시글 ID
+	 * @param principal   현재 로그인한 사용자 정보 (Nullable)
+	 * @return 게시글 상세 정보 + 연관 게시글
+	 */
+	public CommunityDetailResponse getCommunityDetail(Long communityId, UserPrincipal principal) {
+		Community community = communityRepository.findById(communityId)
+			.orElseThrow(() -> new CommunityNotFoundException(communityId));
+
+		boolean isLiked = false;
+		if (principal != null) {
+			isLiked = communityLikeRepository.existsByUserIdAndCommunityId(
+				principal.getUserId().toString(),
+				communityId
+			);
+		}
+
+		List<RelatedPostResponse> relatedPosts = communityRepository.findTop3ByCategoryAndIdNot(
+				community.getCategory(), communityId, org.springframework.data.domain.PageRequest.of(0, 3)
+			).stream()
+			.map(RelatedPostResponse::from)
+			.toList();
+
+		// TODO: 조회수 증가 로직 (필요 시 추후 구현)
+
+		return CommunityDetailResponse.of(community, isLiked, relatedPosts);
 	}
 }
