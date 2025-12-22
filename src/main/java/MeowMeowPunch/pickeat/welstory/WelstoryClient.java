@@ -11,7 +11,11 @@ import MeowMeowPunch.pickeat.welstory.http.HttpResult;
 import MeowMeowPunch.pickeat.welstory.http.WelstoryHttpClient;
 
 /**
- * [Welstory][Client] Welstory API 호출/인증 관리 클라이언트
+ * [Welstory][Client] Welstory API 호출/인증 관리 클라이언트.
+ *
+ * <pre>
+ * [WelstoryMenuService] ──▶ [WelstoryClient] ──▶ (WebClient) ──▶ Welstory API
+ * </pre>
  *
  * - 토큰 발급/재시도
  * - 엔드포인트 호출 래핑 및 검증
