@@ -7,9 +7,22 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
+import org.springframework.stereotype.Repository;
 
+/**
+ * [Diet][Repository] 추천 식단 정보 Repository.
+ */
+@Repository
 public interface RecommendedDietRepository extends JpaRepository<RecommendedDiet, Long> {
-	// 오늘 날짜로 DietType(아침, 점심, 저녁, 간식)에 해당하는 데이터가 있는지 조회
+
+	/**
+	 * 사용자의 특정 날짜/끼니에 대한 추천 식단 이력 조회 (최신순).
+	 *
+	 * @param userId   사용자 식별자
+	 * @param date     날짜
+	 * @param dietType 끼니 타입 (아침/점심/저녁/간식)
+	 * @return 추천 식단 리스트
+	 */
 	List<RecommendedDiet> findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(String userId, LocalDate date,
-		DietType dietType);
+			DietType dietType);
 }

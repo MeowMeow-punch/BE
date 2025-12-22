@@ -1,8 +1,11 @@
 package MeowMeowPunch.pickeat.global.common.enums;
 
-// 회원가입 테이블에서 사용할 목적 타입
+/**
+ * [Common][Enum] Focus
+ * 회원가입 시 선택하는 건강/운동 목표
+ */
 public enum Focus {
 	DIET,
 	BULK_UP,
-	BALANCE
+	HEALTH
 }

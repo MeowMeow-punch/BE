@@ -2,6 +2,7 @@ package MeowMeowPunch.pickeat.domain.diet.dto.response;
 
 import java.util.List;
 
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.AiFeedBack;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 
@@ -10,7 +11,7 @@ public record DietHomeResponse(
 	SummaryInfo summaryInfo,
 	AiFeedBack aiFeedbackInfo,
 	List<RecommendedDietInfo> recommendedDietsInfo
-) implements DietResponse {
+) {
 	public static DietHomeResponse of(SummaryInfo summaryInfo, AiFeedBack aiFeedbackInfo,
 		List<RecommendedDietInfo> recommendedDietsInfo) {
 		return new DietHomeResponse(summaryInfo, aiFeedbackInfo, recommendedDietsInfo);

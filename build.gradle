@@ -33,6 +33,7 @@ dependencies {
     // MySQL → PostgreSQL 드라이버로 교체
     runtimeOnly 'org.postgresql:postgresql:42.7.4'
     annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -58,10 +59,18 @@ dependencies {
     /* ====== 6. Csv ====== */
     implementation 'org.apache.commons:commons-csv:1.11.0'
 
-    /* ====== 7. WebClient ====== */
+    /* ====== 7. Redis ====== */
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    /* ====== 8. JWT ====== */
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    /* ====== 9. WebClient ====== */
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-    /* ====== 8. Json 매핑 ====== */
+    /* ====== 10. Json 매핑 ====== */
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 }
 

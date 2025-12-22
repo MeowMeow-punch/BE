@@ -16,14 +16,38 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SENTRY_DSN: ${SENTRY_DSN}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: 6379
       WELSTORY_USERNAME: ${WELSTORY_USERNAME}
       WELSTORY_PASSWORD: ${WELSTORY_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - pickeat-network
     restart: always
+
+  # [Redis]
+  # 리프레시 토큰 및 세션 캐시를 저장하는 Redis 컨테이너
+  redis:
+    image: redis:7
+    container_name: pickeat-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - pickeat-network
 
   # [PostgreSQL Database]
   # 애플리케이션에서 사용하는 PostgreSQL 16 데이터베이스 컨테이너
@@ -68,12 +92,20 @@ services:
       FOODS_CSV_PATH: /app/data/foods.csv
     volumes:
       - ./src/main/resources/data:/app/data:ro
-    command: [ "java", "-jar", "app.jar", "--spring.profiles.active=importer", "--foods.csv-path=/app/data/foods.csv" ]
+    command:
+      [
+        "java",
+        "-jar",
+        "app.jar",
+        "--spring.profiles.active=importer",
+        "--foods.csv-path=/app/data/foods.csv",
+      ]
     networks:
       - pickeat-network
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   pickeat-network:

@@ -12,7 +12,13 @@ import MeowMeowPunch.pickeat.welstory.WelstoryRestaurant;
 import MeowMeowPunch.pickeat.welstory.dto.ApiTypes;
 import MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem;
 
-// 캐시 없이 Welstory API를 직접 호출하는 게이트웨이 구현체
+/**
+ * [Welstory][Gateway] 직접 호출 구현체.
+ *
+ * <pre>
+ * [GatewayDirect] ──▶ [WelstoryClient] ──▶ API
+ * </pre>
+ */
 @Component
 public class WelstoryMenuGatewayDirect implements WelstoryMenuGateway {
 	private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -38,6 +44,7 @@ public class WelstoryMenuGatewayDirect implements WelstoryMenuGateway {
 				mealTimeName != null ? mealTimeName : m.menuMealTypeTxt(),
 				m.menuName(),
 				m.courseTxt(),
+				firstNonBlank(m.menuCourseName(), m.courseTxt(), m.setMenuName()),
 				m.subMenuTxt(),
 				m.sumKcal(),
 				buildPhoto(m.photoUrl(), m.photoCd()),
@@ -64,5 +71,14 @@ public class WelstoryMenuGatewayDirect implements WelstoryMenuGateway {
 			return null;
 		}
 		return photoUrl + photoCd;
+	}
+
+	private String firstNonBlank(String... values) {
+		for (String v : values) {
+			if (v != null && !v.isBlank()) {
+				return v.trim();
+			}
+		}
+		return null;
 	}
 }

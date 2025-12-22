@@ -12,13 +12,30 @@ import MeowMeowPunch.pickeat.domain.diet.service.FoodService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * [Diet][Controller] FoodController
+ *
+ * 음식 목록/검색 API 제공
+ *
+ * <pre>
+ * Client ▶ FoodController ▶ FoodService ▶ Repository
+ * </pre>
+ *
+ * - 응답은 ResTemplate(code/message/data) 일관 포맷
+ */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/diet")
 public class FoodController {
 	private final FoodService foodService;
 
-	// 음식 리스트 조회
+	/**
+	 * [API] 음식 리스트 조회 (커서 기반)
+	 *
+	 * @param cursor 다음 페이지 커서
+	 * @param size   페이지 크기
+	 * @return FoodListResponse
+	 */
 	@GetMapping("/food/list")
 	public ResTemplate<FoodListResponse> getFoodList(
 		@RequestParam(name = "cursor", required = false) String cursor,
@@ -28,7 +45,14 @@ public class FoodController {
 		return ResTemplate.success(HttpStatus.OK, "음식 리스트 조회 성공", data);
 	}
 
-	// 키워드 기반 음식 리스트 조회
+	/**
+	 * [API] 음식 검색
+	 *
+	 * @param keyword 검색 키워드
+	 * @param cursor  다음 페이지 커서
+	 * @param size    페이지 크기
+	 * @return FoodSearchResponse
+	 */
 	@GetMapping("/food")
 	public ResTemplate<FoodSearchResponse> getSearchFood(
 		@RequestParam(name = "keyword") String keyword,

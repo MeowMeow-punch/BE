@@ -1,6 +1,10 @@
 package MeowMeowPunch.pickeat.welstory;
 
-// Welstory API 엔드포인트/쿼리 문자열을 조립하는 유틸
+/**
+ * [Welstory][Util] Welstory API 엔드포인트 유틸
+ *
+ * - 로그인/식단/영양 조회 URI 조립
+ */
 public final class Endpoints {
 	private Endpoints() {
 	}
