@@ -1,6 +1,5 @@
 package MeowMeowPunch.pickeat.domain.user.entity;
 
-import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -37,7 +36,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-public class Allergy extends BaseEntity {
+public class Allergy {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
