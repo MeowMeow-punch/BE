@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
+import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -22,7 +23,9 @@ public interface DietRepository extends JpaRepository<Diet, Long> {
 	 * @param date   조회 날짜
 	 * @return 해당 날짜의 식단 리스트 (아침->점심->저녁 순)
 	 */
-	List<Diet> findAllByUserIdAndDateOrderByTimeAsc(String userId, LocalDate date);
+    List<Diet> findAllByUserIdAndDateOrderByTimeAsc(String userId, LocalDate date);
 
-	Optional<Diet> findTopByUserIdAndDateLessThanOrderByDateDesc(String userId, LocalDate date);
+    Optional<Diet> findTopByUserIdAndDateLessThanOrderByDateDesc(String userId, LocalDate date);
+
+    boolean existsByUserIdAndDateAndStatus(String userId, LocalDate date, DietType status);
 }

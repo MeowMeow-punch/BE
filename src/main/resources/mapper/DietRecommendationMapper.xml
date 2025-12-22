@@ -36,10 +36,10 @@
         f.name AS name,
         f.category AS category,
         f.thumbnail_url AS thumbnailUrl,
-        f.kcal AS adj_kcal,
-        f.carbs AS adj_carbs,
-        f.protein AS adj_protein,
-        f.fat AS adj_fat
+        (f.kcal * 2) AS adj_kcal,
+        (f.carbs * 2) AS adj_carbs,
+        (f.protein * 2) AS adj_protein,
+        (f.fat * 2) AS adj_fat
         FROM foods f
         WHERE f.base_unit = #{baseUnit}
         AND f.kcal BETWEEN (#{remainingKcal} - #{kcalTolerance}) AND (#{remainingKcal} + #{kcalTolerance})

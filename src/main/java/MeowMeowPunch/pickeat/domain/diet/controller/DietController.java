@@ -107,7 +107,7 @@ public class DietController {
 	@GetMapping("/restaurant/menu")
 	public ResTemplate<RestaurantMenuResponse> getRestaurantMenu(
         @AuthenticationPrincipal UserPrincipal principal,
-		@RequestParam(name = "date", required = false) String date
+		@RequestParam(name = "date") String date
 	) {
         String userId = principal.getUserId().toString();
 		RestaurantMenuResponse data = dietService.getRestaurantMenus(date, userId);

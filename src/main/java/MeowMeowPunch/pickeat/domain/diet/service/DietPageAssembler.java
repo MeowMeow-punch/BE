@@ -25,10 +25,12 @@ import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietDuplicateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietDateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietFoodQuantityException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietTimeException;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
+import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietDetailItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodDtoMapper;
@@ -467,6 +469,21 @@ public final class DietPageAssembler {
 
 	public static int toYyyymmdd(LocalDate date) {
 		return date.getYear() * 10000 + date.getMonthValue() * 100 + date.getDayOfMonth();
+	}
+
+	// 중복 식단 검사: SNACK 제외, 동일 (userId, date, mealType) 존재 시 예외
+	public static void validateNoDuplicateMeal(
+			DietRepository dietRepository,
+			String userId,
+			LocalDate date,
+			DietType mealType
+	) {
+		if (mealType != null && mealType != DietType.SNACK) {
+			boolean exists = dietRepository.existsByUserIdAndDateAndStatus(userId, date, mealType);
+			if (exists) {
+				throw new DietDuplicateException();
+			}
+		}
 	}
 
 	// 식단 추가/수정을 위한 집계 사전 작업
