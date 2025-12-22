@@ -36,7 +36,7 @@ public record MyPageResponse(
                         String nickname,
                         Focus focus,
                         String groupName,
-                        LocalDate createAt) {
+                        LocalDate createdAt) {
 
                 public static UserProfile from(User user, String groupName) {
                         return UserProfile.builder()
@@ -44,7 +44,7 @@ public record MyPageResponse(
                                         .nickname(user.getNickname())
                                         .focus(user.getFocus())
                                         .groupName(groupName)
-                                        .createAt(user.getCreatedAt().toLocalDate())
+                                        .createdAt(user.getCreatedAt().toLocalDate())
                                         .build();
                 }
         }
