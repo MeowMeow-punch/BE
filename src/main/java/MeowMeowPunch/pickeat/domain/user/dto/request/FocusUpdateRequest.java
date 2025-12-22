@@ -28,7 +28,7 @@ public record FocusUpdateRequest(
 
         @Size(max = 5, message = "질병 정보는 최대 5개까지만 등록 가능합니다.") List<@Size(max = 50, message = "각 질병 명은 50자를 초과할 수 없습니다.") String> diseases,
 
-        SmokingStatus isSmoking,
+        SmokingStatus smokingStatus,
 
-        DrinkingStatus isDrinking) {
+        DrinkingStatus drinkingStatus) {
 }

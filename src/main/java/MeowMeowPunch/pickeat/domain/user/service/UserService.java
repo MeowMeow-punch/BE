@@ -213,8 +213,8 @@ public class UserService {
                 request.activityLevel(),
                 request.targetWeight(),
                 request.diseases(),
-                request.isSmoking(),
-                request.isDrinking());
+                request.smokingStatus(),
+                request.drinkingStatus());
 
         // save 없어도 변경 감지로 자동 저장됨미다
     }
