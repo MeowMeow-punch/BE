@@ -16,21 +16,22 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import MeowMeowPunch.pickeat.domain.auth.entity.User;
 import org.springframework.util.StringUtils;
 
+import MeowMeowPunch.pickeat.domain.auth.entity.User;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
+import MeowMeowPunch.pickeat.domain.diet.dto.NutritionGoals;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
-import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietDuplicateException;
+import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietDateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietFoodQuantityException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietTimeException;
-import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
+import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietDetailItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodDtoMapper;
@@ -51,6 +52,7 @@ import MeowMeowPunch.pickeat.welstory.repository.GroupMappingRepository;
 import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
 
 // 식단 페이지 공통 계산, 포매팅 헬퍼
+
 /**
  * [Diet][Assembler] 식단/식당 메뉴 응답 조립 및 포맷 변환 유틸.
  *
@@ -64,25 +66,12 @@ public final class DietPageAssembler {
 	}
 
 	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
-	// TODO: 유저 테이블 생성되면 삭제 예정
-	private static final int GOAL_KCAL = 2000;
-	private static final int GOAL_CARBS = 280;
-	private static final int GOAL_PROTEIN = 120;
-	private static final int GOAL_FAT = 70;
-	private static final int GOAL_SUGAR = 50;
-	private static final int GOAL_DIETARY_FIBER = 25;
-	private static final int GOAL_VITAMIN_A = 700;
-	private static final int GOAL_VITAMIN_C = 100;
-	private static final int GOAL_VITAMIN_D = 10;
-	private static final int GOAL_CALCIUM = 700;
-	private static final int GOAL_IRON = 14;
-	private static final int GOAL_SODIUM = 2000;
 
 	// 그룹 이름 반환
 	public static String getGroupName(User user, GroupMappingRepository groupMappingRepository) {
 		if (user.getGroupId() != null) {
-			GroupMapping mapping = groupMappingRepository.findByGroupId(user.getGroupId())
-					.orElse(null);
+			GroupMapping mapping = groupMappingRepository.findByGroupId(String.valueOf(user.getGroupId()))
+				.orElse(null);
 			if (mapping != null) {
 				return mapping.getGroupName();
 			}
@@ -129,53 +118,58 @@ public final class DietPageAssembler {
 	}
 
 	// SummaryInfo 응답 생성
-	public static SummaryInfo buildSummary(NutrientTotals totals) {
+	public static SummaryInfo buildSummary(NutrientTotals totals, NutritionGoals goals) {
 		int currentKcal = toInt(nullSafe(totals.totalKcal()));
 		int currentCarbs = toInt(nullSafe(totals.totalCarbs()));
 		int currentProtein = toInt(nullSafe(totals.totalProtein()));
 		int currentFat = toInt(nullSafe(totals.totalFat()));
 
+		int goalKcal = toInt(goals.kcal());
+		int goalCarbs = toInt(goals.carbs());
+		int goalProtein = toInt(goals.protein());
+		int goalFat = toInt(goals.fat());
+
 		return SummaryInfo.of(
-				SummaryInfo.Calorie.of(currentKcal, GOAL_KCAL),
-				SummaryInfo.NutrientInfo.of(currentCarbs, GOAL_CARBS, status(currentCarbs, GOAL_CARBS)),
-				SummaryInfo.NutrientInfo.of(currentProtein, GOAL_PROTEIN, status(currentProtein, GOAL_PROTEIN)),
-				SummaryInfo.NutrientInfo.of(currentFat, GOAL_FAT, status(currentFat, GOAL_FAT)));
+			SummaryInfo.Calorie.of(currentKcal, goalKcal),
+			SummaryInfo.NutrientInfo.of(currentCarbs, goalCarbs, status(currentCarbs, goalCarbs)),
+			SummaryInfo.NutrientInfo.of(currentProtein, goalProtein, status(currentProtein, goalProtein)),
+			SummaryInfo.NutrientInfo.of(currentFat, goalFat, status(currentFat, goalFat)));
 	}
 
 	// 오늘 등록 식단 응답 생성
 	public static TodayDietInfo toTodayDietInfo(Diet diet, List<String> thumbnailUrls) {
 		return TodayDietInfo.of(
-				diet.getId(),
-				diet.getTitle(),
-				diet.getStatus().name(),
-				toInt(nullSafe(diet.getKcal())),
-				diet.getTime() != null ? diet.getTime().toString() : "",
-				Nutrients.of(
-						toInt(nullSafe(diet.getCarbs())),
-						toInt(nullSafe(diet.getProtein())),
-						toInt(nullSafe(diet.getFat()))),
-				thumbnailUrls);
+			diet.getId(),
+			diet.getTitle(),
+			diet.getStatus().name(),
+			toInt(nullSafe(diet.getKcal())),
+			diet.getTime() != null ? diet.getTime().toString() : "",
+			Nutrients.of(
+				toInt(nullSafe(diet.getCarbs())),
+				toInt(nullSafe(diet.getProtein())),
+				toInt(nullSafe(diet.getFat()))),
+			thumbnailUrls);
 	}
 
 	// 단일 식단 상세 응답 생성
 	public static DietInfo toDietInfo(Diet diet, List<DietFood> dietFoods, Map<Long, Food> foodById) {
 		List<DietDetailItem> foods = dietFoods.stream()
-				.map(df -> toDietFoodItem(foodById.get(df.getFoodId()), df))
-				.toList();
+			.map(df -> toDietFoodItem(foodById.get(df.getFoodId()), df))
+			.toList();
 
 		return DietInfo.of(
-				diet.getId(),
-				diet.getTitle(),
-				diet.getStatus().name(),
-				diet.getTime() != null ? diet.getTime().toString() : "",
-				diet.getDate().toString(),
-				diet.isEditable(),
-				toInt(nullSafe(diet.getKcal())),
-				Nutrients.of(
-						toInt(nullSafe(diet.getCarbs())),
-						toInt(nullSafe(diet.getProtein())),
-						toInt(nullSafe(diet.getFat()))),
-				foods);
+			diet.getId(),
+			diet.getTitle(),
+			diet.getStatus().name(),
+			diet.getTime() != null ? diet.getTime().toString() : "",
+			diet.getDate().toString(),
+			diet.isEditable(),
+			toInt(nullSafe(diet.getKcal())),
+			Nutrients.of(
+				toInt(nullSafe(diet.getCarbs())),
+				toInt(nullSafe(diet.getProtein())),
+				toInt(nullSafe(diet.getFat()))),
+			foods);
 	}
 
 	// 단일 썸네일을 리스트로 래핑
@@ -192,10 +186,10 @@ public final class DietPageAssembler {
 			return "";
 		}
 		String joined = Arrays.stream(subMenu.split(","))
-				.map(String::trim)
-				.filter(s -> !s.isBlank())
-				.filter(s -> !s.equals(mainName))
-				.collect(Collectors.joining(", "));
+			.map(String::trim)
+			.filter(s -> !s.isBlank())
+			.filter(s -> !s.equals(mainName))
+			.collect(Collectors.joining(", "));
 		return joined;
 	}
 
@@ -226,7 +220,7 @@ public final class DietPageAssembler {
 	}
 
 	// 특정 날짜에 등록된 식단들의 부가 영양분 합계를 생성
-	public static NutritionInfo buildNutritionInfo(List<Diet> diets) {
+	public static NutritionInfo buildNutritionInfo(List<Diet> diets, NutritionGoals goals) {
 		BigDecimal sugar = BigDecimal.ZERO;
 		BigDecimal dietaryFiber = BigDecimal.ZERO;
 		BigDecimal vitA = BigDecimal.ZERO;
@@ -248,28 +242,28 @@ public final class DietPageAssembler {
 		}
 
 		return NutritionInfo.of(
-				NutritionDetail.of(toDecimal(sugar), GOAL_SUGAR, "g"),
-				NutritionDetail.of(toDecimal(dietaryFiber), GOAL_DIETARY_FIBER, "g"),
-				NutritionDetail.of(toDecimal(vitA), GOAL_VITAMIN_A, "ug_RAE"),
-				NutritionDetail.of(toDecimal(vitC), GOAL_VITAMIN_C, "mg"),
-				NutritionDetail.of(toDecimal(vitD), GOAL_VITAMIN_D, "ug"),
-				NutritionDetail.of(toDecimal(calcium), GOAL_CALCIUM, "mg"),
-				NutritionDetail.of(toDecimal(iron), GOAL_IRON, "mg"),
-				NutritionDetail.of(toDecimal(sodium), GOAL_SODIUM, "mg"));
+			NutritionDetail.of(toDecimal(sugar), goals.sugar(), "g"),
+			NutritionDetail.of(toDecimal(dietaryFiber), goals.dietaryFiber(), "g"),
+			NutritionDetail.of(toDecimal(vitA), goals.vitaminA(), "ug_RAE"),
+			NutritionDetail.of(toDecimal(vitC), goals.vitaminC(), "mg"),
+			NutritionDetail.of(toDecimal(vitD), goals.vitaminD(), "ug"),
+			NutritionDetail.of(toDecimal(calcium), goals.calcium(), "mg"),
+			NutritionDetail.of(toDecimal(iron), goals.iron(), "mg"),
+			NutritionDetail.of(toDecimal(sodium), goals.sodium(), "mg"));
 	}
 
 	// 식단별 음식 썸네일 리스트 생성
 	public static Map<Long, List<String>> buildThumbnailsByDiet(Map<Long, List<DietFood>> dietFoodsByDietId,
-			Map<Long, Food> foodById) {
+		Map<Long, Food> foodById) {
 		return dietFoodsByDietId.entrySet().stream()
-				.collect(Collectors.toMap(
-						Map.Entry::getKey,
-						e -> e.getValue().stream()
-								.map(df -> foodById.get(df.getFoodId()))
-								.filter(Objects::nonNull)
-								.map(Food::getThumbnailUrl)
-								.distinct()
-								.toList()));
+			.collect(Collectors.toMap(
+				Map.Entry::getKey,
+				e -> e.getValue().stream()
+					.map(df -> foodById.get(df.getFoodId()))
+					.filter(Objects::nonNull)
+					.map(Food::getThumbnailUrl)
+					.distinct()
+					.toList()));
 	}
 
 	// 추가한 음식들을 하나의 식단으로 집계
@@ -317,20 +311,20 @@ public final class DietPageAssembler {
 		String title = String.join(", ", names);
 
 		return new DietAggregation(
-				title,
-				thumbnailUrl,
-				totalKcal,
-				totalCarbs,
-				totalProtein,
-				totalFat,
-				totalSugar,
-				totalVitA,
-				totalVitC,
-				totalVitD,
-				totalCalcium,
-				totalIron,
-				totalDietaryFiber,
-				totalSodium);
+			title,
+			thumbnailUrl,
+			totalKcal,
+			totalCarbs,
+			totalProtein,
+			totalFat,
+			totalSugar,
+			totalVitA,
+			totalVitC,
+			totalVitD,
+			totalCalcium,
+			totalIron,
+			totalDietaryFiber,
+			totalSodium);
 	}
 
 	// quantity 값 검증
@@ -375,11 +369,11 @@ public final class DietPageAssembler {
 	// 음식 ID가 존재하는지 검증
 	public static void validateFoodsExist(List<Long> requestedFoodIds, Map<Long, Food> foodById) {
 		requestedFoodIds.stream()
-				.filter(id -> !foodById.containsKey(id))
-				.findFirst()
-				.ifPresent(id -> {
-					throw new FoodNotFoundException(id);
-				});
+			.filter(id -> !foodById.containsKey(id))
+			.findFirst()
+			.ifPresent(id -> {
+				throw new FoodNotFoundException(id);
+			});
 	}
 
 	// 소수점 처리: 값이 정수면 소수부 제거, 있으면 한 자리까지 반올림
@@ -398,32 +392,32 @@ public final class DietPageAssembler {
 
 	// 식단 집계용 DTO
 	public static record DietAggregation(
-			String title,
-			String thumbnailUrl,
-			BigDecimal kcal,
-			BigDecimal carbs,
-			BigDecimal protein,
-			BigDecimal fat,
-			BigDecimal sugar,
-			BigDecimal vitA,
-			BigDecimal vitC,
-			BigDecimal vitD,
-			BigDecimal calcium,
-			BigDecimal iron,
-			BigDecimal dietaryFiber,
-			BigDecimal sodium) {
+		String title,
+		String thumbnailUrl,
+		BigDecimal kcal,
+		BigDecimal carbs,
+		BigDecimal protein,
+		BigDecimal fat,
+		BigDecimal sugar,
+		BigDecimal vitA,
+		BigDecimal vitC,
+		BigDecimal vitD,
+		BigDecimal calcium,
+		BigDecimal iron,
+		BigDecimal dietaryFiber,
+		BigDecimal sodium) {
 	}
 
 	public static RestaurantMenuInfo toRestaurantMenuInfo(WelstoryMenuItem menu,
-			WelstoryMenuService welstoryMenuService) {
+		WelstoryMenuService welstoryMenuService) {
 		List<ApiTypes.RawMealMenuData> rawNutrients = List.of();
 		if (StringUtils.hasText(menu.hallNo()) && StringUtils.hasText(menu.menuCourseType())) {
 			rawNutrients = welstoryMenuService.getNutrients(
-					menu.restaurantId(),
-					menu.dateYyyymmdd(),
-					menu.mealTimeId(),
-					menu.hallNo(),
-					menu.menuCourseType());
+				menu.restaurantId(),
+				menu.dateYyyymmdd(),
+				menu.mealTimeId(),
+				menu.hallNo(),
+				menu.menuCourseType());
 		}
 
 		BigDecimal totalKcal = BigDecimal.ZERO;
@@ -444,15 +438,15 @@ public final class DietPageAssembler {
 
 		String restaurantName = menu.courseName() == null ? "" : menu.courseName();
 		return RestaurantMenuInfo.of(
-				menu.name(),
-				restaurantName,
-				toInt(totalKcal),
-				DietPageAssembler.buildSubName(menu.name(), menu.submenu()),
-				Nutrients.of(
-						toInt(totalCarbs),
-						toInt(totalProtein),
-						toInt(totalFat)),
-				DietPageAssembler.toThumbnailList(menu.photoUrl()));
+			menu.name(),
+			restaurantName,
+			toInt(totalKcal),
+			DietPageAssembler.buildSubName(menu.name(), menu.submenu()),
+			Nutrients.of(
+				toInt(totalCarbs),
+				toInt(totalProtein),
+				toInt(totalFat)),
+			DietPageAssembler.toThumbnailList(menu.photoUrl()));
 	}
 
 	public static int toYyyymmdd(LocalDate date) {
@@ -461,10 +455,10 @@ public final class DietPageAssembler {
 
 	// 중복 식단 검사: SNACK 제외, 동일 (userId, date, mealType) 존재 시 예외
 	public static void validateNoDuplicateMeal(
-			DietRepository dietRepository,
-			String userId,
-			LocalDate date,
-			DietType mealType) {
+		DietRepository dietRepository,
+		String userId,
+		LocalDate date,
+		DietType mealType) {
 		if (mealType != null && mealType != DietType.SNACK) {
 			boolean exists = dietRepository.existsByUserIdAndDateAndStatus(userId, date, mealType);
 			if (exists) {
@@ -476,11 +470,11 @@ public final class DietPageAssembler {
 	// 식단 추가/수정을 위한 집계 사전 작업
 	public static DietAggregation prepareAggregation(DietRequest request, FoodRepository foodRepository) {
 		List<Long> requestedFoodIds = request.foods().stream()
-				.map(DietRequest.FoodQuantity::foodId)
-				.toList();
+			.map(DietRequest.FoodQuantity::foodId)
+			.toList();
 
 		Map<Long, Food> foodById = foodRepository.findAllById(requestedFoodIds).stream()
-				.collect(Collectors.toMap(Food::getId, Function.identity()));
+			.collect(Collectors.toMap(Food::getId, Function.identity()));
 		validateFoodsExist(requestedFoodIds, foodById);
 
 		return aggregateFoods(request.foods(), foodById);
@@ -489,19 +483,19 @@ public final class DietPageAssembler {
 	// 식단 추가/수정을 위한 식단-음식 중간 테이블 필드 생성
 	public static List<DietFood> buildDietFoods(Long dietId, DietRequest request) {
 		return request.foods().stream()
-				.map(f -> DietFood.builder()
-						.dietId(dietId)
-						.foodId(f.foodId())
-						.quantity(toQuantity(f.quantity()))
-						.build())
-				.toList();
+			.map(f -> DietFood.builder()
+				.dietId(dietId)
+				.foodId(f.foodId())
+				.quantity(toQuantity(f.quantity()))
+				.build())
+			.toList();
 	}
 
 	// 오늘 시간대에 맞는 웰스토리 식단 목록 조회
 	public static Map<String, TodayRestaurantMenuInfo> buildTodayRestaurantMenu(LocalDate targetDate,
-			String groupName, GroupMappingRepository groupMappingRepository, WelstoryMenuService welstoryMenuService) {
+		String groupName, GroupMappingRepository groupMappingRepository, WelstoryMenuService welstoryMenuService) {
 		GroupMapping mapping = groupMappingRepository.findByGroupName(groupName)
-				.orElse(null);
+			.orElse(null);
 		if (mapping == null) {
 			return Map.of();
 		}
@@ -515,17 +509,17 @@ public final class DietPageAssembler {
 				continue;
 			}
 			var menus = welstoryMenuService.getMenus(mapping.getGroupId(), dateYyyymmdd, mealTimeId,
-					slot.name());
+				slot.name());
 			if (menus.isEmpty()) {
 				continue;
 			}
 			var primaryMenu = menus.getFirst();
 			int othersNum = Math.max(0, menus.size() - 1);
 			TodayRestaurantMenuInfo info = TodayRestaurantMenuInfo.of(
-					primaryMenu.name(),
-					toInt(DietPageAssembler.toBigDecimal(primaryMenu.kcal())),
-					DietPageAssembler.buildSubName(primaryMenu.name(), primaryMenu.submenu()),
-					othersNum);
+				primaryMenu.name(),
+				toInt(DietPageAssembler.toBigDecimal(primaryMenu.kcal())),
+				DietPageAssembler.buildSubName(primaryMenu.name(), primaryMenu.submenu()),
+				othersNum);
 			result.put(slot.name(), info);
 		}
 
