@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import MeowMeowPunch.pickeat.domain.auth.entity.User;
 import org.springframework.util.StringUtils;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
@@ -74,6 +75,18 @@ public final class DietPageAssembler {
 	private static final int GOAL_CALCIUM = 700;
 	private static final int GOAL_IRON = 14;
 	private static final int GOAL_SODIUM = 2000;
+
+    // 그룹 이름 반환
+    public static String getGroupName(User user, GroupMappingRepository groupMappingRepository) {
+        if (user.getGroupId() != null) {
+            GroupMapping mapping = groupMappingRepository.findById(user.getGroupId())
+                    .orElse(null);
+            if (mapping != null) {
+                return mapping.getGroupName();
+            }
+        }
+        return "";
+    }
 
 	// 필요 시 YYYY-MM-DD 문자열 검증용
 	public static LocalDate parseDateOrToday(String raw) {
@@ -450,21 +463,6 @@ public final class DietPageAssembler {
 			),
 			DietPageAssembler.toThumbnailList(menu.photoUrl())
 		);
-	}
-
-	public static String resolveRestaurantName(WelstoryMenuItem menu, String fallback) {
-		if (StringUtils.hasText(menu.courseName())) {
-			return normalizeBracket(menu.courseName());
-		}
-		return fallback;
-	}
-
-	public static String normalizeBracket(String s) {
-		String t = s.trim();
-		if (t.startsWith("[") && t.endsWith("]") && t.length() > 2) {
-			return t.substring(1, t.length() - 1).trim();
-		}
-		return t;
 	}
 
 	public static int toYyyymmdd(LocalDate date) {

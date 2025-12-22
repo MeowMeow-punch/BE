@@ -8,7 +8,12 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
+import MeowMeowPunch.pickeat.domain.auth.entity.User;
+import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
+import MeowMeowPunch.pickeat.domain.diet.exception.UserNotFoundException;
+import MeowMeowPunch.pickeat.global.common.enums.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,12 +35,6 @@ import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.RecommendedDietRepository;
-import MeowMeowPunch.pickeat.global.common.enums.DietSourceType;
-import MeowMeowPunch.pickeat.global.common.enums.DietType;
-import MeowMeowPunch.pickeat.global.common.enums.FeedBackType;
-import MeowMeowPunch.pickeat.global.common.enums.Focus;
-import MeowMeowPunch.pickeat.global.common.enums.MainMealCategory;
-import MeowMeowPunch.pickeat.global.common.enums.SnackCategory;
 import MeowMeowPunch.pickeat.welstory.entity.GroupMapping;
 import MeowMeowPunch.pickeat.welstory.repository.GroupMappingRepository;
 import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
@@ -53,13 +52,12 @@ import lombok.RequiredArgsConstructor;
 public class DietRecommendationService {
 	private static final int TOP_LIMIT = 6;
 	private static final int MIN_PICK = 1;
-	// private static final int MAX_PICK = 2; // AI가 결정하므로 Facade에서 제어
 	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 기준
 	private static final String BASE_UNIT_GRAM = "G";
 	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 	private static final String WELSTORY_LUNCH_ID = "2";
 	private static final String WELSTORY_LUNCH_NAME = "점심";
-	// 임시 목표값 (추후 사용자 정보 기반 계산)
+	// TODO: 사용자에서 가져오기
 	private static final BigDecimal GOAL_KCAL = BigDecimal.valueOf(2000);
 	private static final BigDecimal GOAL_CARBS = BigDecimal.valueOf(280);
 	private static final BigDecimal GOAL_PROTEIN = BigDecimal.valueOf(120);
@@ -81,10 +79,7 @@ public class DietRecommendationService {
 	private final WelstoryMenuService welstoryMenuService;
 	private final DietAiFacade dietAiFacade;
 	private final AiFeedBackRepository aiFeedBackRepository;
-
-	// TODO: User 테이블 연동 시 제거 예정 (임시 Group 여부/식당명)
-	private final UserStatus mockUserStatus = UserStatus.GROUP;
-	private final String mockGroupName = "전기부산";
+    private final UserRepository userRepository;
 
 	/**
 	 * [Recommend] 오늘/현재 식사 슬롯에 맞춰 추천 TOP5 계산 + AI 선택
@@ -99,6 +94,11 @@ public class DietRecommendationService {
 		LocalDate today = LocalDate.now(KOREA_ZONE);
 		LocalTime nowTime = LocalTime.now(KOREA_ZONE);
 		DietType mealSlot = mealSlot(nowTime);
+
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(UserNotFoundException::new);
+
+        String groupName = DietPageAssembler.getGroupName(user, groupMappingRepository);
 
 		// 1. 이미 생성된 추천 조회
 		List<RecommendedDiet> existing = recommendedDietRepository.findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(
@@ -121,14 +121,14 @@ public class DietRecommendationService {
 
 		// 2. 웰스토리(그룹) 점심 우선 확인
 		if (isGroupUser(userId) && mealSlot == DietType.LUNCH) {
-			candidates = recommendWelstoryLunch(today, focus, totals);
+			candidates = recommendWelstoryLunch(today, focus, totals, groupName);
 		} else {
 			// 3. 일반 배달/식당(Food DB) 후보 생성
 			candidates = recommendGeneralFoods(mealSlot, focus, totals);
 		}
 
 		// 4. AI 호출하여 최종 Pick & Reason 획득
-		HomeRecommendationResult aiResult = dietAiFacade.recommendHome(focus, mealSlot, candidates);
+		HomeRecommendationResult aiResult = dietAiFacade.recommendHome(focus, mealSlot, candidates, userId);
 
 		// 5. 저장
 		try {
@@ -187,8 +187,9 @@ public class DietRecommendationService {
 	 * [Recommend] 웰스토리 점심 식단 후보 조회 및 점수화
 	 */
 	private List<FoodRecommendationCandidate> recommendWelstoryLunch(LocalDate targetDate, Focus focus,
-		NutrientTotals totals) {
-		String restaurantId = groupMappingRepository.findByGroupName(mockGroupName)
+		NutrientTotals totals, String groupName) {
+
+		String restaurantId = groupMappingRepository.findByGroupName(groupName)
 			.map(GroupMapping::getGroupId)
 			.orElse(null);
 		if (restaurantId == null) {
@@ -251,7 +252,10 @@ public class DietRecommendationService {
 	}
 
 	private boolean isGroupUser(String userId) {
-		return mockUserStatus == UserStatus.GROUP;
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(UserNotFoundException::new);
+
+		return user.getStatus() == UserStatus.GROUP;
 	}
 
 	private int toYyyymmdd(LocalDate date) {
@@ -427,8 +431,4 @@ public class DietRecommendationService {
 		double penaltyOverMacro) {
 	}
 
-	// TODO: user 기반시 삭제
-	private enum UserStatus {
-		SINGLE, GROUP
-	}
 }

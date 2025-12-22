@@ -10,9 +10,12 @@ import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import MeowMeowPunch.pickeat.domain.auth.entity.User;
+import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -36,7 +39,7 @@ import MeowMeowPunch.pickeat.domain.diet.exception.DietDetailNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietFoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietNotEditableException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietNotFoundException;
-import MeowMeowPunch.pickeat.domain.diet.exception.MissingDietUserIdException;
+import MeowMeowPunch.pickeat.domain.diet.exception.UserNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.repository.AiFeedBackRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietFoodRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
@@ -74,6 +77,7 @@ import lombok.RequiredArgsConstructor;
 public class DietService {
 	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 
+    private final UserRepository userRepository;
 	private final DietRecommendationMapper dietRecommendationMapper;
 	private final DietRecommendationService dietRecommendationService;
 	private final DietRepository dietRepository;
@@ -81,12 +85,9 @@ public class DietService {
 	private final FoodRepository foodRepository;
 	private final RecommendedDietRepository recommendedDietRepository;
 	private final RecommendedDietFoodRepository recommendedDietFoodRepository;
-	private final WelstoryMenuService welstoryMenuService;
-	private final GroupMappingRepository groupMappingRepository;
-	private final AiFeedBackRepository aiFeedBackRepository;
-
-	// TODO: User 연동 시 제거 (임시 식당명)
-	private final String mockGroupName = "전기부산";
+    private final WelstoryMenuService welstoryMenuService;
+    private final GroupMappingRepository groupMappingRepository;
+    private final AiFeedBackRepository aiFeedBackRepository;
 
 	/**
 	 * [Home] 오늘 기준 식단 메인 정보 조회
@@ -95,10 +96,10 @@ public class DietService {
 	 * @return DietHomeResponse (요약, AI 피드백 - 추천 식단 기반, 추천 식단)
 	 */
 	public DietHomeResponse getHome(String userId) {
-		if (!StringUtils.hasText(userId)) {
-			throw new MissingDietUserIdException();
-		}
-		Focus focus = Focus.HEALTH; // TODO: 사용자 설정에서 읽어오는 것으로 변경 예정
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(UserNotFoundException::new);
+
+		Focus focus = user.getFocus();
 		LocalDate todayDate = LocalDate.now(KOREA_ZONE);
 
 		// 오늘 섭취 합계 (쿼리 1회)
@@ -141,10 +142,11 @@ public class DietService {
 	 * @param rawDate 조회 날짜(YYYY-MM-DD, null/빈값이면 오늘)
 	 * @return DailyDietResponse (요약, AI 피드백 - 오늘 식단 기반, 오늘 식단, 식당 메뉴)
 	 */
-	public DailyDietResponse getDaily(String userId, String rawDate) {
-		if (!StringUtils.hasText(userId)) {
-			throw new MissingDietUserIdException();
-		}
+    public DailyDietResponse getDaily(String userId, String rawDate) {
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(UserNotFoundException::new);
+
+        String groupName = DietPageAssembler.getGroupName(user, groupMappingRepository);
 
 		LocalDate targetDate = parseDateOrToday(rawDate);
 
@@ -194,7 +196,7 @@ public class DietService {
 
 		Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu = buildTodayRestaurantMenu(
 			targetDate,
-			mockGroupName,
+            groupName,
 			groupMappingRepository,
 			welstoryMenuService
 		);
@@ -216,9 +218,8 @@ public class DietService {
 	 * @return DietDetailResponse(식단명, 식사 시간대, 시간, 날짜, 수정 가능 여부, 칼로리, 영양분, 음식 데이터)
 	 */
 	public DietDetailResponse getDetail(String userId, Long dietId) {
-		if (!StringUtils.hasText(userId)) {
-			throw new MissingDietUserIdException();
-		}
+//        User user = userRepository.findById(UUID.fromString(userId))
+//                .orElseThrow(UserNotFoundException::new);
 
 		Diet diet = dietRepository.findById(dietId)
 			.orElseThrow(() -> new DietDetailNotFoundException(dietId));
@@ -253,9 +254,8 @@ public class DietService {
 	 * @return NutritionResponse(8개의 영양분 섭취량)
 	 */
 	public NutritionResponse getNutrition(String userId, String rawDate) {
-		if (!StringUtils.hasText(userId)) {
-			throw new MissingDietUserIdException();
-		}
+//        User user = userRepository.findById(UUID.fromString(userId))
+//                .orElseThrow(UserNotFoundException::new);
 
 		LocalDate targetDate = parseDateOrToday(rawDate);
 		List<Diet> diets = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate);
@@ -269,10 +269,17 @@ public class DietService {
 	 * @param rawDate 조회 날짜(YYYY-MM-DD, null/빈값이면 오늘)
 	 * @return RestaurantMenuResponse (식사시간대별 메뉴 리스트)
 	 */
-	public RestaurantMenuResponse getRestaurantMenus(String rawDate) {
-		LocalDate targetDate = parseDateOrToday(rawDate);
-		GroupMapping mapping = groupMappingRepository.findByGroupName(mockGroupName)
+	public RestaurantMenuResponse getRestaurantMenus(String rawDate, String userId) {
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(UserNotFoundException::new);
+
+        String groupName = DietPageAssembler.getGroupName(user, groupMappingRepository);
+
+		GroupMapping mapping = groupMappingRepository.findByGroupName(groupName)
 			.orElse(null);
+
+        LocalDate targetDate = parseDateOrToday(rawDate);
+
 		if (mapping == null) {
 			return RestaurantMenuResponse.from(Map.of());
 		}
@@ -309,9 +316,8 @@ public class DietService {
 	 */
 	@Transactional
 	public DietRegisterResponse registerRecommendation(String userId, Long recommendationId) {
-		if (!StringUtils.hasText(userId)) {
-			throw new MissingDietUserIdException();
-		}
+//        User user = userRepository.findById(UUID.fromString(userId))
+//                .orElseThrow(UserNotFoundException::new);
 
 		RecommendedDiet recommended = recommendedDietRepository.findById(recommendationId)
 			.orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
@@ -384,9 +390,8 @@ public class DietService {
 	 */
 	@Transactional
 	public void create(String userId, DietRequest request) {
-		if (!StringUtils.hasText(userId)) {
-			throw new MissingDietUserIdException();
-		}
+//        User user = userRepository.findById(UUID.fromString(userId))
+//                .orElseThrow(UserNotFoundException::new);
 
 		LocalDate date = parseDateOrToday(request.date());
 		LocalTime time = parseTime(request.time());
@@ -418,9 +423,8 @@ public class DietService {
 	 */
 	@Transactional
 	public void update(String userId, Long dietId, DietRequest request) {
-		if (!StringUtils.hasText(userId)) {
-			throw new MissingDietUserIdException();
-		}
+//        User user = userRepository.findById(UUID.fromString(userId))
+//                .orElseThrow(UserNotFoundException::new);
 
 		Diet diet = dietRepository.findById(dietId)
 			.orElseThrow(() -> new DietNotFoundException(dietId));
@@ -459,9 +463,8 @@ public class DietService {
 	 */
 	@Transactional
 	public void delete(String userId, Long dietId) {
-		if (!StringUtils.hasText(userId)) {
-			throw new MissingDietUserIdException();
-		}
+//        User user = userRepository.findById(UUID.fromString(userId))
+//                .orElseThrow(UserNotFoundException::new);
 
 		Diet diet = dietRepository.findById(dietId)
 			.orElseThrow(() -> new DietNotFoundException(dietId));
