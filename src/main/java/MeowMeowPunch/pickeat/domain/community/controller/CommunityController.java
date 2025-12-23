@@ -1,6 +1,5 @@
 package MeowMeowPunch.pickeat.domain.community.controller;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,13 +43,13 @@ public class CommunityController {
 	 * @return 커뮤니티 목록 응답
 	 */
 	@GetMapping("/{category}")
-	public ResponseEntity<CommunityListResponse> getCommunityList(
+	public ResTemplate<CommunityListResponse> getCommunityList(
 		@PathVariable(name = "category") String category,
 		@RequestParam(name = "cursorId", required = false) Long cursorId,
 		@RequestParam(name = "size", defaultValue = DEFAULT_PAGE_SIZE) int size
 	) {
 		CommunityListResponse response = communityService.getCommunityList(category, cursorId, size);
-		return ResponseEntity.ok(response);
+		return ResTemplate.success(HttpStatus.OK, "컨텐츠 목록 조회 성공", response);
 	}
 
 	/**
@@ -64,12 +63,12 @@ public class CommunityController {
 	 * @return 게시글 상세 정보 (ResTemplate Wrapped)
 	 */
 	@GetMapping("/{communityId:\\d+}")
-	public ResponseEntity<ResTemplate<CommunityDetailResponse>> getCommunityDetail(
+	public ResTemplate<CommunityDetailResponse> getCommunityDetail(
 		@PathVariable(name = "communityId") Long communityId,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		CommunityDetailResponse response = communityService.getCommunityDetail(communityId, principal);
-		return ResponseEntity.ok(ResTemplate.success(HttpStatus.OK, "컨텐츠 상세 조회 성공", response));
+		return ResTemplate.success(HttpStatus.OK, "컨텐츠 상세 조회 성공", response);
 	}
 
 	/**
@@ -79,11 +78,11 @@ public class CommunityController {
 	 * @return 검색 결과 (게시글 리스트 + 개수)
 	 */
 	@GetMapping("/search")
-	public ResponseEntity<ResTemplate<CommunitySearchResponse>> getCommunitySearch(
+	public ResTemplate<CommunitySearchResponse> getCommunitySearch(
 		@RequestParam(name = "keyword") String keyword
 	) {
 		CommunitySearchResponse response = communityService.searchCommunity(keyword);
-		return ResponseEntity.ok(ResTemplate.success(HttpStatus.OK, "컨텐츠 검색 성공", response));
+		return ResTemplate.success(HttpStatus.OK, "컨텐츠 검색 성공", response);
 	}
 
 	/**
@@ -95,12 +94,12 @@ public class CommunityController {
 	 * @return 성공 메시지
 	 */
 	@PostMapping("/{communityId:\\d+}/likes")
-	public ResponseEntity<ResTemplate<Void>> updateLikeStatus(
+	public ResTemplate<Void> updateLikeStatus(
 		@PathVariable(name = "communityId") Long communityId,
 		@AuthenticationPrincipal UserPrincipal principal,
 		@Valid @RequestBody CommunityLikeRequest request
 	) {
 		communityService.updateLikeStatus(communityId, principal, request);
-		return ResponseEntity.ok(ResTemplate.success(HttpStatus.OK, "좋아요 상태변경 성공"));
+		return ResTemplate.success(HttpStatus.OK, "좋아요 상태변경 성공");
 	}
 }
