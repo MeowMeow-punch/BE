@@ -42,3 +42,5 @@ out/
 
 tmp_before.txt
 tmp_dc.txt
+/tmp_slice.txt
+/tmp_dpa_getgroup.txt
