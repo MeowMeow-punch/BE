@@ -5,17 +5,12 @@ import lombok.Builder;
 
 @Builder
 public record SocialUserInfo(
-	String id,
-	String nickname,
-	String email,
-	OAuthProvider provider
-) {
-	public static SocialUserInfo of(String id, String nickname, String email, OAuthProvider provider) {
+		String id,
+		OAuthProvider provider) {
+	public static SocialUserInfo of(String id, OAuthProvider provider) {
 		return SocialUserInfo.builder()
-			.id(id)
-			.nickname(nickname)
-			.email(email)
-			.provider(provider)
-			.build();
+				.id(id)
+				.provider(provider)
+				.build();
 	}
 }
