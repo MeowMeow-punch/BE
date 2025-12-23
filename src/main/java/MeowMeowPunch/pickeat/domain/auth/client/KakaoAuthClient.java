@@ -71,15 +71,16 @@ public class KakaoAuthClient implements SocialAuthClient {
 
 		try {
 			ResponseEntity<JsonNode> response = restTemplate.postForEntity(TOKEN_URL, request, JsonNode.class);
-			
+
 			if (response.getBody() == null || !response.getBody().has("access_token")) {
 				log.error("[KakaoAuth] Token Response Body is null or missing access_token");
 				throw new RuntimeException("카카오 액세스 토큰 발급에 실패했습니다.");
 			}
-			
+
 			return response.getBody().get("access_token").asText();
 		} catch (HttpClientErrorException | HttpServerErrorException e) {
-			log.error("[KakaoAuth] Token Request Error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+			log.error("[KakaoAuth] Token Request Error: status={}, body={}", e.getStatusCode(),
+					e.getResponseBodyAsString());
 			throw new RuntimeException("카카오 서버 통신 중 오류가 발생했습니다.");
 		}
 	}
@@ -100,7 +101,8 @@ public class KakaoAuthClient implements SocialAuthClient {
 		HttpEntity<Void> request = new HttpEntity<>(headers);
 
 		try {
-			ResponseEntity<JsonNode> response = restTemplate.exchange(USER_INFO_URL, HttpMethod.GET, request, JsonNode.class);
+			ResponseEntity<JsonNode> response = restTemplate.exchange(USER_INFO_URL, HttpMethod.GET, request,
+					JsonNode.class);
 			JsonNode body = response.getBody();
 
 			if (body == null) {
@@ -109,28 +111,11 @@ public class KakaoAuthClient implements SocialAuthClient {
 			}
 
 			String id = String.valueOf(body.get("id").asLong());
-			String nickname = "";
-			String email = "";
-
-			if (body.has("kakao_account")) {
-				JsonNode account = body.get("kakao_account");
-				if (account.has("email")) {
-					email = account.get("email").asText();
-				}
-				if (account.has("profile") && account.get("profile").has("nickname")) {
-					nickname = account.get("profile").get("nickname").asText();
-				}
-			}
-
-			// 프로퍼티 백업 확인
-			if (nickname.isEmpty() && body.has("properties") && body.get("properties").has("nickname")) {
-				nickname = body.get("properties").get("nickname").asText();
-			}
-
-			return SocialUserInfo.of(id, nickname, email, OAuthProvider.KAKAO);
+			return SocialUserInfo.of(id, OAuthProvider.KAKAO);
 
 		} catch (HttpClientErrorException | HttpServerErrorException e) {
-			log.error("[KakaoAuth] UserInfo Request Error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+			log.error("[KakaoAuth] UserInfo Request Error: status={}, body={}", e.getStatusCode(),
+					e.getResponseBodyAsString());
 			throw new RuntimeException("카카오 사용자 정보 조회 중 오류가 발생했습니다.");
 		}
 	}

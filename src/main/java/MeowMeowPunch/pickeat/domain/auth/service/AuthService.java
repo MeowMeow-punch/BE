@@ -17,6 +17,7 @@ import MeowMeowPunch.pickeat.domain.auth.entity.User;
 import io.jsonwebtoken.Claims;
 import MeowMeowPunch.pickeat.domain.auth.exception.AuthNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateNicknameException;
+import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateUserException;
 import MeowMeowPunch.pickeat.domain.auth.exception.InvalidTokenException;
 import MeowMeowPunch.pickeat.domain.auth.exception.NeedRegistrationException;
 import MeowMeowPunch.pickeat.domain.auth.exception.TokenNotFoundException;
@@ -54,6 +55,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AuthService {
 
 	private final UserRepository userRepository;
@@ -69,6 +71,7 @@ public class AuthService {
 	 * @param request OAuth 로그인 요청 정보 (authorizationCode 포함)
 	 * @return 액세스/리프레시 토큰 묶음
 	 */
+	@Transactional
 	public AuthTokenResponse login(OAuthLoginRequest request) {
 		// 1. 인가 코드로 소셜 플랫폼에서 사용자 정보 조회 (Strategy Pattern)
 		SocialUserInfo socialUser = compositeSocialAuthService.getUserInfo(
@@ -81,7 +84,7 @@ public class AuthService {
 					// 3. 회원가입 필요 시: 서명된 임시 토큰(RegisterToken) 발급
 					String registerToken = jwtTokenProvider.createRegisterToken(socialUser.id(),
 							socialUser.provider().name());
-					return new NeedRegistrationException(registerToken, socialUser);
+					return new NeedRegistrationException(registerToken);
 				});
 
 		// 4. 토큰 발급
@@ -147,6 +150,11 @@ public class AuthService {
 		Claims claims = jwtTokenProvider.parseClaims(request.registerToken());
 		String oauthId = claims.getSubject();
 		OAuthProvider provider = OAuthProvider.valueOf(claims.get("provider", String.class));
+
+		// 2. 중복 가입 방지 체크 (Security Fix)
+		if (userRepository.findByOauthProviderAndOauthId(provider, oauthId).isPresent()) {
+			throw DuplicateUserException.duplicateUser();
+		}
 
 		validateNickname(request.nickname());
 		String resolvedGroupId = resolveGroupId(request.groupId());
