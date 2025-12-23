@@ -4,6 +4,8 @@ import MeowMeowPunch.pickeat.global.Logging.LogType;
 import MeowMeowPunch.pickeat.global.Logging.MdcKeys;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import MeowMeowPunch.pickeat.global.error.exception.*;
+import MeowMeowPunch.pickeat.domain.auth.exception.NeedRegistrationException;
+import MeowMeowPunch.pickeat.domain.auth.dto.response.NeedRegistrationResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -50,6 +52,11 @@ public class ControllerAdvice {
     @ExceptionHandler({ NotFoundGroupException.class })
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ResTemplate<?> handleNotFoundDate(RuntimeException e, HttpServletRequest request) {
+        if (e instanceof NeedRegistrationException ne) {
+            log.info("Need Registration: tokenIssued");
+            NeedRegistrationResponse response = NeedRegistrationResponse.of(ne.getRegisterToken(), ne.getSocialUserInfo());
+            return new ResTemplate<>(HttpStatus.NOT_FOUND, "회원가입이 필요합니다.", response);
+        }
         logError("NOT_FOUND", HttpStatus.NOT_FOUND, e, request);
         return createErrorResponse(e, HttpStatus.NOT_FOUND);
     }

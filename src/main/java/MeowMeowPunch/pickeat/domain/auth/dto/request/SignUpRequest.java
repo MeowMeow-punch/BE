@@ -7,7 +7,7 @@ import MeowMeowPunch.pickeat.global.common.enums.DrinkingStatus;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import MeowMeowPunch.pickeat.global.common.enums.Gender;
 import MeowMeowPunch.pickeat.global.common.enums.MealFrequency;
-import MeowMeowPunch.pickeat.global.common.enums.OAuthProvider;
+
 import MeowMeowPunch.pickeat.global.common.enums.SmokingStatus;
 import MeowMeowPunch.pickeat.global.common.enums.UserStatus;
 import jakarta.validation.constraints.Min;
@@ -30,8 +30,7 @@ import jakarta.validation.constraints.Positive;
  * - 보안 키워드: OAuthProvider와 oauthId로 계정 연결
  */
 public record SignUpRequest(
-		@NotNull(message = "oauthProvider는 필수입니다.") OAuthProvider oauthProvider,
-		@NotBlank(message = "oauthId는 필수입니다.") String oauthId,
+		@NotBlank(message = "registerToken은 필수입니다.") String registerToken,
 		@NotBlank(message = "닉네임은 필수입니다.") String nickname,
 		@NotNull(message = "마케팅 수신 동의 여부를 입력해주세요.") Boolean isMarketing,
 		@NotNull(message = "성별은 필수입니다.") Gender gender,
