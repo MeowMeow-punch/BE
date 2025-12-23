@@ -44,8 +44,8 @@ public class SecurityConfig {
 								"/auth/login",
 								"/auth/regist",
 								"/auth/refresh",
-								"/user/nickname", // 회원가입 시 닉네임 중복 체크
-								"/user/groupSearch", // 회원가입 시 그룹 검색
+								"/user/nickname",
+								"/user/groupSearch",
 								"/diet/**", // TODO: 제거 필요 Diet/food/** 만 허용되게
 								"/internal/**",
 								"/community/**",
