@@ -44,6 +44,8 @@ public class SecurityConfig {
 								"/auth/login",
 								"/auth/regist",
 								"/auth/refresh",
+								"/user/nickname", // 회원가입 시 닉네임 중복 체크
+								"/user/groupSearch", // 회원가입 시 그룹 검색
 								"/diet/**", // TODO: 제거 필요 Diet/food/** 만 허용되게
 								"/internal/**",
 								"/community/**",
@@ -65,16 +67,16 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		
+
 		// 1. 허용할 Origin 설정 (application.yml 참고)
 		configuration.setAllowedOrigins(corsProperties.getAllowedOrigins());
-		
+
 		// 2. 허용할 HTTP Method 명시
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-		
+
 		// 3. 허용할 Header 설정
 		configuration.setAllowedHeaders(Collections.singletonList("*"));
-		
+
 		// 4. 자격 증명(Cookie) 허용
 		configuration.setAllowCredentials(true);
 
@@ -82,7 +84,7 @@ public class SecurityConfig {
 		source.registerCorsConfiguration("/**", configuration);
 		return source;
 	}
-	
+
 	/**
 	 * [Security][Bean] 패스워드 인코더 (OAuth 기반이지만 추후 비밀번호 인증 대비)
 	 */

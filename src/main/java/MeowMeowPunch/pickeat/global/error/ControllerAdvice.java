@@ -54,7 +54,7 @@ public class ControllerAdvice {
     public ResTemplate<?> handleNotFoundDate(RuntimeException e, HttpServletRequest request) {
         if (e instanceof NeedRegistrationException ne) {
             log.info("Need Registration: tokenIssued");
-            NeedRegistrationResponse response = NeedRegistrationResponse.of(ne.getRegisterToken(), ne.getSocialUserInfo());
+            NeedRegistrationResponse response = NeedRegistrationResponse.of(ne.getRegisterToken());
             return new ResTemplate<>(HttpStatus.NOT_FOUND, "회원가입이 필요합니다.", response);
         }
         logError("NOT_FOUND", HttpStatus.NOT_FOUND, e, request);
@@ -164,6 +164,16 @@ public class ControllerAdvice {
                 kv("clientIp", MDC.get(MdcKeys.CLIENT_IP)),
                 kv("traceId", MDC.get(MdcKeys.TRACE_ID)));
         return errorResponse;
+    }
+
+    // DB 무결성 위반 (Unique Constraint 등) - Concurrency 방어
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ResTemplate<?> handleDataIntegrityViolationException(
+            org.springframework.dao.DataIntegrityViolationException e,
+            HttpServletRequest request) {
+        logError("DATABASE_CONFLICT", HttpStatus.CONFLICT, e, request);
+        return ResTemplate.error(HttpStatus.CONFLICT, "데이터 충돌이 발생했습니다. (중복된 요청 또는 데이터)");
     }
 
     // 공통 에러 응답 생성
