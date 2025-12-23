@@ -13,7 +13,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import MeowMeowPunch.pickeat.domain.auth.entity.User;
-import MeowMeowPunch.pickeat.domain.auth.exception.AuthNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateNicknameException;
 import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
@@ -22,6 +21,7 @@ import MeowMeowPunch.pickeat.domain.user.dto.request.UserUpdateRequest;
 import MeowMeowPunch.pickeat.domain.user.dto.response.MyPageResponse;
 import MeowMeowPunch.pickeat.domain.user.dto.response.UserGroupResponse;
 import MeowMeowPunch.pickeat.domain.user.exception.InvalidKeywordException;
+import MeowMeowPunch.pickeat.domain.auth.exception.AuthNotFoundException;
 import MeowMeowPunch.pickeat.welstory.entity.GroupMapping;
 import MeowMeowPunch.pickeat.welstory.repository.GroupMappingRepository;
 
@@ -174,14 +174,7 @@ public class UserService {
             checkNickname(request.nickname());
         }
 
-        String parsedGroupId = null;
-        if (request.groupId() != null) {
-            try {
-                parsedGroupId = request.groupId();
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("잘못된 그룹 ID 형식입니다.");
-            }
-        }
+        String parsedGroupId = resolveGroupId(request.groupId());
 
         user.updateProfile(
                 request.nickname(),
@@ -194,6 +187,22 @@ public class UserService {
                 request.isMarketing());
 
         // save 없어도 변경 감지로 자동 저장됨미다
+    }
+
+    private String resolveGroupId(String groupId) {
+        if (groupId == null || groupId.trim().isEmpty()) {
+            return null;
+        }
+
+        String trimmed = groupId.trim();
+        if (trimmed.matches("\\d+")) {
+            long mappingId = Long.parseLong(trimmed);
+            return groupMappingRepository.findById(mappingId)
+                    .map(GroupMapping::getGroupId)
+                    .orElseThrow(AuthNotFoundException::groupNotFound);
+        }
+
+        return trimmed;
     }
 
     /**
