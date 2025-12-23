@@ -37,6 +37,23 @@ public interface CommunityRepository extends JpaRepository<Community, Long> {
 	Slice<Community> findByCategoryAndIdLessThanOrderByIdDesc(CommunityCategory category, Long id, Pageable pageable);
 
 	/**
+	 * 모든 커뮤니티 게시글 목록을 조회합니다 (카테고리 무관, 첫 페이지용).
+	 *
+	 * @param pageable 페이징 정보 (limit)
+	 * @return 전체 게시글 Slice 객체
+	 */
+	Slice<Community> findAllByOrderByIdDesc(Pageable pageable);
+
+	/**
+	 * 특정 게시글(cursor) 이전의 모든 게시글 목록을 조회합니다 (카테고리 무관, 커서 이후 조회용).
+	 *
+	 * @param id       커서 ID (이 ID보다 작은 게시글 조회)
+	 * @param pageable 페이징 정보 (limit)
+	 * @return 전체 게시글 Slice 객체
+	 */
+	Slice<Community> findByIdLessThanOrderByIdDesc(Long id, Pageable pageable);
+
+	/**
 	 * 특정 카테고리의 최신 게시글 3개를 조회합니다 (본문 제외, 현재 게시글 제외).
 	 *
 	 * @param category 조회할 커뮤니티 카테고리

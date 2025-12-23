@@ -47,20 +47,32 @@ public class CommunityService {
 	 * @return 커뮤니티 목록 응답 (게시글 리스트 + 페이징 정보)
 	 */
 	public CommunityListResponse getCommunityList(String categoryStr, Long cursorId, int size) {
-		CommunityCategory category;
-		try {
-			category = CommunityCategory.valueOf(categoryStr.toUpperCase());
-		} catch (IllegalArgumentException e) {
-			throw InvalidCategoryException.invalidName(categoryStr);
+		boolean isAllCategory = "ALL".equalsIgnoreCase(categoryStr);
+		CommunityCategory category = null;
+
+		if (!isAllCategory) {
+			try {
+				category = CommunityCategory.valueOf(categoryStr.toUpperCase());
+			} catch (IllegalArgumentException e) {
+				throw InvalidCategoryException.invalidName(categoryStr);
+			}
 		}
 		
 		PageRequest pageRequest = PageRequest.of(0, size);
 
 		Slice<Community> communitySlice;
-		if (cursorId == null) {
-			communitySlice = communityRepository.findByCategoryOrderByIdDesc(category, pageRequest);
+		if (isAllCategory) {
+			if (cursorId == null) {
+				communitySlice = communityRepository.findAllByOrderByIdDesc(pageRequest);
+			} else {
+				communitySlice = communityRepository.findByIdLessThanOrderByIdDesc(cursorId, pageRequest);
+			}
 		} else {
-			communitySlice = communityRepository.findByCategoryAndIdLessThanOrderByIdDesc(category, cursorId, pageRequest);
+			if (cursorId == null) {
+				communitySlice = communityRepository.findByCategoryOrderByIdDesc(category, pageRequest);
+			} else {
+				communitySlice = communityRepository.findByCategoryAndIdLessThanOrderByIdDesc(category, cursorId, pageRequest);
+			}
 		}
 
 		List<CommunitySummaryDto> posts = communitySlice.getContent().stream()

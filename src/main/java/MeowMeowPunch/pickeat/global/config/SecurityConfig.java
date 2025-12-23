@@ -48,6 +48,7 @@ public class SecurityConfig {
 								"/auth/refresh",
 								"/diet/**", // 주윤
 								"/internal/**",
+								"/community/**",
 								"/error")
 						.permitAll()
 						.anyRequest().authenticated())

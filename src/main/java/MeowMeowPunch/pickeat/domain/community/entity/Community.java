@@ -66,11 +66,9 @@ public class Community extends BaseEntity {
 	@Builder.Default
 	private int likes = 0;
 
-	@Lob
 	@Column(name = "thumbnail_url")
 	private String thumbnailUrl;
 
-	@Lob
 	@Column(columnDefinition = "TEXT")
 	private String content;
 
