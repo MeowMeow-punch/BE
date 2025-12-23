@@ -86,6 +86,33 @@ public class JwtTokenProvider {
 	}
 
 	/**
+	 * 회원가입용 임시 토큰 생성 (Register Token).
+	 * <p>
+	 * OAuth 로그인 성공 후 회원가입이 필요할 때 발급되는 단기 토큰.<br>
+	 * payload에 oauthId와 provider 정보를 포함하며, 서명되어 있어 위변조가 불가능하다.
+	 * </p>
+	 *
+	 * @param oauthId  소셜 플랫폼의 사용자 식별자
+	 * @param provider 소셜 플랫폼 이름 (KAKAO, NAVER, GOOGLE)
+	 * @return 서명된 JWT 문자열
+	 */
+	public String createRegisterToken(String oauthId, String provider) {
+		Instant now = Instant.now();
+		// 회원가입 토큰 유효시간: 10분 (사용자가 정보를 입력할 시간 고려)
+		Instant expiry = now.plusSeconds(600);
+
+		return Jwts.builder()
+				.issuer(jwtProperties.getIssuer())
+				.subject(oauthId)
+				.claim("provider", provider)
+				.claim("type", "register")
+				.issuedAt(Date.from(now))
+				.expiration(Date.from(expiry))
+				.signWith(getSigningKey())
+				.compact();
+	}
+
+	/**
 	 * JWT 문자열을 파싱하여 Claims(Payload)를 추출.
 	 * <p>
 	 * 서명이 유효하지 않거나 만료된 경우 {@link InvalidTokenException}을 발생시킨다.
