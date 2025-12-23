@@ -4,6 +4,7 @@ import MeowMeowPunch.pickeat.global.Logging.LogType;
 import MeowMeowPunch.pickeat.global.Logging.MdcKeys;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
 import MeowMeowPunch.pickeat.global.error.exception.*;
+import MeowMeowPunch.pickeat.domain.auth.exception.NeedRegistrationException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -50,6 +51,10 @@ public class ControllerAdvice {
     @ExceptionHandler({ NotFoundGroupException.class })
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ResTemplate<?> handleNotFoundDate(RuntimeException e, HttpServletRequest request) {
+        if (e instanceof NeedRegistrationException ne) {
+            log.info("Need Registration: oauthId={}, provider={}", ne.getOauthId(), ne.getOauthProvider());
+            return new ResTemplate<>(HttpStatus.NOT_FOUND, "회원가입이 필요합니다.", ne.getOauthId());
+        }
         logError("NOT_FOUND", HttpStatus.NOT_FOUND, e, request);
         return createErrorResponse(e, HttpStatus.NOT_FOUND);
     }
@@ -95,13 +100,14 @@ public class ControllerAdvice {
     }
 
     // 500, InternalServerError (이메일 전송 과정에서 발생하는 오류를 위해 추가)
-    // 500, InternalServerError (이메일 전송 과정에서 발생하는 오류를 위해 추가)
     @ExceptionHandler({ InternalServerErrorGroupException.class })
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResTemplate<?> handleInternalServerError(RuntimeException e, HttpServletRequest request) {
         logError("SYSTEM", HttpStatus.INTERNAL_SERVER_ERROR, e, request);
         return createErrorResponse(e, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+
 
     // JSON 파싱 에러 (Enum 값 불일치 등)
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)

@@ -59,11 +59,11 @@ public class AuthController {
 	 * @return Access/Refresh 토큰 응답
 	 */
 	@PostMapping("/login")
-	public ResponseEntity<ResTemplate<AuthTokenResponse>> login(@Valid @RequestBody OAuthLoginRequest request) {
+	public ResponseEntity<ResTemplate<?>> login(@Valid @RequestBody OAuthLoginRequest request) {
 		AuthTokenResponse tokens = authService.login(request);
 		ResponseCookie refreshCookie = jwtCookieProvider.createRefreshTokenCookie(tokens.refreshToken());
 
-		HttpStatus status = HttpStatus.OK; // 상황에 따라 변경될 가능성 있음
+		HttpStatus status = HttpStatus.OK;
 		return ResponseEntity.status(status)
 				.header(HttpHeaders.SET_COOKIE, jwtCookieProvider.asHeader(refreshCookie))
 				.body(new ResTemplate<>(status, "로그인 성공", tokens));
