@@ -1,6 +1,8 @@
 package MeowMeowPunch.pickeat.domain.diet.controller;
 
+import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,13 +33,14 @@ public class MainController {
 	/**
 	 * [API] 메인 페이지 조회
 	 *
-	 * @param userId 사용자 식별자
+	 * @param principal 사용자 식별자
 	 * @return DietHomeResponse
 	 */
 	@GetMapping("/main")
 	public ResTemplate<DietHomeResponse> getDiet(
-		@RequestParam(name = "userId") String userId
+        @AuthenticationPrincipal UserPrincipal principal
 	) {
+        String userId = principal.getUserId().toString();
 		DietHomeResponse data = dietService.getHome(userId);
 		return ResTemplate.success(HttpStatus.OK, "메인페이지 조회 성공", data);
 	}

@@ -71,4 +71,7 @@ public class RecommendedDiet extends BaseEntity {
 
 	@Column(name = "thumbnail_url", length = 500)
 	private String thumbnailUrl;
+
+	@Column(name = "score")
+	private Double score;
 }

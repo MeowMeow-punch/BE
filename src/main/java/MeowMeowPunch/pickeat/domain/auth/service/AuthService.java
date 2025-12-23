@@ -191,7 +191,7 @@ public class AuthService {
 		}
 	}
 
-	private void validateGroup(UserStatus status, Long groupId) {
+	private void validateGroup(UserStatus status, String groupId) {
 		if (status == UserStatus.GROUP && groupId == null) {
 			throw AuthNotFoundException.groupNotFound();
 		}

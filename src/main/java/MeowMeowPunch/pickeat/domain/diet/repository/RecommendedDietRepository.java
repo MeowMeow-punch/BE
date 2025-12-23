@@ -2,7 +2,9 @@ package MeowMeowPunch.pickeat.domain.diet.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
+import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
@@ -14,7 +16,8 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface RecommendedDietRepository extends JpaRepository<RecommendedDiet, Long> {
-
+    Optional<RecommendedDiet> findByIdAndUserId
+            (Long id, String userId);
 	/**
 	 * 사용자의 특정 날짜/끼니에 대한 추천 식단 이력 조회 (최신순).
 	 *

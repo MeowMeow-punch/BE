@@ -3,8 +3,12 @@ package MeowMeowPunch.pickeat.domain.diet.ai;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.IntStream;
 
+import MeowMeowPunch.pickeat.domain.auth.entity.User;
+import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
+import MeowMeowPunch.pickeat.domain.diet.exception.UserNotFoundException;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,6 +48,7 @@ public class DietAiFacade {
 	private final LlmClient llmClient;
 	private final LlmProperties llmProperties;
 	private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
 
 	/**
 	 * [Home] AI 추천 선택 및 이유 생성
@@ -54,7 +59,7 @@ public class DietAiFacade {
 	 * @return HomeRecommendationResult (선택된 식단 인덱스 및 이유)
 	 */
 	public HomeRecommendationResult recommendHome(Focus focus, DietType mealSlot,
-		List<FoodRecommendationCandidate> candidates) {
+		List<FoodRecommendationCandidate> candidates, String userId) {
 		if (candidates == null || candidates.isEmpty()) {
 			return HomeRecommendationResult.empty("추천 후보가 없습니다.");
 		}
@@ -67,7 +72,7 @@ public class DietAiFacade {
 
 		try {
 			// 1. 프롬프트 데이터 구성
-			Map<String, Object> inputJson = buildHomePromptInput(focus, mealSlot, candidates);
+			Map<String, Object> inputJson = buildHomePromptInput(focus, mealSlot, candidates, userId);
 			String userPrompt = objectMapper.writeValueAsString(inputJson);
 
 			// 2. 시스템 지시문
@@ -203,8 +208,11 @@ public class DietAiFacade {
 	}
 
 	private Map<String, Object> buildHomePromptInput(Focus focus, DietType mealSlot,
-		List<FoodRecommendationCandidate> candidates) {
+		List<FoodRecommendationCandidate> candidates, String userId) {
 		Map<String, Object> json = new HashMap<>();
+
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(UserNotFoundException::new);
 
 		// Context
 		json.put("context", Map.of(
@@ -212,16 +220,16 @@ public class DietAiFacade {
 			"focus", focus.name()
 		));
 
-		// User Profile (Mock / TODO: 실제 User 정보 연동)
+		// User Profile
 		Map<String, Object> profile = new HashMap<>();
 		if (focus == Focus.HEALTHY) {
-			profile.put("diseases", List.of("HYPERTENSION")); // TODO
-			profile.put("lifestyle", Map.of("isSmoking", false, "isDrink", true));
+			profile.put("diseases", user.getDiseases());
+			profile.put("lifestyle", Map.of("isSmoking", user.getSmokingStatus().name(), "isDrink", user.getDrinkingStatus().name()));
 		} else {
-			profile.put("goal", Map.of("targetWeight", 70.0)); // TODO
+			profile.put("goal", Map.of("targetWeight", user.getTargetWeight()));
 			profile.put("dietPolicy", "LOW_CALORIE");
 		}
-		profile.put("allergies", List.of("PEANUT")); // Common
+		profile.put("allergies", user.getAllergies()); // Common
 		json.put("userProfile", profile);
 
 		// Candidates (Simplified with Index)

@@ -18,15 +18,19 @@ import java.util.stream.Collectors;
 
 import org.springframework.util.StringUtils;
 
+import MeowMeowPunch.pickeat.domain.auth.entity.User;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
+import MeowMeowPunch.pickeat.domain.diet.dto.NutritionGoals;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
 import MeowMeowPunch.pickeat.domain.diet.entity.DietFood;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
+import MeowMeowPunch.pickeat.domain.diet.exception.DietDuplicateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietDateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietFoodQuantityException;
 import MeowMeowPunch.pickeat.domain.diet.exception.InvalidDietTimeException;
+import MeowMeowPunch.pickeat.domain.diet.repository.DietRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.FoodRepository;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietDetailItem;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
@@ -48,6 +52,7 @@ import MeowMeowPunch.pickeat.welstory.repository.GroupMappingRepository;
 import MeowMeowPunch.pickeat.welstory.service.WelstoryMenuService;
 
 // 식단 페이지 공통 계산, 포매팅 헬퍼
+
 /**
  * [Diet][Assembler] 식단/식당 메뉴 응답 조립 및 포맷 변환 유틸.
  *
@@ -61,19 +66,18 @@ public final class DietPageAssembler {
 	}
 
 	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
-	// TODO: 유저 테이블 생성되면 삭제 예정
-	private static final int GOAL_KCAL = 2000;
-	private static final int GOAL_CARBS = 280;
-	private static final int GOAL_PROTEIN = 120;
-	private static final int GOAL_FAT = 70;
-	private static final int GOAL_SUGAR = 50;
-	private static final int GOAL_DIETARY_FIBER = 25;
-	private static final int GOAL_VITAMIN_A = 700;
-	private static final int GOAL_VITAMIN_C = 100;
-	private static final int GOAL_VITAMIN_D = 10;
-	private static final int GOAL_CALCIUM = 700;
-	private static final int GOAL_IRON = 14;
-	private static final int GOAL_SODIUM = 2000;
+
+	// 그룹 이름 반환
+	public static String getGroupName(User user, GroupMappingRepository groupMappingRepository) {
+		if (user.getGroupId() != null) {
+			GroupMapping mapping = groupMappingRepository.findByGroupId(String.valueOf(user.getGroupId()))
+				.orElse(null);
+			if (mapping != null) {
+				return mapping.getGroupName();
+			}
+		}
+		return "";
+	}
 
 	// 필요 시 YYYY-MM-DD 문자열 검증용
 	public static LocalDate parseDateOrToday(String raw) {
@@ -114,18 +118,22 @@ public final class DietPageAssembler {
 	}
 
 	// SummaryInfo 응답 생성
-	public static SummaryInfo buildSummary(NutrientTotals totals) {
+	public static SummaryInfo buildSummary(NutrientTotals totals, NutritionGoals goals) {
 		int currentKcal = toInt(nullSafe(totals.totalKcal()));
 		int currentCarbs = toInt(nullSafe(totals.totalCarbs()));
 		int currentProtein = toInt(nullSafe(totals.totalProtein()));
 		int currentFat = toInt(nullSafe(totals.totalFat()));
 
+		int goalKcal = toInt(goals.kcal());
+		int goalCarbs = toInt(goals.carbs());
+		int goalProtein = toInt(goals.protein());
+		int goalFat = toInt(goals.fat());
+
 		return SummaryInfo.of(
-			SummaryInfo.Calorie.of(currentKcal, GOAL_KCAL),
-			SummaryInfo.NutrientInfo.of(currentCarbs, GOAL_CARBS, status(currentCarbs, GOAL_CARBS)),
-			SummaryInfo.NutrientInfo.of(currentProtein, GOAL_PROTEIN, status(currentProtein, GOAL_PROTEIN)),
-			SummaryInfo.NutrientInfo.of(currentFat, GOAL_FAT, status(currentFat, GOAL_FAT))
-		);
+			SummaryInfo.Calorie.of(currentKcal, goalKcal),
+			SummaryInfo.NutrientInfo.of(currentCarbs, goalCarbs, status(currentCarbs, goalCarbs)),
+			SummaryInfo.NutrientInfo.of(currentProtein, goalProtein, status(currentProtein, goalProtein)),
+			SummaryInfo.NutrientInfo.of(currentFat, goalFat, status(currentFat, goalFat)));
 	}
 
 	// 오늘 등록 식단 응답 생성
@@ -139,10 +147,8 @@ public final class DietPageAssembler {
 			Nutrients.of(
 				toInt(nullSafe(diet.getCarbs())),
 				toInt(nullSafe(diet.getProtein())),
-				toInt(nullSafe(diet.getFat()))
-			),
-			thumbnailUrls
-		);
+				toInt(nullSafe(diet.getFat()))),
+			thumbnailUrls);
 	}
 
 	// 단일 식단 상세 응답 생성
@@ -162,10 +168,8 @@ public final class DietPageAssembler {
 			Nutrients.of(
 				toInt(nullSafe(diet.getCarbs())),
 				toInt(nullSafe(diet.getProtein())),
-				toInt(nullSafe(diet.getFat()))
-			),
-			foods
-		);
+				toInt(nullSafe(diet.getFat()))),
+			foods);
 	}
 
 	// 단일 썸네일을 리스트로 래핑
@@ -216,7 +220,7 @@ public final class DietPageAssembler {
 	}
 
 	// 특정 날짜에 등록된 식단들의 부가 영양분 합계를 생성
-	public static NutritionInfo buildNutritionInfo(List<Diet> diets) {
+	public static NutritionInfo buildNutritionInfo(List<Diet> diets, NutritionGoals goals) {
 		BigDecimal sugar = BigDecimal.ZERO;
 		BigDecimal dietaryFiber = BigDecimal.ZERO;
 		BigDecimal vitA = BigDecimal.ZERO;
@@ -238,15 +242,14 @@ public final class DietPageAssembler {
 		}
 
 		return NutritionInfo.of(
-			NutritionDetail.of(toDecimal(sugar), GOAL_SUGAR, "g"),
-			NutritionDetail.of(toDecimal(dietaryFiber), GOAL_DIETARY_FIBER, "g"),
-			NutritionDetail.of(toDecimal(vitA), GOAL_VITAMIN_A, "ug_RAE"),
-			NutritionDetail.of(toDecimal(vitC), GOAL_VITAMIN_C, "mg"),
-			NutritionDetail.of(toDecimal(vitD), GOAL_VITAMIN_D, "ug"),
-			NutritionDetail.of(toDecimal(calcium), GOAL_CALCIUM, "mg"),
-			NutritionDetail.of(toDecimal(iron), GOAL_IRON, "mg"),
-			NutritionDetail.of(toDecimal(sodium), GOAL_SODIUM, "mg")
-		);
+			NutritionDetail.of(toDecimal(sugar), goals.sugar(), "g"),
+			NutritionDetail.of(toDecimal(dietaryFiber), goals.dietaryFiber(), "g"),
+			NutritionDetail.of(toDecimal(vitA), goals.vitaminA(), "ug_RAE"),
+			NutritionDetail.of(toDecimal(vitC), goals.vitaminC(), "mg"),
+			NutritionDetail.of(toDecimal(vitD), goals.vitaminD(), "ug"),
+			NutritionDetail.of(toDecimal(calcium), goals.calcium(), "mg"),
+			NutritionDetail.of(toDecimal(iron), goals.iron(), "mg"),
+			NutritionDetail.of(toDecimal(sodium), goals.sodium(), "mg"));
 	}
 
 	// 식단별 음식 썸네일 리스트 생성
@@ -260,8 +263,7 @@ public final class DietPageAssembler {
 					.filter(Objects::nonNull)
 					.map(Food::getThumbnailUrl)
 					.distinct()
-					.toList()
-			));
+					.toList()));
 	}
 
 	// 추가한 음식들을 하나의 식단으로 집계
@@ -322,8 +324,7 @@ public final class DietPageAssembler {
 			totalCalcium,
 			totalIron,
 			totalDietaryFiber,
-			totalSodium
-		);
+			totalSodium);
 	}
 
 	// quantity 값 검증
@@ -404,8 +405,7 @@ public final class DietPageAssembler {
 		BigDecimal calcium,
 		BigDecimal iron,
 		BigDecimal dietaryFiber,
-		BigDecimal sodium
-	) {
+		BigDecimal sodium) {
 	}
 
 	public static RestaurantMenuInfo toRestaurantMenuInfo(WelstoryMenuItem menu,
@@ -417,8 +417,7 @@ public final class DietPageAssembler {
 				menu.dateYyyymmdd(),
 				menu.mealTimeId(),
 				menu.hallNo(),
-				menu.menuCourseType()
-			);
+				menu.menuCourseType());
 		}
 
 		BigDecimal totalKcal = BigDecimal.ZERO;
@@ -446,29 +445,26 @@ public final class DietPageAssembler {
 			Nutrients.of(
 				toInt(totalCarbs),
 				toInt(totalProtein),
-				toInt(totalFat)
-			),
-			DietPageAssembler.toThumbnailList(menu.photoUrl())
-		);
-	}
-
-	public static String resolveRestaurantName(WelstoryMenuItem menu, String fallback) {
-		if (StringUtils.hasText(menu.courseName())) {
-			return normalizeBracket(menu.courseName());
-		}
-		return fallback;
-	}
-
-	public static String normalizeBracket(String s) {
-		String t = s.trim();
-		if (t.startsWith("[") && t.endsWith("]") && t.length() > 2) {
-			return t.substring(1, t.length() - 1).trim();
-		}
-		return t;
+				toInt(totalFat)),
+			DietPageAssembler.toThumbnailList(menu.photoUrl()));
 	}
 
 	public static int toYyyymmdd(LocalDate date) {
 		return date.getYear() * 10000 + date.getMonthValue() * 100 + date.getDayOfMonth();
+	}
+
+	// 중복 식단 검사: SNACK 제외, 동일 (userId, date, mealType) 존재 시 예외
+	public static void validateNoDuplicateMeal(
+		DietRepository dietRepository,
+		String userId,
+		LocalDate date,
+		DietType mealType) {
+		if (mealType != null && mealType != DietType.SNACK) {
+			boolean exists = dietRepository.existsByUserIdAndDateAndStatus(userId, date, mealType);
+			if (exists) {
+				throw new DietDuplicateException();
+			}
+		}
 	}
 
 	// 식단 추가/수정을 위한 집계 사전 작업
@@ -523,8 +519,7 @@ public final class DietPageAssembler {
 				primaryMenu.name(),
 				toInt(DietPageAssembler.toBigDecimal(primaryMenu.kcal())),
 				DietPageAssembler.buildSubName(primaryMenu.name(), primaryMenu.submenu()),
-				othersNum
-			);
+				othersNum);
 			result.put(slot.name(), info);
 		}
 

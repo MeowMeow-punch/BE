@@ -20,4 +20,5 @@ public interface RecommendedDietFoodRepository extends JpaRepository<Recommended
 	 * @return 추천 식단-음식 매핑 리스트
 	 */
 	List<RecommendedDietFood> findAllByRecommendedDietId(Long recommendedDietId);
+
 }

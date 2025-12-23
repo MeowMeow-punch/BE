@@ -44,7 +44,7 @@ public class SecurityConfig {
 								"/auth/login",
 								"/auth/regist",
 								"/auth/refresh",
-								"/diet/**", // 주윤
+								"/diet/**", // TODO: 제거 필요 Diet/food/** 만 허용되게
 								"/internal/**",
 								"/community/**",
 								"/error")

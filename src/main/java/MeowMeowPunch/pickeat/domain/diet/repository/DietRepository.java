@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import MeowMeowPunch.pickeat.domain.diet.entity.Diet;
+import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface DietRepository extends JpaRepository<Diet, Long> {
+    Optional<Diet> findByIdAndUserId
+            (Long id, String userId);
 
 	/**
 	 * 특정 날짜의 사용자 식단을 시간순으로 조회.
@@ -38,7 +41,7 @@ public interface DietRepository extends JpaRepository<Diet, Long> {
 
 	/**
 	 * 사용자의 전체 식단 기록 수 조회.
-	 * 
+	 *
 	 * @param userId 사용자 식별자
 	 * @return 전체 식단 기록 횟수
 	 */
@@ -47,7 +50,7 @@ public interface DietRepository extends JpaRepository<Diet, Long> {
 	/**
 	 * 사용자의 식단 기록 날짜 목록 조회 (최신순, 중복 제거).
 	 * 스트릭(streak) 계산에 사용.
-	 * 
+	 *
 	 * @param userId 사용자 식별자
 	 * @return 식단 기록 날짜 리스트
 	 */
@@ -55,4 +58,6 @@ public interface DietRepository extends JpaRepository<Diet, Long> {
 	List<LocalDate> findDistinctDatesByUserId(@Param("userId") String userId);
 
 	Optional<Diet> findTopByUserIdAndDateLessThanOrderByDateDesc(String userId, LocalDate date);
+
+    boolean existsByUserIdAndDateAndStatus(String userId, LocalDate date, DietType status);
 }

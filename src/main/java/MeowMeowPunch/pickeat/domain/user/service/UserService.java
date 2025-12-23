@@ -96,7 +96,7 @@ public class UserService {
         // 1. 그룹(웰스토리 회사명) 조회
         String groupName = null;
         if (user.getGroupId() != null) {
-            groupName = groupMappingRepository.findById(user.getGroupId())
+            groupName = groupMappingRepository.findByGroupId(user.getGroupId())
                     .map(GroupMapping::getGroupName)
                     .orElse(null);
         }
@@ -174,10 +174,10 @@ public class UserService {
             checkNickname(request.nickname());
         }
 
-        Long parsedGroupId = null;
+        String parsedGroupId = null;
         if (request.groupId() != null) {
             try {
-                parsedGroupId = Long.parseLong(request.groupId());
+                parsedGroupId = request.groupId();
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("잘못된 그룹 ID 형식입니다.");
             }
