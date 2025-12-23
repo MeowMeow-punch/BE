@@ -11,7 +11,6 @@ import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityListResponse
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunitySummaryDto;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityDetailResponse;
 import MeowMeowPunch.pickeat.domain.community.dto.request.CommunityLikeRequest;
-import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityDetailResponse;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityDetailResponse.RelatedPostResponse;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunitySearchResponse;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunitySearchResponse.SearchPostDetail;

@@ -11,7 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.Valid;
-
+import jakarta.validation.constraints.Size;
 import MeowMeowPunch.pickeat.domain.community.dto.request.CommunityLikeRequest;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityDetailResponse;
 import MeowMeowPunch.pickeat.domain.community.dto.response.CommunityListResponse;
@@ -76,7 +76,7 @@ public class CommunityController {
 	 */
 	@GetMapping("/search")
 	public ResTemplate<CommunitySearchResponse> getCommunitySearch(
-		@RequestParam(name = "keyword") String keyword
+		@RequestParam(name = "keyword") @Size(min = 2, max = 50, message = "검색어는 2자 이상 50자 이하여야 합니다.") String keyword
 	) {
 		CommunitySearchResponse response = communityService.searchCommunity(keyword);
 		return ResTemplate.success(HttpStatus.OK, "컨텐츠 검색 성공", response);
