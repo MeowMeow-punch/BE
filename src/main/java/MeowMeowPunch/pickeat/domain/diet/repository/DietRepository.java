@@ -17,6 +17,8 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface DietRepository extends JpaRepository<Diet, Long> {
+    Optional<Diet> findByIdAndUserId
+            (Long id, String userId);
 
 	/**
 	 * 특정 날짜의 사용자 식단을 시간순으로 조회.

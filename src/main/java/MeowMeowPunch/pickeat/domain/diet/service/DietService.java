@@ -222,11 +222,8 @@ public class DietService {
 	 * @return DietDetailResponse(식단명, 식사 시간대, 시간, 날짜, 수정 가능 여부, 칼로리, 영양분, 음식 데이터)
 	 */
 	public DietDetailResponse getDetail(String userId, Long dietId) {
-		// User user = userRepository.findById(UUID.fromString(userId))
-		// .orElseThrow(UserNotFoundException::new);
 
-		Diet diet = dietRepository.findById(dietId)
-			.orElseThrow(() -> new DietDetailNotFoundException(dietId));
+		Diet diet = getOwnedDietDetailOrThrow(userId, dietId);
 
 		List<DietFood> dietFoods = dietFoodRepository.findAllByDietId(diet.getId());
 
@@ -331,15 +328,7 @@ public class DietService {
 	 */
 	@Transactional
 	public DietRegisterResponse registerRecommendation(String userId, Long recommendationId) {
-		// User user = userRepository.findById(UUID.fromString(userId))
-		// .orElseThrow(UserNotFoundException::new);
-
-		RecommendedDiet recommended = recommendedDietRepository.findById(recommendationId)
-			.orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
-
-		if (!recommended.getUserId().equals(userId)) {
-			throw new DietAccessDeniedException(recommendationId);
-		}
+        RecommendedDiet recommended = getOwnedRecommendedOrThrow(userId, recommendationId);
 
 		DietSourceType sourceType = recommended.getSourceType() != null ? recommended.getSourceType()
 			: DietSourceType.FOOD_DB;
@@ -397,6 +386,7 @@ public class DietService {
 						.build());
 			}
 		}
+        dietRecommendationService.generateDailyFeedback(userId, date);
 		return DietRegisterResponse.from(saved.getId());
 	}
 
@@ -408,9 +398,6 @@ public class DietService {
 	 */
 	@Transactional
 	public void create(String userId, DietRequest request) {
-		// User user = userRepository.findById(UUID.fromString(userId))
-		// .orElseThrow(UserNotFoundException::new);
-
 		LocalDate date = parseDateOrToday(request.date());
 		LocalTime time = parseTime(request.time());
 
@@ -443,11 +430,7 @@ public class DietService {
 	 */
 	@Transactional
 	public void update(String userId, Long dietId, DietRequest request) {
-		// User user = userRepository.findById(UUID.fromString(userId))
-		// .orElseThrow(UserNotFoundException::new);
-
-		Diet diet = dietRepository.findById(dietId)
-			.orElseThrow(() -> new DietNotFoundException(dietId));
+		Diet diet = getOwnedDietOrThrow(userId, dietId);
 
 		if (!diet.getUserId().equals(userId)) {
 			throw new DietAccessDeniedException(dietId);
@@ -482,15 +465,8 @@ public class DietService {
 	 */
 	@Transactional
 	public void delete(String userId, Long dietId) {
-		// User user = userRepository.findById(UUID.fromString(userId))
-		// .orElseThrow(UserNotFoundException::new);
+        Diet diet = getOwnedDietOrThrow(userId, dietId);
 
-		Diet diet = dietRepository.findById(dietId)
-			.orElseThrow(() -> new DietNotFoundException(dietId));
-
-		if (!diet.getUserId().equals(userId)) {
-			throw new DietAccessDeniedException(dietId);
-		}
 		if (!diet.isEditable()) {
 			throw new DietNotEditableException(dietId);
 		}
@@ -500,4 +476,20 @@ public class DietService {
 
 		dietRecommendationService.generateDailyFeedback(userId, diet.getDate());
 	}
+
+    // 공통 검증 메서드
+    private Diet getOwnedDietOrThrow(String userId, Long dietId) {
+        return dietRepository.findByIdAndUserId(dietId, userId)
+                .orElseThrow(() -> new DietNotFoundException(dietId));
+    }
+
+    private Diet getOwnedDietDetailOrThrow(String userId, Long dietId) {
+        return dietRepository.findByIdAndUserId(dietId, userId)
+                .orElseThrow(() -> new DietDetailNotFoundException(dietId));
+    }
+
+    private RecommendedDiet getOwnedRecommendedOrThrow(String userId, Long recommendationId) {
+        return recommendedDietRepository.findByIdAndUserId(recommendationId, userId)
+                .orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
+    }
 }

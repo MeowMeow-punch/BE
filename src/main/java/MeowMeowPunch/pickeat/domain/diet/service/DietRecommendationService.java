@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import MeowMeowPunch.pickeat.domain.auth.entity.User;
 import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
+import MeowMeowPunch.pickeat.domain.diet.dto.NutritionGoals;
 import MeowMeowPunch.pickeat.domain.diet.exception.UserNotFoundException;
 import MeowMeowPunch.pickeat.global.common.enums.*;
 import org.springframework.scheduling.annotation.Async;
@@ -56,6 +57,7 @@ public class DietRecommendationService {
 	private static final int TOP_LIMIT = 6;
 	private static final int MIN_PICK = 1;
 	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 허용 오차
+    private static final int QUANTITY = 2; //
 	private static final String BASE_UNIT_GRAM = "G";
 	private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 	private static final String WELSTORY_LUNCH_ID = "2";
@@ -82,6 +84,7 @@ public class DietRecommendationService {
 	private final DietAiFacade dietAiFacade;
 	private final AiFeedBackRepository aiFeedBackRepository;
 	private final UserRepository userRepository;
+    private final NutritionGoalCalculator nutritionGoalCalculator;
 
 	/**
 	 * [Recommend] 오늘/현재 식사 슬롯에 맞춰 추천 TOP5 계산 + AI 선택
@@ -124,11 +127,12 @@ public class DietRecommendationService {
 		List<FoodRecommendationCandidate> candidates;
 
 		// 2. 웰스토리(그룹) 점심 우선 확인
-		if (isGroupUser(userId) && mealSlot == DietType.LUNCH) {
+		if (isGroupUser(user) && mealSlot == DietType.LUNCH) {
 			candidates = recommendWelstoryLunch(today, focus, totals, groupName);
 		} else {
 			// 3. 일반 배달/식당(Food DB) 후보 생성
-			candidates = recommendGeneralFoods(mealSlot, focus, totals);
+            NutritionGoals goals = nutritionGoalCalculator.calculateGoals(user);
+			candidates = recommendGeneralFoods(mealSlot, focus, totals, goals, userId);
 		}
 
 		// 4. AI 호출하여 최종 Pick & Reason 획득
@@ -169,11 +173,12 @@ public class DietRecommendationService {
 	}
 
 	private List<FoodRecommendationCandidate> recommendGeneralFoods(DietType mealSlot, Focus focus,
-			NutrientTotals totals) {
-		BigDecimal targetMealKcal = targetForMeal(GOAL_KCAL, totals.totalKcal(), mealSlot);
-		BigDecimal targetMealCarbs = targetMacroForMeal(GOAL_CARBS, totals.totalCarbs(), mealSlot);
-		BigDecimal targetMealProtein = targetMacroForMeal(GOAL_PROTEIN, totals.totalProtein(), mealSlot);
-		BigDecimal targetMealFat = targetMacroForMeal(GOAL_FAT, totals.totalFat(), mealSlot);
+			NutrientTotals totals, NutritionGoals goals, String userId) {
+
+		BigDecimal targetMealKcal = targetForMeal(goals.kcal(), totals.totalKcal(), mealSlot);
+		BigDecimal targetMealCarbs = targetMacroForMeal(goals.carbs(), totals.totalCarbs(), mealSlot);
+		BigDecimal targetMealProtein = targetMacroForMeal(goals.protein(), totals.totalProtein(), mealSlot);
+		BigDecimal targetMealFat = targetMacroForMeal(goals.fat(), totals.totalFat(), mealSlot);
 		List<String> allowedCategories = allowedCategoriesForMeal(mealSlot);
 		Weight weight = weightByPurpose(focus);
 
@@ -191,7 +196,9 @@ public class DietRecommendationService {
 				weight.penaltyOverMacro(),
 				KCAL_TOLERANCE,
 				BASE_UNIT_GRAM,
-				TOP_LIMIT);
+				TOP_LIMIT,
+                QUANTITY
+                );
 	}
 
 	/**
@@ -266,10 +273,7 @@ public class DietRecommendationService {
 		return value.subtract(target).abs().doubleValue();
 	}
 
-	private boolean isGroupUser(String userId) {
-		User user = userRepository.findById(UUID.fromString(userId))
-				.orElseThrow(UserNotFoundException::new);
-
+	private boolean isGroupUser(User user) {
 		return user.getStatus() == UserStatus.GROUP;
 	}
 

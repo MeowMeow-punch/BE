@@ -16,12 +16,6 @@ public interface DietRecommendationMapper {
 
 	NutrientTotals findTotalsByDate(@Param("userId") String userId, @Param("date") LocalDate date);
 
-	List<DailyCalorieSum> findDailyCalories(
-		@Param("userId") String userId,
-		@Param("start") LocalDate start,
-		@Param("end") LocalDate end
-	);
-
 	List<FoodRecommendationCandidate> findTopFoodCandidates(
 		@Param("remainingKcal") BigDecimal remainingKcal,
 		@Param("remainingCarbs") BigDecimal remainingCarbs,
@@ -36,6 +30,7 @@ public interface DietRecommendationMapper {
 		@Param("penaltyOverMacro") double penaltyOverMacro,
 		@Param("kcalTolerance") double kcalTolerance,
 		@Param("baseUnit") String baseUnit,
-		@Param("limit") int limit
+		@Param("limit") int limit,
+        @Param("quantity") int quantity
 	);
 }
