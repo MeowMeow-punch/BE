@@ -23,6 +23,8 @@ import MeowMeowPunch.pickeat.global.common.entity.RefreshToken;
 import MeowMeowPunch.pickeat.global.common.enums.UserStatus;
 import MeowMeowPunch.pickeat.global.jwt.JwtProperties;
 import MeowMeowPunch.pickeat.global.jwt.JwtTokenProvider;
+import MeowMeowPunch.pickeat.welstory.entity.GroupMapping;
+import MeowMeowPunch.pickeat.welstory.repository.GroupMappingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -54,6 +56,7 @@ public class AuthService {
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final JwtProperties jwtProperties;
+	private final GroupMappingRepository groupMappingRepository;
 
 	/**
 	 * [Login] OAuth 로그인 성공 시 토큰 발급.
@@ -122,9 +125,10 @@ public class AuthService {
 	@Transactional
 	public AuthTokenResponse signUp(SignUpRequest request) {
 		validateNickname(request.nickname());
-		validateGroup(request.status(), request.groupId());
+		String resolvedGroupId = resolveGroupId(request.groupId());
+		validateGroup(request.status(), resolvedGroupId);
 
-		User user = buildUser(request);
+		User user = buildUser(request, resolvedGroupId);
 		User savedUser = userRepository.save(user);
 		return issueTokens(savedUser);
 	}
@@ -197,7 +201,23 @@ public class AuthService {
 		}
 	}
 
-	private User buildUser(SignUpRequest request) {
+	private String resolveGroupId(String groupId) {
+		if (groupId == null || groupId.trim().isEmpty()) {
+			return null;
+		}
+
+		String trimmed = groupId.trim();
+		if (trimmed.matches("\\d+")) {
+			long mappingId = Long.parseLong(trimmed);
+			return groupMappingRepository.findById(mappingId)
+					.map(GroupMapping::getGroupId)
+					.orElseThrow(AuthNotFoundException::groupNotFound);
+		}
+
+		return trimmed;
+	}
+
+	private User buildUser(SignUpRequest request, String resolvedGroupId) {
 		List<String> allergies = request.allergies() == null ? new ArrayList<>() : request.allergies();
 		List<String> diseases = request.diseases() == null ? new ArrayList<>() : request.diseases();
 
@@ -213,7 +233,7 @@ public class AuthService {
 				.allergies(allergies)
 				.diseases(diseases)
 				.status(request.status())
-				.groupId(request.groupId())
+				.groupId(resolvedGroupId)
 				.focus(request.focus())
 				.smokingStatus(request.smokingStatus())
 				.drinkingStatus(request.drinkingStatus())
