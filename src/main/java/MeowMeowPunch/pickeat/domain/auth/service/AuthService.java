@@ -27,6 +27,8 @@ import MeowMeowPunch.pickeat.global.common.enums.OAuthProvider;
 import MeowMeowPunch.pickeat.global.common.enums.UserStatus;
 import MeowMeowPunch.pickeat.global.jwt.JwtProperties;
 import MeowMeowPunch.pickeat.global.jwt.JwtTokenProvider;
+import MeowMeowPunch.pickeat.welstory.entity.GroupMapping;
+import MeowMeowPunch.pickeat.welstory.repository.GroupMappingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -58,6 +60,7 @@ public class AuthService {
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final JwtProperties jwtProperties;
+	private final GroupMappingRepository groupMappingRepository;
 	private final CompositeSocialAuthService compositeSocialAuthService;
 
 	/**
@@ -69,18 +72,18 @@ public class AuthService {
 	public AuthTokenResponse login(OAuthLoginRequest request) {
 		// 1. 인가 코드로 소셜 플랫폼에서 사용자 정보 조회 (Strategy Pattern)
 		SocialUserInfo socialUser = compositeSocialAuthService.getUserInfo(
-			request.oauthProvider(), 
-			request.authorizationCode()
-		);
+				request.oauthProvider(),
+				request.authorizationCode());
 
 		// 2. DB에서 사용자 조회
 		User user = userRepository.findByOauthProviderAndOauthId(socialUser.provider(), socialUser.id())
 				.orElseThrow(() -> {
 					// 3. 회원가입 필요 시: 서명된 임시 토큰(RegisterToken) 발급
-					String registerToken = jwtTokenProvider.createRegisterToken(socialUser.id(), socialUser.provider().name());
+					String registerToken = jwtTokenProvider.createRegisterToken(socialUser.id(),
+							socialUser.provider().name());
 					return new NeedRegistrationException(registerToken, socialUser);
 				});
-		
+
 		// 4. 토큰 발급
 		return issueTokens(user);
 	}
@@ -146,9 +149,10 @@ public class AuthService {
 		OAuthProvider provider = OAuthProvider.valueOf(claims.get("provider", String.class));
 
 		validateNickname(request.nickname());
-		validateGroup(request.status(), request.groupId());
+		String resolvedGroupId = resolveGroupId(request.groupId());
+		validateGroup(request.status(), resolvedGroupId);
 
-		User user = buildUser(request, oauthId, provider);
+		User user = buildUser(request, oauthId, provider, resolvedGroupId);
 		User savedUser = userRepository.save(user);
 		return issueTokens(savedUser);
 	}
@@ -221,7 +225,23 @@ public class AuthService {
 		}
 	}
 
-	private User buildUser(SignUpRequest request, String oauthId, OAuthProvider provider) {
+	private String resolveGroupId(String groupId) {
+		if (groupId == null || groupId.trim().isEmpty()) {
+			return null;
+		}
+
+		String trimmed = groupId.trim();
+		if (trimmed.matches("\\d+")) {
+			long mappingId = Long.parseLong(trimmed);
+			return groupMappingRepository.findById(mappingId)
+					.map(GroupMapping::getGroupId)
+					.orElseThrow(AuthNotFoundException::groupNotFound);
+		}
+
+		return trimmed;
+	}
+
+	private User buildUser(SignUpRequest request, String oauthId, OAuthProvider provider, String resolvedGroupId) {
 		List<String> allergies = request.allergies() == null ? new ArrayList<>() : request.allergies();
 		List<String> diseases = request.diseases() == null ? new ArrayList<>() : request.diseases();
 
@@ -237,7 +257,7 @@ public class AuthService {
 				.allergies(allergies)
 				.diseases(diseases)
 				.status(request.status())
-				.groupId(request.groupId())
+				.groupId(resolvedGroupId)
 				.focus(request.focus())
 				.smokingStatus(request.smokingStatus())
 				.drinkingStatus(request.drinkingStatus())
