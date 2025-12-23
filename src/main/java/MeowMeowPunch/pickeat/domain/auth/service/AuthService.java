@@ -12,10 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import MeowMeowPunch.pickeat.domain.auth.dto.request.OAuthLoginRequest;
 import MeowMeowPunch.pickeat.domain.auth.dto.request.SignUpRequest;
 import MeowMeowPunch.pickeat.domain.auth.dto.response.AuthTokenResponse;
+import MeowMeowPunch.pickeat.domain.auth.dto.response.SocialUserInfo;
 import MeowMeowPunch.pickeat.domain.auth.entity.User;
 import MeowMeowPunch.pickeat.domain.auth.exception.AuthNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateNicknameException;
 import MeowMeowPunch.pickeat.domain.auth.exception.InvalidTokenException;
+import MeowMeowPunch.pickeat.domain.auth.exception.NeedRegistrationException;
 import MeowMeowPunch.pickeat.domain.auth.exception.TokenNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.repository.RefreshTokenRepository;
 import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
@@ -54,16 +56,26 @@ public class AuthService {
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final JwtProperties jwtProperties;
+	private final CompositeSocialAuthService compositeSocialAuthService;
 
 	/**
 	 * [Login] OAuth 로그인 성공 시 토큰 발급.
 	 *
-	 * @param request OAuth 로그인 요청 정보
+	 * @param request OAuth 로그인 요청 정보 (authorizationCode 포함)
 	 * @return 액세스/리프레시 토큰 묶음
 	 */
 	public AuthTokenResponse login(OAuthLoginRequest request) {
-		User user = userRepository.findByOauthProviderAndOauthId(request.oauthProvider(), request.oauthId())
-				.orElseThrow(AuthNotFoundException::userNotFound);
+		// 1. 인가 코드로 소셜 플랫폼에서 사용자 정보 조회 (Strategy Pattern)
+		SocialUserInfo socialUser = compositeSocialAuthService.getUserInfo(
+			request.oauthProvider(), 
+			request.authorizationCode()
+		);
+
+		// 2. DB에서 사용자 조회
+		User user = userRepository.findByOauthProviderAndOauthId(socialUser.provider(), socialUser.id())
+				.orElseThrow(() -> new NeedRegistrationException(socialUser.id(), socialUser.provider()));
+		
+		// 3. 토큰 발급
 		return issueTokens(user);
 	}
 
