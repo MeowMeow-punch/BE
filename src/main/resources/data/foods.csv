@@ -159,8 +159,8 @@ D317-698020000-0001,마늘쫑장아찌_고추장,장아찌 및 절임,100,G,110,
 D317-699000000-0001,매실장아찌,장아찌 및 절임,100,G,243,58.11,1.65,0.43,38.16,3.9,41.0,0.0,0.0,30.0,0.0,1126.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/pickled.jpg
 D317-700000000-0001,무장아찌,장아찌 및 절임,100,G,80,16.76,1.47,0.76,9.62,2.4,2.0,17.85,0.0,28.0,0.01,2933.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/pickled.jpg
 D317-704000000-0001,오이지,장아찌 및 절임,100,G,29,2.52,0.82,1.79,1.87,2.1,0.0,0.0,0.0,60.0,0.72,2370.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/pickled.jpg
-D318-705000000-0001,소스/드레싱_간편조리세트_오야꼬동 (밥제외),장류양념,100,G,116,7.66,8.93,5.54,5.93,1.0,0.0,0.09,0.12,18.0,0.71,530.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
-D318-707000000-0001,카레소스_간편조리세트_키마카레&치즈키마카레,장류양념,100,G,136,6.02,9.16,8.38,2.86,1.1,0.0,0.0,0.0,85.0,1.11,264.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D318-705000000-0001,소스/드레싱_간편조리세트_오야꼬동 (밥제외),장 및 양념,100,G,116,7.66,8.93,5.54,5.93,1.0,0.0,0.09,0.12,18.0,0.71,530.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D318-707000000-0001,카레소스_간편조리세트_키마카레&치즈키마카레,장 및 양념,100,G,136,6.02,9.16,8.38,2.86,1.1,0.0,0.0,0.0,85.0,1.11,264.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
 D319-708020000-0001,밀크쉐이크_바닐라,유제품류 및 빙과,100,G,113,17.01,2.43,3.88,16.57,0.3,0.0,0.36,0.0,98.0,0.0,51.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/milk_ice.jpg
 D319-709043900-0001,빙수_인절미_우유얼음,유제품류 및 빙과,100,G,141,19.6,5.97,4.35,14.98,2.0,0.0,1.01,0.0,97.0,0.58,63.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/milk_ice.jpg
 D319-709053900-0001,빙수_팥_우유얼음,유제품류 및 빙과,100,G,146,31.49,3.24,0.79,25.04,1.9,0.0,0.46,0.0,58.0,0.43,51.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/milk_ice.jpg
@@ -2542,8 +2542,8 @@ D214-640000000-0024,샐러드_오렌지 그릴치킨 샐러드,생채 및 무침
 D214-640000000-0025,샐러드_치킨콥 샐러드,생채 및 무침,100,G,124,6.4,5.8,8.4,3.6,0.0,0.0,0.0,0.0,0.0,0.0,286.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoned.jpg
 D214-640000000-0026,샐러드_콥샐러드,생채 및 무침,100,G,120,0.0,6.93,0.0,1.46,0.0,0.0,0.0,0.0,0.0,0.0,277.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoned.jpg
 D214-640000000-0027,샐러드_포테이토&튜나 샐러드,생채 및 무침,100,G,174,0.0,4.41,0.0,4.13,0.0,0.0,0.0,0.0,0.0,0.0,218.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoned.jpg
-D218-705000000-0001,소스/드레싱_이디야초콜릿디핑소스,장류양념,100,G,280,0.0,2.5,0.0,47.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
-D218-707000000-0001,카레소스_치킨마크니 찍먹커리,장류양념,100,G,172,28.01,3.65,0.0,10.24,0.0,0.0,0.0,0.0,0.0,0.0,648.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D218-705000000-0001,소스/드레싱_이디야초콜릿디핑소스,장 및 양념,100,G,280,0.0,2.5,0.0,47.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D218-707000000-0001,카레소스_치킨마크니 찍먹커리,장 및 양념,100,G,172,28.01,3.65,0.0,10.24,0.0,0.0,0.0,0.0,0.0,0.0,648.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
 D219-709000000-0001,빙수_22오리지널 팥빙수,유제품류 및 빙과,100,G,136,0.0,2.68,0.0,18.35,0.0,0.0,0.0,0.0,0.0,0.0,62.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/milk_ice.jpg
 D219-709000000-0002,빙수_그린티 초코 쿨빙수,유제품류 및 빙과,100,G,138,0.0,1.72,0.0,15.5,0.0,0.0,0.0,0.0,0.0,0.0,64.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/milk_ice.jpg
 D219-709000000-0003,빙수_까르보나라 젤빙,유제품류 및 빙과,100,G,158,0.0,2.64,0.0,13.82,0.0,0.0,0.0,0.0,0.0,0.0,209.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/milk_ice.jpg
@@ -3004,12 +3004,12 @@ D514-723000000-0001,해파리냉채,생채 및 무침,100,G,49,8.52,2.5,0.79,4.3
 D514-724000000-0001,햄샐러드,생채 및 무침,100,G,107,13.49,3.6,4.4,4.74,1.2,2.0,8.4,0.0,15.0,0.39,190.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoned.jpg
 D515-672000000-0001,보쌈김치,김치,100,G,47,6.64,2.5,1.4,2.27,1.4,8.0,9.19,0.12,89.0,1.38,1935.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/kimchi.jpg
 D515-678000000-0001,오이김치,김치,100,G,39,7.77,2.6,0.29,2.25,2.2,22.0,13.54,0.0,38.0,0.8,1947.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/kimchi.jpg
-D518-706000000-0001,짜장소스,장류양념,100,G,101,12.86,4.3,3.71,4.15,2.4,28.0,8.12,0.1,24.0,0.48,538.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
-D518-707000000-0001,카레소스,장류양념,100,G,70,9.75,2.7,2.33,2.22,1.3,34.0,5.11,0.02,17.0,0.39,376.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
-D518-708000000-0001,고춧가루 양념장,장류양념,100,G,140,14.39,5.9,7.19,1.95,4.9,57.0,1.44,0.0,85.0,2.17,1416.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
-D518-710000000-0001,쌈장,장류양념,100,G,142,20.14,6.5,4.55,8.64,5.2,57.0,2.13,0.0,54.0,1.31,2335.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
-D518-711000000-0001,양념초장,장류양념,100,G,134,21.8,10.4,1.03,1.39,3.8,46.0,0.0,0.0,39.0,2.07,4784.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
-D518-712000000-0001,초간장,장류양념,100,G,73,12.19,6.1,0.0,0.0,0.5,0.0,0.0,0.0,18.0,1.12,3190.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D518-706000000-0001,짜장소스,장 및 양념,100,G,101,12.86,4.3,3.71,4.15,2.4,28.0,8.12,0.1,24.0,0.48,538.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D518-707000000-0001,카레소스,장 및 양념,100,G,70,9.75,2.7,2.33,2.22,1.3,34.0,5.11,0.02,17.0,0.39,376.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D518-708000000-0001,고춧가루 양념장,장 및 양념,100,G,140,14.39,5.9,7.19,1.95,4.9,57.0,1.44,0.0,85.0,2.17,1416.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D518-710000000-0001,쌈장,장 및 양념,100,G,142,20.14,6.5,4.55,8.64,5.2,57.0,2.13,0.0,54.0,1.31,2335.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D518-711000000-0001,양념초장,장 및 양념,100,G,134,21.8,10.4,1.03,1.39,3.8,46.0,0.0,0.0,39.0,2.07,4784.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D518-712000000-0001,초간장,장 및 양념,100,G,73,12.19,6.1,0.0,0.0,0.5,0.0,0.0,0.0,18.0,1.12,3190.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
 D519-716000000-0001,팥빙수,유제품류 및 빙과,100,G,99,20.99,2.2,0.82,11.78,1.4,50.0,4.87,0.07,15.0,0.59,34.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/milk_ice.jpg
 D520-756000000-0001,딸기바나나 스무디,음료 및 차,100,ML,54,11.75,1.1,0.68,9.34,0.9,10.0,19.51,0.02,29.0,0.17,11.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/beverage.jpg
 D520-757000000-0001,미숫가루(선식)음료,음료 및 차,100,ML,128,27.73,2.9,1.1,12.67,2.6,0.0,0.0,0.0,11.0,0.81,1.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/beverage.jpg
@@ -3851,7 +3851,7 @@ D427-763000000-0001,모듬회,어류 및 육류,100,G,133,5.15,22.5,2.31,2.44,0.
 D417-703000000-0001,오이장아찌,장아찌 및 절임,100,G,71,7.71,1.9,3.83,4.03,1.2,2.0,4.09,0.0,40.0,0.74,1991.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/pickled.jpg
 D417-706000000-0001,무말랭이장아찌,장아찌 및 절임,100,G,117,18.34,4.1,3.23,6.61,6.8,7.0,13.28,0.0,97.0,1.41,1287.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/pickled.jpg
 D417-707000000-0001,무숙장아찌,장아찌 및 절임,100,G,93,4.78,3.7,6.44,2.36,1.0,13.0,3.94,0.0,26.0,0.66,1391.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/pickled.jpg
-D418-709000000-0001,기름장,장류양념,100,G,640,0.92,0.2,69.06,0.01,0.3,1.0,0.0,0.0,44.0,1.46,7518.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
+D418-709000000-0001,기름장,장 및 양념,100,G,640,0.92,0.2,69.06,0.01,0.3,1.0,0.0,0.0,44.0,1.46,7518.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/seasoning.jpg
 D420-754000000-0001,두유 카페라떼,음료 및 차,100,ML,30,2.12,1.4,1.76,1.34,0.3,0.0,4.33,0.7,36.0,0.25,32.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/beverage.jpg
 D420-754200000-0001,두유 카페라떼_시럽,음료 및 차,100,ML,44,5.79,1.4,1.76,4.65,0.3,0.0,4.33,0.7,42.0,0.25,33.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/beverage.jpg
 D420-755000000-0001,딸기넥타,음료 및 차,100,ML,31,7.96,0.4,0.09,6.39,0.7,0.0,31.38,0.0,7.0,0.18,6.0,https://pickeat-prod-bucket.s3.ap-northeast-2.amazonaws.com/food-category/beverage.jpg
