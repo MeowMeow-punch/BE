@@ -1,0 +1,86 @@
+services:
+  # [Spring Boot Application]
+  # GHCR에서 빌드된 이미지를 Pull 받아 실행합니다.
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/pickeat-be:latest
+    container_name: pickeat-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Secrets에서 생성된 .env 파일의 값을 사용
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SENTRY_DSN: ${SENTRY_DSN}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      WELSTORY_USERNAME: ${WELSTORY_USERNAME}
+      WELSTORY_PASSWORD: ${WELSTORY_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # Social Login
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY}
+      KAKAO_REDIRECT_URL: ${KAKAO_REDIRECT_URL}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      NAVER_REST_API_KEY: ${NAVER_REST_API_KEY}
+      NAVER_REDIRECT_URL: ${NAVER_REDIRECT_URL}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET}
+      GOOGLE_REST_API_KEY: ${GOOGLE_REST_API_KEY}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pickeat-network
+    restart: always
+
+  # [Redis]
+  redis:
+    image: redis:7
+    container_name: pickeat-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - pickeat-network
+
+  # [PostgreSQL Database]
+  postgres:
+    image: postgres:16
+    container_name: pickeat-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - pickeat-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  pickeat-network:
+    driver: bridge
