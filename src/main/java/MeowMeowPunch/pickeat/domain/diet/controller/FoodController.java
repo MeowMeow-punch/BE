@@ -44,7 +44,7 @@ public class FoodController {
 		@RequestParam(name = "category", required = false) String category
 	) {
 		FoodListResponse data = foodService.getFoodList(cursor, size, category);
-		return ResTemplate.success(HttpStatus.OK, "식 리스트 조회 성공", data);
+		return ResTemplate.success(HttpStatus.OK, "음식 리스트 조회 성공", data);
 	}
 
 	/**
@@ -64,6 +64,6 @@ public class FoodController {
 		@RequestParam(name = "category", required = false) String category
 	) {
 		FoodSearchResponse data = foodService.search(keyword, cursor, size, category);
-		return ResTemplate.success(HttpStatus.OK, "식 검색 성공", data);
+		return ResTemplate.success(HttpStatus.OK, "음식 검색 성공", data);
 	}
 }
