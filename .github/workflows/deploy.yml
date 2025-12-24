@@ -1,0 +1,114 @@
+name: Deploy to EC2 (SSM)
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  IMAGE_NAME: pickeat-be
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: 'gradle'
+
+    # [CI] application.yaml 생성
+    - name: Create application.yaml
+      run: |
+        mkdir -p ./src/main/resources
+        echo "${{ secrets.APPLICATION_YAML }}" > ./src/main/resources/application.yaml
+      shell: bash
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew bootJar -x test
+
+    - name: Lowercase Repository Owner
+      run: |
+        echo "OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcr.io/${{ env.OWNER_LOWER }}/${{ env.IMAGE_NAME }}:latest
+          ghcr.io/${{ env.OWNER_LOWER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Lowercase Repository Owner
+      run: |
+        echo "OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+    # [Deploy] AWS SSM으로 배포 명령 전송
+    # SSH와 달리 파일 전송이 까다로우므로, cat/echo 명령어를 사용하여 EC2 내부에서 파일을 생성합니다.
+    - name: Deploy via AWS SSM
+      run: |
+        aws ssm send-command \
+          --document-name "AWS-RunShellScript" \
+          --targets "Key=instanceids,Values=${{ secrets.INSTANCE_ID }}" \
+          --comment "Deploy PickEat Backend" \
+          --parameters commands='[
+            "mkdir -p /home/ubuntu/app",
+            "cd /home/ubuntu/app",
+            
+            "echo \"Setting up .env file...\"",
+            "echo \"${{ secrets.ENV_FILE }}\" > .env",
+            
+            "echo \"Setting up docker-compose.prod.yml...\"",
+            "cat <<EOF > docker-compose.prod.yml",
+            "$(cat docker-compose.prod.yml)",
+            "EOF",
+            
+            "echo \"Logging into GHCR...\"",
+            "echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin",
+            
+            "echo \"Pulling latest image...\"",
+            "export GITHUB_REPOSITORY_OWNER=${{ env.OWNER_LOWER }}",
+            "docker-compose -f docker-compose.prod.yml pull",
+            
+            "echo \"Restarting containers...\"",
+            "docker-compose -f docker-compose.prod.yml up -d",
+            
+            "echo \"Cleaning up...\"",
+            "docker image prune -f"
+          ]' \
+          --output text
