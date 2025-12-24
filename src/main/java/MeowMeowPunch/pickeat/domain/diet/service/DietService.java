@@ -467,10 +467,6 @@ public class DietService {
 	public void delete(String userId, Long dietId) {
         Diet diet = getOwnedDietOrThrow(userId, dietId);
 
-		if (!diet.isEditable()) {
-			throw new DietNotEditableException(dietId);
-		}
-
 		dietFoodRepository.deleteAllByDietId(dietId);
 		dietRepository.delete(diet);
 
