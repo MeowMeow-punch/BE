@@ -7,8 +7,7 @@ public record DietDetailItem(
 	int amount,
 	int quantity,
 	int calorie,
-	Nutrients nutrients,
-	String thumbnailUrl
+	Nutrients nutrients
 ) {
 	public static DietDetailItem from(FoodItem item, int quantity) {
 		return new DietDetailItem(
@@ -21,8 +20,7 @@ public record DietDetailItem(
 				item.nutrients().carbs() * quantity,
 				item.nutrients().protein() * quantity,
 				item.nutrients().fat() * quantity
-			),
-			item.thumbnailUrl()
+			)
 		);
 	}
 }

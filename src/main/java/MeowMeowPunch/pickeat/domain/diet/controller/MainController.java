@@ -3,11 +3,15 @@ package MeowMeowPunch.pickeat.domain.diet.controller;
 import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietHomeResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
@@ -28,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @RequestMapping("/diet")
 public class MainController {
-	private final DietService dietService;
+    private final DietService dietService;
 
 	/**
 	 * [API] 메인 페이지 조회
@@ -36,12 +40,12 @@ public class MainController {
 	 * @param principal 사용자 식별자
 	 * @return DietHomeResponse
 	 */
-	@GetMapping("/main")
-	public ResTemplate<DietHomeResponse> getDiet(
+    @GetMapping("/main")
+    public ResTemplate<DietHomeResponse> getDiet(
         @AuthenticationPrincipal UserPrincipal principal
-	) {
+    ) {
         String userId = principal.getUserId().toString();
-		DietHomeResponse data = dietService.getHome(userId);
-		return ResTemplate.success(HttpStatus.OK, "메인페이지 조회 성공", data);
-	}
+        DietHomeResponse data = dietService.getHome(userId);
+        return ResTemplate.success(HttpStatus.OK, "메인페이지 조회 성공", data);
+    }
 }

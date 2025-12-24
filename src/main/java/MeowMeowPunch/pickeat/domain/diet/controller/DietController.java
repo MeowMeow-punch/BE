@@ -1,5 +1,6 @@
 package MeowMeowPunch.pickeat.domain.diet.controller;
 
+import MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest;
 import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -183,4 +184,17 @@ public class DietController {
 		dietService.delete(userId, myDietId);
 		return ResTemplate.success(HttpStatus.OK, "식단 삭제 성공");
 	}
+
+    /**
+     * [API] 웰스토리 주간식단에서 특정 메뉴를 내 식단으로 등록
+     */
+    @PostMapping("/restaurant/register")
+    public ResTemplate<DietRegisterResponse> registerWelstoryDiet(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody RegisterWelstoryDietRequest request
+    ) {
+        String userId = principal.getUserId().toString();
+        DietRegisterResponse data = dietService.registerWelstoryDiet(userId, request);
+        return ResTemplate.success(HttpStatus.OK, "웰스토리 식단 등록 성공", data);
+    }
 }
