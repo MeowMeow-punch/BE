@@ -1,5 +1,6 @@
 package MeowMeowPunch.pickeat.domain.auth.client;
 
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 
@@ -20,53 +21,53 @@ import com.fasterxml.jackson.databind.JsonNode;
 import MeowMeowPunch.pickeat.domain.auth.dto.response.SocialUserInfo;
 import MeowMeowPunch.pickeat.domain.auth.exception.SocialAuthException;
 import MeowMeowPunch.pickeat.global.common.enums.OAuthProvider;
-import MeowMeowPunch.pickeat.global.config.KakaoProperties;
+import MeowMeowPunch.pickeat.global.config.GoogleProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * [Auth][Client] KakaoAuthClient
+ * [Auth][Client] GoogleAuthClient
  * 
- * 카카오 소셜 로그인 API 연동 구현체.
- * 공식 문서: https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api
+ * 구글 소셜 로그인 API 연동 구현체.
+ * 공식 문서: https://developers.google.com/identity/protocols/oauth2/web-server
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class KakaoAuthClient implements SocialAuthClient {
+public class GoogleAuthClient implements SocialAuthClient {
 
-	private final KakaoProperties kakaoProperties;
+	private final GoogleProperties googleProperties;
 	private final RestTemplate restTemplate;
 
-	private static final String TOKEN_URL = "https://kauth.kakao.com/oauth/token";
-	private static final String USER_INFO_URL = "https://kapi.kakao.com/v2/user/me";
+	private static final String TOKEN_URL = "https://oauth2.googleapis.com/token";
+	private static final String USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 
 	@Override
 	public OAuthProvider getProvider() {
-		return OAuthProvider.KAKAO;
+		return OAuthProvider.GOOGLE;
 	}
 
 	/**
-	 * [Kakao] 인가 코드로 액세스 토큰 요청
+	 * [Google] 인가 코드로 액세스 토큰 요청
 	 * 
-	 * @param code 카카오 인가 코드
+	 * @param code 구글 인가 코드
 	 * @return Access Token
-	 * @throws RuntimeException 토큰 발급 실패 시
+	 * @throws SocialAuthException 토큰 발급 실패 시
 	 */
 	@Override
 	public String requestAccessToken(String code) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-		headers.setAcceptCharset(Collections.singletonList(StandardCharsets.UTF_8));
+
+		// 구글은 redirect_uri가 인코딩된 상태로 오면 이중 인코딩 문제가 발생할 수 있으므로 디코딩 처리
+		String decodedCode = URLDecoder.decode(code, StandardCharsets.UTF_8);
 
 		MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
 		body.add("grant_type", "authorization_code");
-		body.add("client_id", kakaoProperties.getClientId());
-		body.add("redirect_uri", kakaoProperties.getRedirectUri());
-		body.add("code", code);
-		if (kakaoProperties.getClientSecret() != null) {
-			body.add("client_secret", kakaoProperties.getClientSecret());
-		}
+		body.add("client_id", googleProperties.getClientId());
+		body.add("client_secret", googleProperties.getClientSecret());
+		body.add("redirect_uri", googleProperties.getRedirectUri());
+		body.add("code", decodedCode);
 
 		HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
@@ -74,30 +75,29 @@ public class KakaoAuthClient implements SocialAuthClient {
 			ResponseEntity<JsonNode> response = restTemplate.postForEntity(TOKEN_URL, request, JsonNode.class);
 
 			if (response.getBody() == null || !response.getBody().has("access_token")) {
-				log.error("[KakaoAuth] 토큰 응답 본문이 비어있거나 access_token이 없습니다.");
-				throw SocialAuthException.tokenIssuanceFailed("카카오");
+				log.error("[GoogleAuth] 토큰 응답 본문이 비어있거나 access_token이 없습니다.");
+				throw SocialAuthException.tokenIssuanceFailed("구글");
 			}
 
 			return response.getBody().get("access_token").asText();
+
 		} catch (HttpClientErrorException | HttpServerErrorException e) {
-			log.error("[KakaoAuth] 토큰 발급 요청 실패: status={}, body={}", e.getStatusCode(),
+			log.error("[GoogleAuth] 토큰 발급 요청 실패: status={}, body={}", e.getStatusCode(),
 					e.getResponseBodyAsString());
-			throw SocialAuthException.serverError("카카오", e);
+			throw SocialAuthException.serverError("구글", e);
 		}
 	}
 
 	/**
-	 * [Kakao] 액세스 토큰으로 사용자 정보 조회
+	 * [Google] 액세스 토큰으로 사용자 정보 조회
 	 * 
-	 * @param accessToken 카카오 액세스 토큰
-	 * @return SocialUserInfo (ID, Nickname, Email)
+	 * @param accessToken 구글 액세스 토큰
+	 * @return SocialUserInfo (ID)
 	 */
 	@Override
 	public SocialUserInfo getUserInfo(String accessToken) {
 		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 		headers.setBearerAuth(accessToken);
-		headers.setAcceptCharset(Collections.singletonList(StandardCharsets.UTF_8));
 
 		HttpEntity<Void> request = new HttpEntity<>(headers);
 
@@ -107,17 +107,22 @@ public class KakaoAuthClient implements SocialAuthClient {
 			JsonNode body = response.getBody();
 
 			if (body == null) {
-				log.error("[KakaoAuth] 사용자 정보 응답 본문이 비어있습니다.");
-				throw SocialAuthException.userInfoFailed("카카오");
+				log.error("[GoogleAuth] 사용자 정보 응답 본문이 비어있습니다.");
+				throw SocialAuthException.userInfoFailed("구글");
 			}
 
-			String id = String.valueOf(body.get("id").asLong());
-			return SocialUserInfo.of(id, OAuthProvider.KAKAO);
+			if (!body.has("id")) {
+				log.error("[GoogleAuth] 사용자 정보 응답에 'id' 필드가 없습니다.");
+				throw SocialAuthException.userInfoFailed("구글");
+			}
+
+			String id = body.get("id").asText();
+			return SocialUserInfo.of(id, OAuthProvider.GOOGLE);
 
 		} catch (HttpClientErrorException | HttpServerErrorException e) {
-			log.error("[KakaoAuth] 사용자 정보 조회 요청 실패: status={}, body={}", e.getStatusCode(),
+			log.error("[GoogleAuth] 사용자 정보 조회 요청 실패: status={}, body={}", e.getStatusCode(),
 					e.getResponseBodyAsString());
-			throw SocialAuthException.userInfoFailed("카카오", e);
+			throw SocialAuthException.userInfoFailed("구글", e);
 		}
 	}
 }
