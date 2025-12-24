@@ -51,8 +51,8 @@ import MeowMeowPunch.pickeat.global.common.dto.response.diet.AiFeedBack;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.RestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfoContext;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
@@ -204,21 +204,21 @@ public class DietService {
 			.collect(Collectors.toMap(Food::getId, Function.identity()));
 		validateFoodsExist(foodIds, foodById);
 
-        Map<Long, List<String>> thumbnailsByDietId = DietPageAssembler.buildThumbnailsByDiet(dietFoodsByDietId,
-                foodById);
+		Map<Long, List<String>> thumbnailsByDietId = DietPageAssembler.buildThumbnailsByDiet(dietFoodsByDietId,
+			foodById);
 
-        List<TodayDietInfo> todayDietInfo = diets.stream()
-                .map(diet -> {
-                    List<String> thumbs = thumbnailsByDietId.getOrDefault(diet.getId(), List.of());
-                    if (thumbs.isEmpty()) {
-                        List<String> fallback = DietPageAssembler.toThumbnailList(diet.getThumbnailUrl());
-                        if (!fallback.isEmpty()) {
-                            thumbs = fallback;
-                        }
-                    }
-                    return DietPageAssembler.toTodayDietInfo(diet, thumbs);
-                })
-                .toList();
+		List<TodayDietInfo> todayDietInfo = diets.stream()
+			.map(diet -> {
+				List<String> thumbs = thumbnailsByDietId.getOrDefault(diet.getId(), List.of());
+				if (thumbs.isEmpty()) {
+					List<String> fallback = DietPageAssembler.toThumbnailList(diet.getThumbnailUrl());
+					if (!fallback.isEmpty()) {
+						thumbs = fallback;
+					}
+				}
+				return DietPageAssembler.toTodayDietInfo(diet, thumbs);
+			})
+			.toList();
 
 		Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu = buildTodayRestaurantMenu(
 			targetDate,
@@ -348,7 +348,7 @@ public class DietService {
 	 */
 	@Transactional
 	public DietRegisterResponse registerRecommendation(String userId, Long recommendationId) {
-        RecommendedDiet recommended = getOwnedRecommendedOrThrow(userId, recommendationId);
+		RecommendedDiet recommended = getOwnedRecommendedOrThrow(userId, recommendationId);
 
 		DietSourceType sourceType = recommended.getSourceType() != null ? recommended.getSourceType()
 			: DietSourceType.FOOD_DB;
@@ -406,7 +406,7 @@ public class DietService {
 						.build());
 			}
 		}
-        dietRecommendationService.generateDailyFeedback(userId, date);
+		dietRecommendationService.generateDailyFeedback(userId, date);
 		return DietRegisterResponse.from(saved.getId());
 	}
 
@@ -414,24 +414,27 @@ public class DietService {
 	 * [Register] 웰스토리 주간식단에서 특정 메뉴를 내 식단으로 등록
 	 */
 	@Transactional
-	public DietRegisterResponse registerWelstoryDiet(String userId, MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest request) {
+	public DietRegisterResponse registerWelstoryDiet(String userId,
+		MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest request) {
 		LocalDate date = parseDateOrToday(request.date());
-        DietType mealType = request.mealType();
+		DietType mealType = request.mealType();
 
-        java.util.UUID uid = java.util.UUID.fromString(userId);
-        MeowMeowPunch.pickeat.domain.auth.entity.User user = userRepository.findById(uid)
-            .orElseThrow(MeowMeowPunch.pickeat.domain.diet.exception.UserNotFoundException::new);
-        String userGroupId = user.getGroupId();
-        MeowMeowPunch.pickeat.welstory.entity.GroupMapping mapping = groupMappingRepository
-            .findByGroupId(userGroupId)
-            .orElseThrow(() -> new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryGroupNotFoundException(userGroupId));
+		java.util.UUID uid = java.util.UUID.fromString(userId);
+		MeowMeowPunch.pickeat.domain.auth.entity.User user = userRepository.findById(uid)
+			.orElseThrow(MeowMeowPunch.pickeat.domain.diet.exception.UserNotFoundException::new);
+		String userGroupId = user.getGroupId();
+		MeowMeowPunch.pickeat.welstory.entity.GroupMapping mapping = groupMappingRepository
+			.findByGroupId(userGroupId)
+			.orElseThrow(
+				() -> new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryGroupNotFoundException(userGroupId));
 
 		int dateYyyymmdd = toYyyymmdd(date);
 		String mealTimeId = mealTimeIdForSlot(mealType);
 		java.util.List<MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem> menus = welstoryMenuService
 			.getMenus(mapping.getGroupId(), dateYyyymmdd, mealTimeId, mealType.name());
 		if (menus.isEmpty()) {
-			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuNotFoundException(request.restaurantName(), request.menuName());
+			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuNotFoundException(
+				request.restaurantName(), request.menuName());
 		}
 
 		String targetRestaurant = normalize(request.restaurantName());
@@ -442,10 +445,12 @@ public class DietService {
 			.toList();
 
 		if (matched.isEmpty()) {
-			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuNotFoundException(request.restaurantName(), request.menuName());
+			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuNotFoundException(
+				request.restaurantName(), request.menuName());
 		}
 		if (matched.size() > 1) {
-			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuAmbiguousException(request.restaurantName(), request.menuName());
+			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuAmbiguousException(
+				request.restaurantName(), request.menuName());
 		}
 		MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem menu = matched.getFirst();
 
@@ -455,7 +460,8 @@ public class DietService {
 		java.math.BigDecimal totalFat = java.math.BigDecimal.ZERO;
 
 		if (notBlank(menu.hallNo()) && notBlank(menu.menuCourseType())) {
-			var nutrients = welstoryMenuService.getNutrients(menu.restaurantId(), dateYyyymmdd, mealTimeId, menu.hallNo(), menu.menuCourseType());
+			var nutrients = welstoryMenuService.getNutrients(menu.restaurantId(), dateYyyymmdd, mealTimeId,
+				menu.hallNo(), menu.menuCourseType());
 			for (var n : nutrients) {
 				totalKcal = totalKcal.add(toBigDecimal(n.kcal()));
 				totalCarbs = totalCarbs.add(toBigDecimal(n.totCho()));
@@ -490,13 +496,16 @@ public class DietService {
 	}
 
 	private String normalize(String s) {
-		if (s == null) return "";
+		if (s == null)
+			return "";
 		return s.toLowerCase()
 			.replaceAll("[\\s\\p{Z}]+", "")
 			.replaceAll("[()\u3000\u3001\u3002\uFF08\uFF09{}·∙・·.,_-]", "");
 	}
 
-	private boolean notBlank(String v) { return v != null && !v.isBlank(); }
+	private boolean notBlank(String v) {
+		return v != null && !v.isBlank();
+	}
 
 	private java.math.BigDecimal toBigDecimal(String value) {
 		if (value == null || value.isBlank()) {
@@ -504,7 +513,8 @@ public class DietService {
 		}
 		try {
 			String cleaned = value.replace(",", "").trim();
-			if (cleaned.startsWith(".")) cleaned = "0" + cleaned;
+			if (cleaned.startsWith("."))
+				cleaned = "0" + cleaned;
 			return new java.math.BigDecimal(cleaned);
 		} catch (Exception e) {
 			return java.math.BigDecimal.ZERO;
@@ -585,31 +595,31 @@ public class DietService {
 	 * @param dietId 식단 ID
 	 */
 	@Transactional
-    public void delete(String userId, Long dietId) {
-        Diet diet = getOwnedDietOrThrow(userId, dietId);
+	public void delete(String userId, Long dietId) {
+		Diet diet = getOwnedDietOrThrow(userId, dietId);
 
-        // 수정은 막되, 삭제는 허용: 비편집 식단(WELSTORY 등)도 삭제 가능하도록 변경
-        // 기존 정책상 editable=false면 수정 불가이며, 삭제는 허용
+		// 수정은 막되, 삭제는 허용: 비편집 식단(WELSTORY 등)도 삭제 가능하도록 변경
+		// 기존 정책상 editable=false면 수정 불가이며, 삭제는 허용
 
-        dietFoodRepository.deleteAllByDietId(dietId);
-        dietRepository.delete(diet);
+		dietFoodRepository.deleteAllByDietId(dietId);
+		dietRepository.delete(diet);
 
-        dietRecommendationService.generateDailyFeedback(userId, diet.getDate());
-    }
+		dietRecommendationService.generateDailyFeedback(userId, diet.getDate());
+	}
 
-    // 공통 검증 메서드
-    private Diet getOwnedDietOrThrow(String userId, Long dietId) {
-        return dietRepository.findByIdAndUserId(dietId, userId)
-                .orElseThrow(() -> new DietNotFoundException(dietId));
-    }
+	// 공통 검증 메서드
+	private Diet getOwnedDietOrThrow(String userId, Long dietId) {
+		return dietRepository.findByIdAndUserId(dietId, userId)
+			.orElseThrow(() -> new DietNotFoundException(dietId));
+	}
 
-    private Diet getOwnedDietDetailOrThrow(String userId, Long dietId) {
-        return dietRepository.findByIdAndUserId(dietId, userId)
-                .orElseThrow(() -> new DietDetailNotFoundException(dietId));
-    }
+	private Diet getOwnedDietDetailOrThrow(String userId, Long dietId) {
+		return dietRepository.findByIdAndUserId(dietId, userId)
+			.orElseThrow(() -> new DietDetailNotFoundException(dietId));
+	}
 
-    private RecommendedDiet getOwnedRecommendedOrThrow(String userId, Long recommendationId) {
-        return recommendedDietRepository.findByIdAndUserId(recommendationId, userId)
-                .orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
-    }
+	private RecommendedDiet getOwnedRecommendedOrThrow(String userId, Long recommendationId) {
+		return recommendedDietRepository.findByIdAndUserId(recommendationId, userId)
+			.orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
+	}
 }
