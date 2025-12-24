@@ -81,6 +81,40 @@ services:
     networks:
       - pickeat-network
 
+  # [Importer Service]
+  # 초기 데이터 로딩을 위한 일회성 컨테이너
+  importer:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/pickeat-be:latest
+    container_name: pickeat-importer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Importer 프로필 활성화
+      SPRING_PROFILES_ACTIVE: importer
+      # DB 접속 정보
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Timezone
+      TZ: Asia/Seoul
+      # CSV 경로 (Dockerfile에서 /app/data로 COPY됨)
+      FOODS_CSV_PATH: /app/data/foods.csv
+    # Importer 실행 명령어
+    command:
+      [
+        "java",
+        "-jar",
+        "app.jar",
+        "--spring.profiles.active=importer",
+        "--foods.csv-path=/app/data/foods.csv",
+        "--welstory.group-mapping.csv-path=/app/data/group_mapping.csv",
+      ]
+    networks:
+      - pickeat-network
+    # 작업 완료 후 종료 (재시작 안 함)
+    restart: "no"
+
 volumes:
   postgres_data:
   redis_data:

@@ -21,5 +21,9 @@ WORKDIR /app
 # 빌드 단계에서 생성된 JAR 파일만 복사 (builder 별칭 사용)
 COPY --from=builder /workspace/app/build/libs/*.jar app.jar
 
+# [Data] Importer용 CSV 파일 복사
+# src/main/resources/data 폴더의 내용을 컨테이너의 /app/data로 복사합니다.
+COPY src/main/resources/data /app/data
+
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","app.jar"]
