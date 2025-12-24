@@ -9,16 +9,21 @@ import MeowMeowPunch.pickeat.global.common.dto.response.diet.FoodSummary;
 
 @Mapper
 public interface FoodMapper {
-	List<FoodSummary> findFoodSummariesForCursor(
-		@Param("cursorId") Long cursorId,
-		@Param("limit") int limit
-	);
+    List<FoodSummary> findFoodSummariesForCursor(
+        @Param("cursorId") Long cursorId,
+        @Param("limit") int limit,
+        @Param("categoryPatterns") List<String> categoryPatterns
+    );
 
-	List<FoodSummary> findFoodSummariesByKeyword(
-		@Param("keyword") String keyword,
-		@Param("cursorId") Long cursorId,
-		@Param("limit") int limit
-	);
+    List<FoodSummary> findFoodSummariesByKeyword(
+        @Param("keyword") String keyword,
+        @Param("cursorId") Long cursorId,
+        @Param("limit") int limit,
+        @Param("categoryPatterns") List<String> categoryPatterns
+    );
 
-	int findFoodsByKeywordCount(@Param("keyword") String keyword);
+    int findFoodsByKeywordCount(
+        @Param("keyword") String keyword,
+        @Param("categoryPatterns") List<String> categoryPatterns
+    );
 }

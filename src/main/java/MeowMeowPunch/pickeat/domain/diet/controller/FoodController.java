@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
  * Client ▶ FoodController ▶ FoodService ▶ Repository
  * </pre>
  *
- * - 응답은 ResTemplate(code/message/data) 일관 포맷
+ * - 응답은 ResTemplate(code/message/data) 포맷
  */
 @RestController
 @RequiredArgsConstructor
@@ -34,15 +34,17 @@ public class FoodController {
 	 *
 	 * @param cursor 다음 페이지 커서
 	 * @param size   페이지 크기
+	 * @param category 카테고리(옵션, 한글 라벨)
 	 * @return FoodListResponse
 	 */
 	@GetMapping("/food/list")
 	public ResTemplate<FoodListResponse> getFoodList(
 		@RequestParam(name = "cursor", required = false) String cursor,
-		@RequestParam(name = "size", required = false) Integer size
+		@RequestParam(name = "size", required = false) Integer size,
+		@RequestParam(name = "category", required = false) String category
 	) {
-		FoodListResponse data = foodService.getFoodList(cursor, size);
-		return ResTemplate.success(HttpStatus.OK, "음식 리스트 조회 성공", data);
+		FoodListResponse data = foodService.getFoodList(cursor, size, category);
+		return ResTemplate.success(HttpStatus.OK, "식 리스트 조회 성공", data);
 	}
 
 	/**
@@ -51,15 +53,17 @@ public class FoodController {
 	 * @param keyword 검색 키워드
 	 * @param cursor  다음 페이지 커서
 	 * @param size    페이지 크기
+	 * @param category 카테고리(옵션, 한글 라벨)
 	 * @return FoodSearchResponse
 	 */
 	@GetMapping("/food")
 	public ResTemplate<FoodSearchResponse> getSearchFood(
 		@RequestParam(name = "keyword") String keyword,
 		@RequestParam(name = "cursor", required = false) String cursor,
-		@RequestParam(name = "size", required = false) Integer size
+		@RequestParam(name = "size", required = false) Integer size,
+		@RequestParam(name = "category", required = false) String category
 	) {
-		FoodSearchResponse data = foodService.search(keyword, cursor, size);
-		return ResTemplate.success(HttpStatus.OK, "음식 검색 성공", data);
+		FoodSearchResponse data = foodService.search(keyword, cursor, size, category);
+		return ResTemplate.success(HttpStatus.OK, "식 검색 성공", data);
 	}
 }
