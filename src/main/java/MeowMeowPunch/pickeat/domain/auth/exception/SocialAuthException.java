@@ -28,6 +28,10 @@ public class SocialAuthException extends InternalServerErrorGroupException {
 		return new SocialAuthException(provider + " 사용자 정보 조회에 실패했습니다.");
 	}
 
+	public static SocialAuthException userInfoFailed(String provider, Throwable cause) {
+		return new SocialAuthException(provider + " 사용자 정보 조회에 실패했습니다.", cause);
+	}
+
 	public static SocialAuthException serverError(String provider, Throwable cause) {
 		return new SocialAuthException(provider + " 서버 통신 중 오류가 발생했습니다.", cause);
 	}
