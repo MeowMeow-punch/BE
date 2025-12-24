@@ -1,7 +1,7 @@
 plugins {
-	id 'java'
-	id 'org.springframework.boot' version '3.5.8'
-	id 'io.spring.dependency-management' version '1.1.7'
+    id 'java'
+    id 'org.springframework.boot' version '3.5.8'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'MeowMeowPunch'
@@ -9,31 +9,34 @@ version = '0.0.1-SNAPSHOT'
 description = '냥냥펀치의 도전기'
 
 java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
-	}
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 configurations {
-	compileOnly {
-		extendsFrom annotationProcessor
-	}
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
 }
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.5'
-	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'com.mysql:mysql-connector-j'
-	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.5'
+    compileOnly 'org.projectlombok:lombok'
+    // MySQL → PostgreSQL 드라이버로 교체
+    runtimeOnly 'org.postgresql:postgresql:42.7.4'
+    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     /* ====== 1. Sentry ====== */
 //    implementation 'io.sentry:sentry-spring-boot-starter-jakarta:7.10.0'
@@ -42,9 +45,9 @@ dependencies {
     /* ====== 2. Logback ====== */
     // Spring Boot에는 기본적으로 logback-classic 포함되어 있으므로 보통 추가 불필요
     // 커스텀 RollingPolicy 등을 쓰고 싶으면 아래 추가
-	implementation "net.logstash.logback:logstash-logback-encoder:7.4"
+    implementation "net.logstash.logback:logstash-logback-encoder:7.4"
 
-	/* ====== 3. Metrics (Micrometer) ====== */
+    /* ====== 3. Metrics (Micrometer) ====== */
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
     /* ====== 4. Spring Boot Actuator ====== */
@@ -53,8 +56,24 @@ dependencies {
     /* ====== 5. Spring Security ====== */
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
+    /* ====== 6. Csv ====== */
+    implementation 'org.apache.commons:commons-csv:1.11.0'
+
+    /* ====== 7. Redis ====== */
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    /* ====== 8. JWT ====== */
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    /* ====== 9. WebClient ====== */
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    /* ====== 10. Json 매핑 ====== */
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+    useJUnitPlatform()
 }

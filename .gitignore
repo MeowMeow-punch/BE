@@ -6,6 +6,7 @@ src/main/resources/application.yaml
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+AGENTS.md
 
 ### STS ###
 .apt_generated
@@ -37,3 +38,9 @@ out/
 
 ### VS Code ###
 .vscode/
+.DS_Store
+
+tmp_before.txt
+tmp_dc.txt
+/tmp_slice.txt
+/tmp_dpa_getgroup.txt
