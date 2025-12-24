@@ -57,7 +57,7 @@ public class WelstoryRestaurant {
             try {
                 var body = client.unwrap(res, "식단 리스트 조회");
                 var data = body.data();
-                if (data == null || data.mealList() == null) {
+                if (data.mealList() == null) {
                     log.info("[Welstory][Restaurant] data null (attempt={}): restaurantId={}, date={}, timeId={}",
                             attempt + 1, id, dateYyyymmdd, mealTimeId);
                     if (attempt == 0) {
