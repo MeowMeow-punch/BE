@@ -153,6 +153,25 @@ public class DietService {
 	}
 
 	/**
+	 * [API] 추천 식단 재생성(항상 신규)
+	 */
+	public HomeRecommendationResult retryHomeRecommendation(String userId) {
+		User user = userRepository.findById(UUID.fromString(userId))
+			.orElseThrow(UserNotFoundException::new);
+
+		Focus focus = user.getFocus();
+		LocalDate todayDate = LocalDate.now(KOREA_ZONE);
+		DietType currentSlot = mealSlot(LocalTime.now(KOREA_ZONE));
+
+		boolean hasCurrentMeal = dietRepository.existsByUserIdAndDateAndStatus(userId, todayDate, currentSlot);
+		DietType targetSlot = hasCurrentMeal ? nextSlot(currentSlot) : currentSlot;
+
+		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, todayDate);
+
+		return dietRecommendationService.recommendTopFoods(userId, focus, totals, targetSlot, true, true);
+	}
+
+	/**
 	 * [Daily] 특정 날짜 식단 페이지 조회
 	 *
 	 * @param userId  사용자 식별자
@@ -621,5 +640,13 @@ public class DietService {
 	private RecommendedDiet getOwnedRecommendedOrThrow(String userId, Long recommendationId) {
 		return recommendedDietRepository.findByIdAndUserId(recommendationId, userId)
 			.orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
+	}
+
+	private DietType nextSlot(DietType current) {
+		return switch (current) {
+			case BREAKFAST -> DietType.LUNCH;
+			case LUNCH -> DietType.DINNER;
+			case DINNER, SNACK -> DietType.SNACK;
+		};
 	}
 }

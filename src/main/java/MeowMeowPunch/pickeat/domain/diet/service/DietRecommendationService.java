@@ -22,6 +22,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.HomeRecommendationResult;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutritionGoals;
+import MeowMeowPunch.pickeat.domain.diet.dto.NutritionSummary;
 import MeowMeowPunch.pickeat.domain.diet.entity.AiFeedBack;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
@@ -91,6 +92,7 @@ public class DietRecommendationService {
 	private final AiFeedBackRepository aiFeedBackRepository;
 	private final UserRepository userRepository;
 	private final NutritionGoalCalculator nutritionGoalCalculator;
+	private final NutritionStatusClassifier nutritionStatusClassifier;
 
 	/**
 	 * [Recommend] 오늘/현재 식사 슬롯에 맞춰 추천 TOP5 계산 + AI 선택
@@ -102,35 +104,58 @@ public class DietRecommendationService {
 	 */
 	@Transactional
 	public HomeRecommendationResult recommendTopFoods(String userId, Focus focus, NutrientTotals totals) {
+		DietType mealSlot = mealSlot(LocalTime.now(KOREA_ZONE));
+		return recommendTopFoods(userId, focus, totals, mealSlot, false);
+	}
+
+	public HomeRecommendationResult recommendTopFoods(String userId, Focus focus, NutrientTotals totals,
+		DietType mealSlot, boolean forceNew) {
+		return recommendTopFoods(userId, focus, totals, mealSlot, forceNew, false);
+	}
+
+	/**
+	 * [Recommend] 주어진 슬롯에 대해 추천 TOP5 계산 + AI 선택
+	 *
+	 * @param userId 사용자 식별자
+	 * @param focus  추천 목적(균형/단백질 등)
+	 * @param totals 오늘 섭취 합계
+	 * @param mealSlot 대상 식사 슬롯
+	 * @param forceNew 기존 추천 재사용 없이 항상 새로 생성할지 여부
+	 * @param excludeExisting 오늘 동일 슬롯의 기존 추천 메뉴를 후보에서 제외할지 여부
+	 * @return 추천 결과 (Picks + Reason)
+	 */
+	@Transactional
+	public HomeRecommendationResult recommendTopFoods(String userId, Focus focus, NutrientTotals totals,
+		DietType mealSlot, boolean forceNew, boolean excludeExisting) {
 		LocalDate today = LocalDate.now(KOREA_ZONE);
-		LocalTime nowTime = LocalTime.now(KOREA_ZONE);
-		DietType mealSlot = mealSlot(nowTime);
 
 		User user = userRepository.findById(UUID.fromString(userId))
 			.orElseThrow(UserNotFoundException::new);
 
 		String groupName = DietPageAssembler.getGroupName(user, groupMappingRepository);
 
-		// 1. 이미 생성된 추천 조회
-		List<RecommendedDiet> existing = recommendedDietRepository.findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(
-			userId, today, mealSlot);
+		if (!forceNew) {
+			// 1. 이미 생성된 추천 조회
+			List<RecommendedDiet> existing = recommendedDietRepository.findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(
+				userId, today, mealSlot);
 
-		if (existing.size() >= MIN_PICK) {
-			List<FoodRecommendationCandidate> picks = existing.stream()
-				.sorted(Comparator.comparing(RecommendedDiet::getScore, Comparator.nullsLast(Double::compareTo))
-					.reversed())
-				.map(this::toCandidate)
-				// LUNCH 외 슬롯에서는 WELSTORY 추천은 제외(그룹 점심 우선 정책)
-				.filter(c -> mealSlot == DietType.LUNCH || c.sourceType() != DietSourceType.WELSTORY)
-				.limit(TOP_LIMIT)
-				.toList();
+			if (existing.size() >= MIN_PICK) {
+				List<FoodRecommendationCandidate> picks = existing.stream()
+					.sorted(Comparator.comparing(RecommendedDiet::getScore, Comparator.nullsLast(Double::compareTo))
+						.reversed())
+					.map(this::toCandidate)
+					// LUNCH 외 슬롯에서는 WELSTORY 추천은 제외(그룹 점심 우선 정책)
+					.filter(c -> mealSlot == DietType.LUNCH || c.sourceType() != DietSourceType.WELSTORY)
+					.limit(TOP_LIMIT)
+					.toList();
 
-			// 저장된 피드백 사유 조회
-			String reason = aiFeedBackRepository.findByUserIdAndDateAndType(userId, today, FeedBackType.RECOMMENDATION)
-				.map(AiFeedBack::getContent)
-				.orElse("목표 영양에 근접한 메뉴를 엄선 추천했어요.");
+				// 저장된 피드백 사유 조회
+				String reason = aiFeedBackRepository.findByUserIdAndDateAndType(userId, today, FeedBackType.RECOMMENDATION)
+					.map(AiFeedBack::getContent)
+					.orElse("목표 영양에 근접한 메뉴를 엄선 추천했어요.");
 
-			return HomeRecommendationResult.of(picks, reason);
+				return HomeRecommendationResult.of(picks, reason);
+			}
 		}
 
 		List<FoodRecommendationCandidate> candidates;
@@ -142,6 +167,27 @@ public class DietRecommendationService {
 			// 3. 일반 배달/식당(Food DB) 후보 생성
 			NutritionGoals goals = nutritionGoalCalculator.calculateGoals(user);
 			candidates = recommendGeneralFoods(mealSlot, focus, totals, goals, userId);
+		}
+
+		List<RecommendedDiet> todaySlotRecommended = List.of();
+		if (excludeExisting) {
+			todaySlotRecommended = recommendedDietRepository.findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(
+				userId, today, mealSlot);
+			List<String> usedTitles = todaySlotRecommended.stream()
+				.map(RecommendedDiet::getTitle)
+				.filter(title -> title != null && !title.isBlank())
+				.map(title -> title.trim().toLowerCase())
+				.toList();
+
+			List<FoodRecommendationCandidate> original = candidates;
+			candidates = candidates.stream()
+				.filter(c -> c.name() == null || !usedTitles.contains(c.name().trim().toLowerCase()))
+				.toList();
+
+			if (candidates.isEmpty()) {
+				// 모든 후보가 제외되었을 때 원본 후보로 복구하여 빈 결과 방지
+				candidates = original;
+			}
 		}
 
 		// 4. AI 호출하여 최종 Pick & Reason 획득
@@ -417,24 +463,26 @@ public class DietRecommendationService {
 	@Transactional
 	public void generateDailyFeedback(String userId, LocalDate date) {
 		try {
+			User user = userRepository.findById(UUID.fromString(userId))
+				.orElseThrow(UserNotFoundException::new);
+			Focus focus = user.getFocus();
+			DietType mealSlot = mealSlot(LocalTime.now(KOREA_ZONE));
+
 			// 1. 오늘 누적값 확인
 			NutrientTotals todayTotals = dietRecommendationMapper.findTotalsByDate(userId, date);
 			boolean isFirstMeal = (todayTotals == null ||
 				todayTotals.totalKcal() == null ||
 				todayTotals.totalKcal().compareTo(BigDecimal.ZERO) == 0);
 
-			NutrientTotals lastRecord = null;
-			if (isFirstMeal) {
-				// 2. Cold Start: 최근 기록 조회
-				lastRecord = dietRepository.findTopByUserIdAndDateLessThanOrderByDateDesc(userId, date)
-					.map(d -> dietRecommendationMapper.findTotalsByDate(userId, d.getDate()))
-					.orElse(null);
-			}
+			NutritionGoals goals = nutritionGoalCalculator.calculateGoals(user);
+			NutritionSummary nutritionSummary = isFirstMeal || todayTotals == null
+				? NutritionSummary.empty()
+				: nutritionStatusClassifier.classify(todayTotals, goals);
 
-			// 3. AI 호출
-			String feedback = dietAiFacade.feedbackDaily(isFirstMeal, todayTotals, lastRecord);
+			// 2. AI 호출
+			String feedback = dietAiFacade.feedbackDaily(isFirstMeal, mealSlot, focus, nutritionSummary);
 
-			// 4. 저장 (기존 피드백 있으면 업데이트)
+			// 3. 저장 (기존 피드백 있으면 업데이트)
 			AiFeedBack aiFeedBack = aiFeedBackRepository.findByUserIdAndDateAndType(userId, date, FeedBackType.DAILY)
 				.orElse(AiFeedBack.builder()
 					.userId(userId)

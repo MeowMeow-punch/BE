@@ -13,9 +13,10 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import MeowMeowPunch.pickeat.domain.diet.dto.DailyFeedbackPrompt;
 import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.HomeRecommendationResult;
-import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
+import MeowMeowPunch.pickeat.domain.diet.dto.NutritionSummary;
 import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.enums.Focus;
 import MeowMeowPunch.pickeat.global.common.enums.LlmUseCase;
@@ -24,6 +25,7 @@ import MeowMeowPunch.pickeat.global.llm.dto.LlmClient;
 import MeowMeowPunch.pickeat.global.llm.dto.LlmRequest;
 import MeowMeowPunch.pickeat.global.llm.dto.LlmRequestOptions;
 import MeowMeowPunch.pickeat.global.llm.dto.LlmResponse;
+import MeowMeowPunch.pickeat.global.llm.exception.LlmException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,10 +47,33 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DietAiFacade {
 
+	private static final String DAILY_FEEDBACK_SYSTEM_PROMPT = """
+		당신은 임상 영양사 역할을 수행합니다.
+		서버가 이미 계산한 영양 상태 요약을 바탕으로
+		사용자에게 안전하고 현실적인 한 줄 식단 피드백을 작성하세요.
+
+		[중요 규칙]
+		1. 과잉(EXCESS) 영양소가 하나라도 있으면 반드시 최우선으로 언급합니다.
+		2. 과잉 상태가 있는 경우, 부족(DEFICIT) 영양소의 "추가 섭취"를 직접적으로 권장하지 않습니다.
+		3. 부족 영양소는
+		   - 과잉 문제가 없을 때만 적극 권장하거나
+		   - "다음 식사에서 보완"과 같은 간접 표현으로 언급합니다.
+		4. 피드백은 반드시 한국어 한 문장으로 작성합니다.
+		5. 의학적 판단이나 단정적인 표현은 사용하지 않습니다.
+		6. 조언은 ‘오늘’ 또는 ‘다음 식사’ 단위로 제한합니다.
+
+		[출력 형식]
+		- 일반 텍스트 한 문장 (JSON 사용 금지)
+		""";
+	private static final List<String> DESSERT_CATEGORIES = List.of("빵 및 과자", "유제품류 및 빙과", "음료 및 차", "과일",
+		"죽 및 스프");
+	private static final boolean DESSERT_BLOCKED_WHEN_NOT_SNACK = true;
+	private static final double WEIGHT_KCAL = 0.3;
+
 	private final LlmClient llmClient;
 	private final LlmProperties llmProperties;
 	private final ObjectMapper objectMapper;
-    private final UserRepository userRepository;
+	private final UserRepository userRepository;
 
 	/**
 	 * [Home] AI 추천 선택 및 이유 생성
@@ -77,13 +102,14 @@ public class DietAiFacade {
 
 			// 2. 시스템 지시문
 			String systemPrompt = """
-				당신은 전문 영양사입니다. 다음 기준을 50:50으로 고려하여 후보 중 2개를 선정하세요.
-				1. Score (50%): 서버가 계산한 영양 적합도 점수가 높은 메뉴를 우선 고려합니다.
-				2. Context (50%): 사용자의 질환, 목표 등 미묘한 상황을 판단합니다.
-				    - Healthy: 질환(고혈압 등)에 해로운 영양소 회피
-				    - Diet/Muscle: 목표 달성을 위한 칼로리/탄수화물/단백질/지방 준수
-								
-				Output JSON Format:
+				당신은 전문 영양사입니다. 서버가 제공한 후보 중 1~2개를 선택하고 한국어 한 줄 이유를 작성하세요.
+
+				[선택 기준]
+				- guidelineText를 최우선으로 준수하고, score는 보조 지표로 사용합니다(대략 70:30).
+				- candidate.category를 참고해 식사/간식 적절성을 판단합니다.
+				- mealSlot이 SNACK이 아니면 policy.dessertCategories에 해당하는 디저트 단독 추천을 금지합니다.
+
+				[출력 형식(JSON)]
 				{
 				  "pickedIndices": [0, 3],
 				  "reason": "한국어 한 줄 평"
@@ -135,52 +161,39 @@ public class DietAiFacade {
 	 * @param lastRecord  (Cold Start) 최근 식사 기록
 	 * @return AI가 생성한 한 줄 피드백
 	 */
-	public String feedbackDaily(boolean isFirstMeal, NutrientTotals balance, NutrientTotals lastRecord) {
+	public String feedbackDaily(boolean isFirstMeal, DietType mealSlot, Focus focus,
+		NutritionSummary nutritionSummary) {
 		try {
-			Map<String, Object> inputJson = new HashMap<>();
-			inputJson.put("isFirstMeal", isFirstMeal);
+			DailyFeedbackPrompt prompt = new DailyFeedbackPrompt(
+				isFirstMeal,
+				mealSlot,
+				focus,
+				nutritionSummary == null ? NutritionSummary.empty() : nutritionSummary
+			);
 
-			if (isFirstMeal && lastRecord != null) {
-				// Cold Start: 지난 기록 활용
-				inputJson.put("lastDietRecord", Map.of(
-					"totalKcal", lastRecord.totalKcal(),
-					"totalCarbs", lastRecord.totalCarbs(),
-					"totalProtein", lastRecord.totalProtein(),
-					"totalFat", lastRecord.totalFat()
-				));
-			} else if (balance != null) {
-				// Today Balance Logic
-				// 여기서는 NutrientTotals 자체를 넘기기보다, '가장 심각한 이슈' 하나를 넘기는게 좋음
-				// 하지만 편의상 전체 객체를 넘기고 프롬프트에서 판단하게 할 수도 있음.
-				// 계획대로 '서버 계산된 과잉/부족'을 넘기려면 로직 필요.
-				// MVP: 일단 Balance 전체 전달
-				inputJson.put("balance", balance);
-			}
-
-			String userPrompt = objectMapper.writeValueAsString(inputJson);
-			String systemPrompt = """
-				사용자의 식습관을 한 줄로 피드백하세요.
-				- lastDietRecord가 있으면(오늘 첫 끼), 과거 기록을 참고해 오늘 보완할 점을 제안하세요.
-				- balance가 있으면, 현재 영양 상태에 대해 과잉/부족을 조언하세요.
-				- Output: 한국어 문장 하나.
-				""";
+			String userPrompt = objectMapper.writeValueAsString(prompt);
+			LlmProperties.Generation gen = safeGeneration();
 
 			LlmRequest req = new LlmRequest(
 				LlmUseCase.DAILY_FEEDBACK,
-				systemPrompt,
+				DAILY_FEEDBACK_SYSTEM_PROMPT,
 				userPrompt,
 				LlmRequestOptions.of(
-					llmProperties.generation().temperature(),
-					llmProperties.generation().maxOutputTokens()
+					gen.temperature(),
+					gen.maxOutputTokens()
 				)
 			);
 
 			LlmResponse res = llmClient.generate(req);
-			return res.jsonText().trim(); // String response
+			String jsonText = res.jsonText() == null ? "" : res.jsonText().trim();
+			if (jsonText.isEmpty()) {
+				return res.rawText() == null ? "" : res.rawText().trim();
+			}
+			return jsonText;
 
 		} catch (Exception e) {
 			log.error("AI Daily Feedback Failed", e);
-			throw new MeowMeowPunch.pickeat.global.llm.exception.LlmException("일일 피드백 생성 실패", e);
+			throw new LlmException("일일 피드백 생성 실패", e);
 		}
 	}
 
@@ -211,14 +224,19 @@ public class DietAiFacade {
 		List<FoodRecommendationCandidate> candidates, String userId) {
 		Map<String, Object> json = new HashMap<>();
 
-        User user = userRepository.findById(UUID.fromString(userId))
-                .orElseThrow(UserNotFoundException::new);
+		User user = userRepository.findById(UUID.fromString(userId))
+			.orElseThrow(UserNotFoundException::new);
 
 		// Context
-		json.put("context", Map.of(
-			"mealSlot", mealSlot.name(),
-			"focus", focus.name()
+		Map<String, Object> context = new HashMap<>();
+		context.put("mealSlot", mealSlot.name());
+		context.put("focus", focus.name());
+		context.put("policy", Map.of(
+			"dessertCategories", DESSERT_CATEGORIES,
+			"dessertBlockedWhenNotSnack", DESSERT_BLOCKED_WHEN_NOT_SNACK,
+			"weightKcal", WEIGHT_KCAL
 		));
+		json.put("context", context);
 
 		// User Profile
 		Map<String, Object> profile = new HashMap<>();
@@ -231,6 +249,7 @@ public class DietAiFacade {
 		}
 		profile.put("allergies", user.getAllergies()); // Common
 		json.put("userProfile", profile);
+		json.put("guidelineText", List.of());
 
 		// Candidates (Simplified with Index)
 		List<Map<String, Object>> candidateList = IntStream.range(0, candidates.size())
@@ -242,9 +261,11 @@ public class DietAiFacade {
 					"nutrients", Map.of(
 						"kcal", c.kcal(),
 						"carbs", c.carbs(),
-						"fat", c.fat(),
-						"protein", c.protein()
+						"protein", c.protein(),
+						"fat", c.fat()
 					),
+					"category", c.category(),
+					"sourceType", c.sourceType(),
 					"score", c.score()
 				);
 			})
