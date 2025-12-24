@@ -88,6 +88,12 @@ jobs:
     # [Deploy] AWS SSM으로 배포 명령 전송
     # Secrets(ENV_FILE)와 docker-compose 파일에 특수문자/따옴표가 포함될 수 있으므로,
     # GitHub Runner에서 Base64로 인코딩한 뒤 EC2에서 디코딩하여 파일을 생성합니다.
+    # [Deploy] AWS SSM으로 배포 명령 전송
+    # Secrets(ENV_FILE)와 docker-compose 파일에 특수문자/따옴표가 포함될 수 있으므로,
+    # GitHub Runner에서 Base64로 인코딩한 뒤 EC2에서 디코딩하여 파일을 생성합니다.
+    # Amazon Linux 2023 등 최신 환경 대응:
+    # 1. 경로: /home/ubuntu/app -> /home/ec2-user/app
+    # 2. 명령어: docker-compose -> docker compose (V2 Plugin)
     - name: Deploy via AWS SSM
       env:
         ENV_FILE_CONTENT: ${{ secrets.ENV_FILE }}
@@ -104,8 +110,8 @@ jobs:
           --targets "Key=instanceids,Values=${{ secrets.INSTANCE_ID }}" \
           --comment "Deploy PickEat Backend" \
           --parameters commands="[
-            \"mkdir -p /home/ubuntu/app\",
-            \"cd /home/ubuntu/app\",
+            \"mkdir -p /home/ec2-user/app\",
+            \"cd /home/ec2-user/app\",
             
             \"echo 'Setting up .env file...'\",
             \"echo '$ENV_B64' | base64 -d > .env\",
@@ -118,10 +124,10 @@ jobs:
             
             \"echo 'Pulling latest image...'\",
             \"export GITHUB_REPOSITORY_OWNER=${{ env.OWNER_LOWER }}\",
-            \"docker-compose -f docker-compose.prod.yml pull\",
+            \"docker compose -f docker-compose.prod.yml pull\",
             
             \"echo 'Restarting containers...'\",
-            \"docker-compose -f docker-compose.prod.yml up -d\",
+            \"docker compose -f docker-compose.prod.yml up -d\",
             
             \"echo 'Cleaning up...'\",
             \"docker image prune -f\"
