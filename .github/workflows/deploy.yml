@@ -27,10 +27,15 @@ jobs:
         cache: 'gradle'
 
     # [CI] application.yaml 생성
+    # [CI] application.yaml 생성 (비밀 설정 파일 주입)
+    # gitignore된 application.yaml을 GitHub Secrets에서 복원하여 빌드에 포함시킵니다.
+    # cat << 'EOF'를 사용하여 ${...} 변수가 쉘에서 확되지 않도록 합니다.
     - name: Create application.yaml
       run: |
         mkdir -p ./src/main/resources
-        echo "${{ secrets.APPLICATION_YAML }}" > ./src/main/resources/application.yaml
+        cat << 'EOF' > ./src/main/resources/application.yaml
+        ${{ secrets.APPLICATION_YAML }}
+        EOF
       shell: bash
 
     - name: Grant execute permission for gradlew
@@ -80,35 +85,45 @@ jobs:
 
     # [Deploy] AWS SSM으로 배포 명령 전송
     # SSH와 달리 파일 전송이 까다로우므로, cat/echo 명령어를 사용하여 EC2 내부에서 파일을 생성합니다.
+    # [Deploy] AWS SSM으로 배포 명령 전송
+    # Secrets(ENV_FILE)와 docker-compose 파일에 특수문자/따옴표가 포함될 수 있으므로,
+    # GitHub Runner에서 Base64로 인코딩한 뒤 EC2에서 디코딩하여 파일을 생성합니다.
     - name: Deploy via AWS SSM
+      env:
+        ENV_FILE_CONTENT: ${{ secrets.ENV_FILE }}
+        GHCR_PAT: ${{ secrets.GHCR_PAT }}
       run: |
+        # 1. 파일 내용을 Base64로 인코딩 (줄바꿈 없이 -w0 옵션 사용)
+        ENV_B64=$(echo "$ENV_FILE_CONTENT" | base64 -w0)
+        COMPOSE_B64=$(cat docker-compose.prod.yml | base64 -w0)
+        
+        # 2. SSM 명령 전송
+        # 주의: commands 배열 내부는 JSON 형식이므로 따옴표 처리에 유의해야 합니다.
         aws ssm send-command \
           --document-name "AWS-RunShellScript" \
           --targets "Key=instanceids,Values=${{ secrets.INSTANCE_ID }}" \
           --comment "Deploy PickEat Backend" \
-          --parameters commands='[
-            "mkdir -p /home/ubuntu/app",
-            "cd /home/ubuntu/app",
+          --parameters commands="[
+            \"mkdir -p /home/ubuntu/app\",
+            \"cd /home/ubuntu/app\",
             
-            "echo \"Setting up .env file...\"",
-            "echo \"${{ secrets.ENV_FILE }}\" > .env",
+            \"echo 'Setting up .env file...'\",
+            \"echo '$ENV_B64' | base64 -d > .env\",
             
-            "echo \"Setting up docker-compose.prod.yml...\"",
-            "cat <<EOF > docker-compose.prod.yml",
-            "$(cat docker-compose.prod.yml)",
-            "EOF",
+            \"echo 'Setting up docker-compose.prod.yml...'\",
+            \"echo '$COMPOSE_B64' | base64 -d > docker-compose.prod.yml\",
             
-            "echo \"Logging into GHCR...\"",
-            "echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin",
+            \"echo 'Logging into GHCR...'\",
+            \"echo $GHCR_PAT | docker login ghcr.io -u ${{ github.actor }} --password-stdin\",
             
-            "echo \"Pulling latest image...\"",
-            "export GITHUB_REPOSITORY_OWNER=${{ env.OWNER_LOWER }}",
-            "docker-compose -f docker-compose.prod.yml pull",
+            \"echo 'Pulling latest image...'\",
+            \"export GITHUB_REPOSITORY_OWNER=${{ env.OWNER_LOWER }}\",
+            \"docker-compose -f docker-compose.prod.yml pull\",
             
-            "echo \"Restarting containers...\"",
-            "docker-compose -f docker-compose.prod.yml up -d",
+            \"echo 'Restarting containers...'\",
+            \"docker-compose -f docker-compose.prod.yml up -d\",
             
-            "echo \"Cleaning up...\"",
-            "docker image prune -f"
-          ]' \
+            \"echo 'Cleaning up...'\",
+            \"docker image prune -f\"
+          ]" \
           --output text
