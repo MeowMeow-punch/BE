@@ -27,10 +27,15 @@ jobs:
         cache: 'gradle'
 
     # [CI] application.yaml 생성
+    # [CI] application.yaml 생성 (비밀 설정 파일 주입)
+    # gitignore된 application.yaml을 GitHub Secrets에서 복원하여 빌드에 포함시킵니다.
+    # cat << 'EOF'를 사용하여 ${...} 변수가 쉘에서 확되지 않도록 합니다.
     - name: Create application.yaml
       run: |
         mkdir -p ./src/main/resources
-        echo "${{ secrets.APPLICATION_YAML }}" > ./src/main/resources/application.yaml
+        cat << 'EOF' > ./src/main/resources/application.yaml
+        ${{ secrets.APPLICATION_YAML }}
+        EOF
       shell: bash
 
     - name: Grant execute permission for gradlew
