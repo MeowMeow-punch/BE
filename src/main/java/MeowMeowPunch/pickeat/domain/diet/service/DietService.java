@@ -204,14 +204,21 @@ public class DietService {
 			.collect(Collectors.toMap(Food::getId, Function.identity()));
 		validateFoodsExist(foodIds, foodById);
 
-		Map<Long, List<String>> thumbnailsByDietId = DietPageAssembler.buildThumbnailsByDiet(dietFoodsByDietId,
-			foodById);
+        Map<Long, List<String>> thumbnailsByDietId = DietPageAssembler.buildThumbnailsByDiet(dietFoodsByDietId,
+                foodById);
 
-		List<TodayDietInfo> todayDietInfo = diets.stream()
-			.map(diet -> DietPageAssembler.toTodayDietInfo(
-				diet,
-				thumbnailsByDietId.getOrDefault(diet.getId(), List.of())))
-			.toList();
+        List<TodayDietInfo> todayDietInfo = diets.stream()
+                .map(diet -> {
+                    List<String> thumbs = thumbnailsByDietId.getOrDefault(diet.getId(), List.of());
+                    if (thumbs.isEmpty()) {
+                        List<String> fallback = DietPageAssembler.toThumbnailList(diet.getThumbnailUrl());
+                        if (!fallback.isEmpty()) {
+                            thumbs = fallback;
+                        }
+                    }
+                    return DietPageAssembler.toTodayDietInfo(diet, thumbs);
+                })
+                .toList();
 
 		Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu = buildTodayRestaurantMenu(
 			targetDate,
@@ -401,6 +408,103 @@ public class DietService {
 		}
         dietRecommendationService.generateDailyFeedback(userId, date);
 		return DietRegisterResponse.from(saved.getId());
+	}
+
+	/**
+	 * [Register] 웰스토리 주간식단에서 특정 메뉴를 내 식단으로 등록
+	 */
+	@Transactional
+	public DietRegisterResponse registerWelstoryDiet(String userId, MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest request) {
+		LocalDate date = parseDateOrToday(request.date());
+        DietType mealType = request.mealType();
+
+		MeowMeowPunch.pickeat.welstory.entity.GroupMapping mapping = groupMappingRepository
+			.findByGroupName(request.groupName())
+			.orElseThrow(() -> new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryGroupNotFoundException(request.groupName()));
+
+		int dateYyyymmdd = toYyyymmdd(date);
+		String mealTimeId = mealTimeIdForSlot(mealType);
+		java.util.List<MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem> menus = welstoryMenuService
+			.getMenus(mapping.getGroupId(), dateYyyymmdd, mealTimeId, mealType.name());
+		if (menus.isEmpty()) {
+			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuNotFoundException(request.restaurantName(), request.menuName());
+		}
+
+		String targetRestaurant = normalize(request.restaurantName());
+		String targetMenu = normalize(request.menuName());
+		java.util.List<MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem> matched = menus.stream()
+			.filter(m -> normalize(m.courseName()).equals(targetRestaurant))
+			.filter(m -> normalize(m.name()).equals(targetMenu))
+			.toList();
+
+		if (matched.isEmpty()) {
+			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuNotFoundException(request.restaurantName(), request.menuName());
+		}
+		if (matched.size() > 1) {
+			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuAmbiguousException(request.restaurantName(), request.menuName());
+		}
+		MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem menu = matched.getFirst();
+
+		java.math.BigDecimal totalKcal = java.math.BigDecimal.ZERO;
+		java.math.BigDecimal totalCarbs = java.math.BigDecimal.ZERO;
+		java.math.BigDecimal totalProtein = java.math.BigDecimal.ZERO;
+		java.math.BigDecimal totalFat = java.math.BigDecimal.ZERO;
+
+		if (notBlank(menu.hallNo()) && notBlank(menu.menuCourseType())) {
+			var nutrients = welstoryMenuService.getNutrients(menu.restaurantId(), dateYyyymmdd, mealTimeId, menu.hallNo(), menu.menuCourseType());
+			for (var n : nutrients) {
+				totalKcal = totalKcal.add(toBigDecimal(n.kcal()));
+				totalCarbs = totalCarbs.add(toBigDecimal(n.totCho()));
+				totalProtein = totalProtein.add(toBigDecimal(n.totProtein()));
+				totalFat = totalFat.add(toBigDecimal(n.totFat()));
+			}
+		} else {
+			totalKcal = toBigDecimal(menu.kcal());
+		}
+
+		String title = request.restaurantName() + " - " + request.menuName();
+
+		RecommendedDiet saved = recommendedDietRepository.save(
+			RecommendedDiet.builder()
+				.userId(userId)
+				.foodId(null)
+				.dietType(mealType)
+				.sourceType(DietSourceType.WELSTORY)
+				.date(date)
+				.time(LocalTime.now(KOREA_ZONE))
+				.title(title)
+				.kcal(totalKcal)
+				.carbs(totalCarbs)
+				.protein(totalProtein)
+				.fat(totalFat)
+				.thumbnailUrl(menu.photoUrl())
+				.score(0.0)
+				.build()
+		);
+
+		return registerRecommendation(userId, saved.getId());
+	}
+
+	private String normalize(String s) {
+		if (s == null) return "";
+		return s.toLowerCase()
+			.replaceAll("[\\s\\p{Z}]+", "")
+			.replaceAll("[()\u3000\u3001\u3002\uFF08\uFF09{}·∙・·.,_-]", "");
+	}
+
+	private boolean notBlank(String v) { return v != null && !v.isBlank(); }
+
+	private java.math.BigDecimal toBigDecimal(String value) {
+		if (value == null || value.isBlank()) {
+			return java.math.BigDecimal.ZERO;
+		}
+		try {
+			String cleaned = value.replace(",", "").trim();
+			if (cleaned.startsWith(".")) cleaned = "0" + cleaned;
+			return new java.math.BigDecimal(cleaned);
+		} catch (Exception e) {
+			return java.math.BigDecimal.ZERO;
+		}
 	}
 
 	/**

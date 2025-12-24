@@ -358,9 +358,9 @@ public class DietRecommendationService {
 	// mealSlot 별로 허용할 카테고리
 	private List<String> allowedCategoriesForMeal(DietType mealSlot) {
 		if (mealSlot == DietType.SNACK) {
-			return SnackCategory.labels();
+			return List.of();
 		}
-		return MainMealCategory.labels();
+		return List.of();
 	}
 
 	// TODO: 가중치 값은 GPT 추천으로 논의되지 않았으나 추후 개선 예정
