@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import MeowMeowPunch.pickeat.domain.auth.dto.response.SocialUserInfo;
+import MeowMeowPunch.pickeat.domain.auth.exception.SocialAuthException;
 import MeowMeowPunch.pickeat.global.common.enums.OAuthProvider;
 import MeowMeowPunch.pickeat.global.config.KakaoProperties;
 import lombok.RequiredArgsConstructor;
@@ -73,15 +74,15 @@ public class KakaoAuthClient implements SocialAuthClient {
 			ResponseEntity<JsonNode> response = restTemplate.postForEntity(TOKEN_URL, request, JsonNode.class);
 
 			if (response.getBody() == null || !response.getBody().has("access_token")) {
-				log.error("[KakaoAuth] Token Response Body is null or missing access_token");
-				throw new RuntimeException("카카오 액세스 토큰 발급에 실패했습니다.");
+				log.error("[KakaoAuth] 토큰 응답 본문이 비어있거나 access_token이 없습니다.");
+				throw SocialAuthException.tokenIssuanceFailed("카카오");
 			}
 
 			return response.getBody().get("access_token").asText();
 		} catch (HttpClientErrorException | HttpServerErrorException e) {
-			log.error("[KakaoAuth] Token Request Error: status={}, body={}", e.getStatusCode(),
+			log.error("[KakaoAuth] 토큰 발급 요청 실패: status={}, body={}", e.getStatusCode(),
 					e.getResponseBodyAsString());
-			throw new RuntimeException("카카오 서버 통신 중 오류가 발생했습니다.");
+			throw SocialAuthException.serverError("카카오", e);
 		}
 	}
 
@@ -106,17 +107,17 @@ public class KakaoAuthClient implements SocialAuthClient {
 			JsonNode body = response.getBody();
 
 			if (body == null) {
-				log.error("[KakaoAuth] UserInfo Response Body is null");
-				throw new RuntimeException("카카오 사용자 정보 조회에 실패했습니다.");
+				log.error("[KakaoAuth] 사용자 정보 응답 본문이 비어있습니다.");
+				throw SocialAuthException.userInfoFailed("카카오");
 			}
 
 			String id = String.valueOf(body.get("id").asLong());
 			return SocialUserInfo.of(id, OAuthProvider.KAKAO);
 
 		} catch (HttpClientErrorException | HttpServerErrorException e) {
-			log.error("[KakaoAuth] UserInfo Request Error: status={}, body={}", e.getStatusCode(),
+			log.error("[KakaoAuth] 사용자 정보 조회 요청 실패: status={}, body={}", e.getStatusCode(),
 					e.getResponseBodyAsString());
-			throw new RuntimeException("카카오 사용자 정보 조회 중 오류가 발생했습니다.");
+			throw SocialAuthException.userInfoFailed("카카오", e);
 		}
 	}
 }

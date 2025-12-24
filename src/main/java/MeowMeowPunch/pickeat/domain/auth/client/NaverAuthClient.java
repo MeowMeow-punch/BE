@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import MeowMeowPunch.pickeat.domain.auth.dto.response.SocialUserInfo;
+import MeowMeowPunch.pickeat.domain.auth.exception.SocialAuthException;
 import MeowMeowPunch.pickeat.global.common.enums.OAuthProvider;
 import MeowMeowPunch.pickeat.global.config.NaverProperties;
 import lombok.RequiredArgsConstructor;
@@ -57,10 +58,9 @@ public class NaverAuthClient implements SocialAuthClient {
 	public String requestAccessToken(String code) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-		// Naver API does not strictly require charset in header for token, but good practice
 		headers.setAcceptCharset(Collections.singletonList(java.nio.charset.StandardCharsets.UTF_8));
 
-		String state = generateState();
+		String state = generateState(); //TODO: 원래는 프론트로부터 받아와야 함.. => 향후 리팩토링 진행
 
 		MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
 		body.add("grant_type", "authorization_code");
@@ -77,16 +77,16 @@ public class NaverAuthClient implements SocialAuthClient {
 			JsonNode responseBody = response.getBody();
 
 			if (responseBody == null || !responseBody.has("access_token")) {
-				log.error("[NaverAuth] Token Response Body is null or missing access_token");
-				throw new RuntimeException("네이버 액세스 토큰 발급에 실패했습니다.");
+				log.error("[NaverAuth] 토큰 응답 본문이 비어있거나 access_token이 없습니다.");
+				throw SocialAuthException.tokenIssuanceFailed("네이버");
 			}
 
 			return responseBody.get("access_token").asText();
 
 		} catch (HttpClientErrorException | HttpServerErrorException e) {
-			log.error("[NaverAuth] Token Request Error: status={}, body={}", e.getStatusCode(),
+			log.error("[NaverAuth] 토큰 발급 요청 실패: status={}, body={}", e.getStatusCode(),
 					e.getResponseBodyAsString());
-			throw new RuntimeException("네이버 서버 통신 중 오류가 발생했습니다.");
+			throw SocialAuthException.serverError("네이버", e);
 		}
 	}
 
@@ -110,24 +110,23 @@ public class NaverAuthClient implements SocialAuthClient {
 			JsonNode body = response.getBody();
 
 			if (body == null || !body.has("response")) {
-				log.error("[NaverAuth] UserInfo Response Body is null or missing 'response' field");
-				throw new RuntimeException("네이버 사용자 정보 조회에 실패했습니다.");
+				log.error("[NaverAuth] 사용자 정보 응답 본문이 비어있거나 'response' 필드가 없습니다.");
+				throw SocialAuthException.userInfoFailed("네이버");
 			}
 
-			// Naver user info is wrapped in "response" object
 			JsonNode responseNode = body.get("response");
 			if (!responseNode.has("id")) {
-				log.error("[NaverAuth] UserInfo 'response' does not contain 'id'");
-				throw new RuntimeException("네이버 사용자 ID를 찾을 수 없습니다.");
+				log.error("[NaverAuth] 사용자 정보 'response' 객체에 'id'가 없습니다.");
+				throw SocialAuthException.userInfoFailed("네이버");
 			}
 
 			String id = responseNode.get("id").asText();
 			return SocialUserInfo.of(id, OAuthProvider.NAVER);
 
 		} catch (HttpClientErrorException | HttpServerErrorException e) {
-			log.error("[NaverAuth] UserInfo Request Error: status={}, body={}", e.getStatusCode(),
+			log.error("[NaverAuth] 사용자 정보 조회 요청 실패: status={}, body={}", e.getStatusCode(),
 					e.getResponseBodyAsString());
-			throw new RuntimeException("네이버 사용자 정보 조회 중 오류가 발생했습니다.");
+			throw SocialAuthException.userInfoFailed("네이버", e);
 		}
 	}
 
