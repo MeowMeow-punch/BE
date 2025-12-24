@@ -17,6 +17,13 @@
         thumbnail_url AS thumbnailUrl
         FROM foods
         WHERE 1 = 1
+        <if test="categoryPatterns != null and categoryPatterns.size() &gt; 0">
+            AND (
+            <foreach collection="categoryPatterns" item="pat" separator=" OR ">
+                category ILIKE #{pat}
+            </foreach>
+            )
+        </if>
         <if test="cursorId != null">
             AND id &gt; #{cursorId}
         </if>
@@ -38,6 +45,13 @@
         thumbnail_url AS thumbnailUrl
         FROM foods
         WHERE name ILIKE CONCAT('%', #{keyword}, '%')
+        <if test="categoryPatterns != null and categoryPatterns.size() &gt; 0">
+            AND (
+            <foreach collection="categoryPatterns" item="pat" separator=" OR ">
+                category ILIKE #{pat}
+            </foreach>
+            )
+        </if>
         <if test="cursorId != null">
             AND id &gt; #{cursorId}
         </if>
@@ -49,5 +63,12 @@
         SELECT COUNT(*)
         FROM foods
         WHERE name ILIKE CONCAT('%', #{keyword}, '%')
+        <if test="categoryPatterns != null and categoryPatterns.size() &gt; 0">
+            AND (
+            <foreach collection="categoryPatterns" item="pat" separator=" OR ">
+                category ILIKE #{pat}
+            </foreach>
+            )
+        </if>
     </select>
 </mapper>
