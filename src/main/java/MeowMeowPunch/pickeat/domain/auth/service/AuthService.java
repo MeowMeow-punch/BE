@@ -12,14 +12,19 @@ import org.springframework.transaction.annotation.Transactional;
 import MeowMeowPunch.pickeat.domain.auth.dto.request.OAuthLoginRequest;
 import MeowMeowPunch.pickeat.domain.auth.dto.request.SignUpRequest;
 import MeowMeowPunch.pickeat.domain.auth.dto.response.AuthTokenResponse;
+import MeowMeowPunch.pickeat.domain.auth.dto.response.SocialUserInfo;
 import MeowMeowPunch.pickeat.domain.auth.entity.User;
+import io.jsonwebtoken.Claims;
 import MeowMeowPunch.pickeat.domain.auth.exception.AuthNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateNicknameException;
+import MeowMeowPunch.pickeat.domain.auth.exception.DuplicateUserException;
 import MeowMeowPunch.pickeat.domain.auth.exception.InvalidTokenException;
+import MeowMeowPunch.pickeat.domain.auth.exception.NeedRegistrationException;
 import MeowMeowPunch.pickeat.domain.auth.exception.TokenNotFoundException;
 import MeowMeowPunch.pickeat.domain.auth.repository.RefreshTokenRepository;
 import MeowMeowPunch.pickeat.domain.auth.repository.UserRepository;
 import MeowMeowPunch.pickeat.global.common.entity.RefreshToken;
+import MeowMeowPunch.pickeat.global.common.enums.OAuthProvider;
 import MeowMeowPunch.pickeat.global.common.enums.UserStatus;
 import MeowMeowPunch.pickeat.global.jwt.JwtProperties;
 import MeowMeowPunch.pickeat.global.jwt.JwtTokenProvider;
@@ -50,6 +55,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AuthService {
 
 	private final UserRepository userRepository;
@@ -57,16 +63,31 @@ public class AuthService {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final JwtProperties jwtProperties;
 	private final GroupMappingRepository groupMappingRepository;
+	private final CompositeSocialAuthService compositeSocialAuthService;
 
 	/**
 	 * [Login] OAuth 로그인 성공 시 토큰 발급.
 	 *
-	 * @param request OAuth 로그인 요청 정보
+	 * @param request OAuth 로그인 요청 정보 (authorizationCode 포함)
 	 * @return 액세스/리프레시 토큰 묶음
 	 */
+	@Transactional
 	public AuthTokenResponse login(OAuthLoginRequest request) {
-		User user = userRepository.findByOauthProviderAndOauthId(request.oauthProvider(), request.oauthId())
-				.orElseThrow(AuthNotFoundException::userNotFound);
+		// 1. 인가 코드로 소셜 플랫폼에서 사용자 정보 조회 (Strategy Pattern)
+		SocialUserInfo socialUser = compositeSocialAuthService.getUserInfo(
+				request.oauthProvider(),
+				request.authorizationCode());
+
+		// 2. DB에서 사용자 조회
+		User user = userRepository.findByOauthProviderAndOauthId(socialUser.provider(), socialUser.id())
+				.orElseThrow(() -> {
+					// 3. 회원가입 필요 시: 서명된 임시 토큰(RegisterToken) 발급
+					String registerToken = jwtTokenProvider.createRegisterToken(socialUser.id(),
+							socialUser.provider().name());
+					return new NeedRegistrationException(registerToken);
+				});
+
+		// 4. 토큰 발급
 		return issueTokens(user);
 	}
 
@@ -122,13 +143,24 @@ public class AuthService {
 	 * @param request 회원가입 요청 정보
 	 * @return 액세스/리프레시 토큰 묶음
 	 */
+
 	@Transactional
 	public AuthTokenResponse signUp(SignUpRequest request) {
+		// 1. 임시 토큰(RegisterToken) 검증 및 정보 추출
+		Claims claims = jwtTokenProvider.parseClaims(request.registerToken());
+		String oauthId = claims.getSubject();
+		OAuthProvider provider = OAuthProvider.valueOf(claims.get("provider", String.class));
+
+		// 2. 중복 가입 방지 체크 (Security Fix)
+		if (userRepository.findByOauthProviderAndOauthId(provider, oauthId).isPresent()) {
+			throw DuplicateUserException.duplicateUser();
+		}
+
 		validateNickname(request.nickname());
 		String resolvedGroupId = resolveGroupId(request.groupId());
 		validateGroup(request.status(), resolvedGroupId);
 
-		User user = buildUser(request, resolvedGroupId);
+		User user = buildUser(request, oauthId, provider, resolvedGroupId);
 		User savedUser = userRepository.save(user);
 		return issueTokens(savedUser);
 	}
@@ -217,13 +249,13 @@ public class AuthService {
 		return trimmed;
 	}
 
-	private User buildUser(SignUpRequest request, String resolvedGroupId) {
+	private User buildUser(SignUpRequest request, String oauthId, OAuthProvider provider, String resolvedGroupId) {
 		List<String> allergies = request.allergies() == null ? new ArrayList<>() : request.allergies();
 		List<String> diseases = request.diseases() == null ? new ArrayList<>() : request.diseases();
 
 		return User.builder()
-				.oauthProvider(request.oauthProvider())
-				.oauthId(request.oauthId())
+				.oauthProvider(provider)
+				.oauthId(oauthId)
 				.nickname(request.nickname())
 				.isMarketing(request.isMarketing())
 				.gender(request.gender())

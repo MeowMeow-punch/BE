@@ -17,7 +17,7 @@ import jakarta.validation.constraints.NotNull;
  * - 검증 키워드: redirectUri는 플랫폼 리다이렉트 설정과 일치 필요.
  */
 public record OAuthLoginRequest(
-		@NotNull(message = "oauthProvider는 필수입니다.") OAuthProvider oauthProvider,
-		@NotBlank(message = "oauthId는 필수입니다.") String oauthId,
-		@NotBlank(message = "redirectUri는 필수입니다.") String redirectUri) {
+	@NotNull(message = "oauthProvider는 필수입니다.") OAuthProvider oauthProvider,
+	@NotBlank(message = "authorizationCode는 필수입니다.") String authorizationCode,
+	@NotBlank(message = "redirectUri는 필수입니다.") String redirectUri) {
 }
