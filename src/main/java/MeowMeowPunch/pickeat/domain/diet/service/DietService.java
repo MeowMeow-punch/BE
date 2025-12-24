@@ -418,9 +418,13 @@ public class DietService {
 		LocalDate date = parseDateOrToday(request.date());
         DietType mealType = request.mealType();
 
-		MeowMeowPunch.pickeat.welstory.entity.GroupMapping mapping = groupMappingRepository
-			.findByGroupName(request.groupName())
-			.orElseThrow(() -> new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryGroupNotFoundException(request.groupName()));
+        java.util.UUID uid = java.util.UUID.fromString(userId);
+        MeowMeowPunch.pickeat.domain.auth.entity.User user = userRepository.findById(uid)
+            .orElseThrow(MeowMeowPunch.pickeat.domain.diet.exception.UserNotFoundException::new);
+        String userGroupId = user.getGroupId();
+        MeowMeowPunch.pickeat.welstory.entity.GroupMapping mapping = groupMappingRepository
+            .findByGroupId(userGroupId)
+            .orElseThrow(() -> new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryGroupNotFoundException(userGroupId));
 
 		int dateYyyymmdd = toYyyymmdd(date);
 		String mealTimeId = mealTimeIdForSlot(mealType);
@@ -581,18 +585,17 @@ public class DietService {
 	 * @param dietId 식단 ID
 	 */
 	@Transactional
-	public void delete(String userId, Long dietId) {
+    public void delete(String userId, Long dietId) {
         Diet diet = getOwnedDietOrThrow(userId, dietId);
 
-		if (!diet.isEditable()) {
-			throw new DietNotEditableException(dietId);
-		}
+        // 수정은 막되, 삭제는 허용: 비편집 식단(WELSTORY 등)도 삭제 가능하도록 변경
+        // 기존 정책상 editable=false면 수정 불가이며, 삭제는 허용
 
-		dietFoodRepository.deleteAllByDietId(dietId);
-		dietRepository.delete(diet);
+        dietFoodRepository.deleteAllByDietId(dietId);
+        dietRepository.delete(diet);
 
-		dietRecommendationService.generateDailyFeedback(userId, diet.getDate());
-	}
+        dietRecommendationService.generateDailyFeedback(userId, diet.getDate());
+    }
 
     // 공통 검증 메서드
     private Diet getOwnedDietOrThrow(String userId, Long dietId) {

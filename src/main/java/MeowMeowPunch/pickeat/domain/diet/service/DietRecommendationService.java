@@ -54,7 +54,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class DietRecommendationService {
-	private static final int TOP_LIMIT = 6;
+	private static final int TOP_LIMIT = 2;
 	private static final int MIN_PICK = 1;
 	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 허용 오차
     private static final int QUANTITY = 2; //
@@ -114,6 +114,9 @@ public class DietRecommendationService {
 					.sorted(Comparator.comparing(RecommendedDiet::getScore, Comparator.nullsLast(Double::compareTo))
 							.reversed())
 					.map(this::toCandidate)
+					// LUNCH 외 슬롯에서는 WELSTORY 추천은 제외(그룹 점심 우선 정책)
+					.filter(c -> mealSlot == DietType.LUNCH || c.sourceType() != DietSourceType.WELSTORY)
+					.limit(TOP_LIMIT)
 					.toList();
 
 			// 저장된 피드백 사유 조회
@@ -149,6 +152,9 @@ public class DietRecommendationService {
 				.sorted(Comparator.comparing(RecommendedDiet::getScore, Comparator.nullsLast(Double::compareTo))
 					.reversed())
 				.map(this::toCandidate)
+				// LUNCH 외 슬롯에서는 WELSTORY 추천 제외 + 최대 2개
+				.filter(c -> mealSlot == DietType.LUNCH || c.sourceType() != DietSourceType.WELSTORY)
+				.limit(TOP_LIMIT)
 				.toList();
 
 			// AI 사유 저장(Daily Recommendation Feedback)
