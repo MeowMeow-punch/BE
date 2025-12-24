@@ -52,6 +52,7 @@ import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RestaurantMenuInfo;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfoContext;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
@@ -121,6 +122,16 @@ public class DietService {
 			recommendationResult.reason(),
 			LocalDateTime.now(KOREA_ZONE).withNano(0).toString());
 
+		// Provide sourceType to RecommendedDietInfo via context for serialization
+		RecommendedDietInfoContext.set(
+			recommendationResult.picks().stream()
+				.collect(Collectors.toMap(
+					c -> c.recommendationId(),
+					c -> c.sourceType(),
+					(a, b) -> a,
+					LinkedHashMap::new))
+		);
+
 		List<RecommendedDietInfo> recommended = recommendationResult.picks().stream()
 
 			.map(c -> RecommendedDietInfo.of(
@@ -135,6 +146,8 @@ public class DietService {
 					toInt(c.protein()),
 					toInt(c.fat()))))
 			.toList();
+
+		RecommendedDietInfoContext.clear();
 
 		return DietHomeResponse.of(summaryInfo, aiFeedBack, recommended);
 	}
