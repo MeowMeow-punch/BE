@@ -125,7 +125,8 @@ public class WelstoryMenuService {
 		}
 
 		return new FoodRecommendationCandidate(
-			null,
+			null, // recommendationId 없음(저장 시 DB PK 할당)
+			null, // foodId 없음
 			menu.name(),
 			menu.photoUrl(),
 			totalKcal,

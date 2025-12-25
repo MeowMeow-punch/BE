@@ -18,6 +18,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
+import MeowMeowPunch.pickeat.domain.diet.dto.response.HomeRecommendationResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.RestaurantMenuResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
@@ -140,12 +141,12 @@ public class DietController {
 	 * @return HomeRecommendationResult
 	 */
 	@PostMapping("/recommend/retry")
-	public ResTemplate<HomeRecommendationResult> retryRecommendation(
+	public ResTemplate<HomeRecommendationResponse> retryRecommendation(
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
 		String userId = principal.getUserId().toString();
-		HomeRecommendationResult data = dietService.retryHomeRecommendation(userId);
-		return ResTemplate.success(HttpStatus.OK, "추천 식단 재생성 성공", data);
+		HomeRecommendationResult result = dietService.retryHomeRecommendation(userId);
+		return ResTemplate.success(HttpStatus.OK, "추천 식단 재생성 성공", HomeRecommendationResponse.from(result));
 	}
 
 	/**

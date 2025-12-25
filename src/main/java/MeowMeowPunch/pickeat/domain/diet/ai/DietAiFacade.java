@@ -92,7 +92,7 @@ public class DietAiFacade {
 		if (!hasLlmConfig()) {
 			log.warn("LLM 설정이 비어 있어 AI 추천을 건너뜁니다. openai={}, generation={}", llmProperties.openai(),
 				llmProperties.generation());
-			return fallback(candidates, "AI 설정이 없어 점수 기반으로 추천했어요.");
+			return fallback(candidates, "AI 설정이 없어 점수 기반으로 추천했어요.", mealSlot);
 		}
 
 		try {
@@ -142,14 +142,14 @@ public class DietAiFacade {
 
 			if (picks.isEmpty()) {
 				// AI가 유효하지 않은 인덱스를 반환한 경우 Fallback
-				return fallback(candidates, "AI 추천 결과가 올바르지 않아 점수 기반으로 추천해 드립니다.");
+				return fallback(candidates, "AI 추천 결과가 올바르지 않아 점수 기반으로 추천해 드립니다.", mealSlot);
 			}
 
-			return HomeRecommendationResult.of(picks, output.reason());
+			return HomeRecommendationResult.of(picks, output.reason(), mealSlot.name());
 
 		} catch (Exception e) {
 			log.error("AI Recommendation Failed", e);
-			return fallback(candidates, "목표 영양에 근접한 메뉴를 우선 추천했어요.");
+			return fallback(candidates, "목표 영양에 근접한 메뉴를 우선 추천했어요.", mealSlot);
 		}
 	}
 
@@ -198,11 +198,12 @@ public class DietAiFacade {
 	}
 
 	// --- Private Helpers ---
-	private HomeRecommendationResult fallback(List<FoodRecommendationCandidate> candidates, String reason) {
+	private HomeRecommendationResult fallback(List<FoodRecommendationCandidate> candidates, String reason,
+		DietType mealSlot) {
 		List<FoodRecommendationCandidate> fallbackPicks = candidates.stream()
 			.limit(2)
 			.toList();
-		return HomeRecommendationResult.of(fallbackPicks, reason);
+		return HomeRecommendationResult.of(fallbackPicks, reason, mealSlot.name());
 	}
 
 	private boolean hasLlmConfig() {
