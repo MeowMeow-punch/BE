@@ -11,7 +11,7 @@ data_path="./data/certbot"
 email="hostmaster@43.202.194.74.sslip.io" # Adding a valid email is recommended
 staging=0 # Set to 1 if you're testing your setup to avoid hitting request limits
 
-if [ -d "$data_path/conf/live/$domains" ]; then
+if [ -f "$data_path/conf/live/$domains/fullchain.pem" ]; then
   echo "Existing data found for $domains. Skipping certificate request."
   exit 0
 fi
