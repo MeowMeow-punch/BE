@@ -147,23 +147,23 @@ jobs:
             ]" \
             --output text
 
-    - name: Debug Docker Logs on Failure
-      if: failure() || success()  # Always run this to see what happened
-      env:
-        GHCR_PAT: ${{ secrets.GHCR_PAT }}
-      run: |
-        echo "=== DEBUGGING LOGS ==="
-        aws ssm send-command \
-          --document-name "AWS-RunShellScript" \
-          --targets "Key=instanceids,Values=${{ secrets.INSTANCE_ID }}" \
-          --comment "Get Docker Logs" \
-          --parameters commands="[
-            \"echo '--- Nginx Logs ---'\",
-            \"docker logs pickeat-nginx\",
-            \"echo '--- Certbot Logs ---'\",
-            \"docker logs pickeat-certbot\",
-            \"echo '--- Init Script Logs (if any) ---'\",
-            \"cat init-letsencrypt.log || echo 'No log file'\",
-            \"docker ps -a\"
-          ]" \
-          --output text
+      - name: Debug Docker Logs on Failure
+        if: failure() || success() # Always run this to see what happened
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        run: |
+          echo "=== DEBUGGING LOGS ==="
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=instanceids,Values=${{ secrets.INSTANCE_ID }}" \
+            --comment "Get Docker Logs" \
+            --parameters commands="[
+              \"echo '--- Nginx Logs ---'\",
+              \"docker logs pickeat-nginx\",
+              \"echo '--- Certbot Logs ---'\",
+              \"docker logs pickeat-certbot\",
+              \"echo '--- Init Script Logs (if any) ---'\",
+              \"cat init-letsencrypt.log || echo 'No log file'\",
+              \"docker ps -a\"
+            ]" \
+            --output text
