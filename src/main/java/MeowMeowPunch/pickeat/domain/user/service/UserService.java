@@ -121,7 +121,8 @@ public class UserService {
                 currentStreak,
                 totalRecordedDays,
                 weeklyRecordedCount,
-                weeklyTargetCount);
+                weeklyTargetCount,
+                user.getTargetWeight());
 
         MyPageResponse.BasicInfo basicInfo = MyPageResponse.BasicInfo.from(user);
 
