@@ -4,8 +4,6 @@ services:
   app:
     image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/pickeat-be:latest
     container_name: pickeat-app
-    ports:
-      - "8080:8080"
     environment:
       # Secrets에서 생성된 .env 파일의 값을 사용
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
@@ -37,7 +35,33 @@ services:
         condition: service_healthy
     networks:
       - pickeat-network
-    restart: always
+
+  # [Nginx Reverse Proxy]
+  nginx:
+    image: nginx:1.24-alpine
+    container_name: pickeat-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    networks:
+      - pickeat-network
+    depends_on:
+      - app
+
+  # [Certbot for SSL]
+  certbot:
+    image: certbot/certbot
+    container_name: pickeat-certbot
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   # [Redis]
   redis:
