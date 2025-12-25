@@ -64,7 +64,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DietRecommendationService {
 	private static final int ACTIVE_PICK_LIMIT = 2;
-	private static final int CANDIDATE_POOL_LIMIT = 6;
+	private static final int GENERAL_CANDIDATE_POOL_LIMIT = 6;
+	private static final int SNACK_CANDIDATE_POOL_LIMIT = 4;
 	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 허용 오차
 	private static final int QUANTITY = 2; //
 	private static final String BASE_UNIT_GRAM = "G";
@@ -97,25 +98,6 @@ public class DietRecommendationService {
 	private final NutritionStatusClassifier nutritionStatusClassifier;
 
 	/**
-	 * [Recommend] 오늘/현재 식사 슬롯에 맞춰 추천 TOP5 계산 + AI 선택
-	 *
-	 * @param userId 사용자 식별자
-	 * @param focus  추천 목적(균형/단백질 등)
-	 * @param totals 오늘 섭취 합계
-	 * @return 추천 결과 (Picks + Reason)
-	 */
-	@Transactional
-	public HomeRecommendationResult recommendTopFoods(String userId, Focus focus, NutrientTotals totals) {
-		DietType mealSlot = mealSlot(LocalTime.now(KOREA_ZONE));
-		return recommendTopFoods(userId, focus, totals, mealSlot, false, false, false);
-	}
-
-	public HomeRecommendationResult recommendTopFoods(String userId, Focus focus, NutrientTotals totals,
-		DietType mealSlot, boolean forceNew) {
-		return recommendTopFoods(userId, focus, totals, mealSlot, forceNew, false, false);
-	}
-
-	/**
 	 * [Recommend] 주어진 슬롯에 대해 추천 TOP5 계산 + AI 선택
 	 *
 	 * @param userId 사용자 식별자
@@ -124,12 +106,11 @@ public class DietRecommendationService {
 	 * @param mealSlot 대상 식사 슬롯
 	 * @param forceNew 기존 추천 재사용 없이 항상 새로 생성할지 여부
 	 * @param excludeExisting 오늘 동일 슬롯의 기존 추천 메뉴를 후보에서 제외할지 여부
-	 * @param refresh 기존 풀에서 남은 후보를 소진하여 새 추천을 노출할지 여부(false면 현재 활성 추천 유지)
 	 * @return 추천 결과 (Picks + Reason)
 	 */
 	@Transactional
 	public HomeRecommendationResult recommendTopFoods(String userId, Focus focus, NutrientTotals totals,
-		DietType mealSlot, boolean forceNew, boolean excludeExisting, boolean refresh) {
+		DietType mealSlot, boolean forceNew, boolean excludeExisting) {
 		LocalDate today = LocalDate.now(KOREA_ZONE);
 		final double USED_SENTINEL = -1.0;
 
@@ -142,7 +123,8 @@ public class DietRecommendationService {
 
 		// 기존 풀 재사용 (forceNew가 아니고, 풀 존재)
 		if (!forceNew && !existingPool.isEmpty()) {
-			return pickFromPool(userId, today, mealSlot, existingPool, refresh, USED_SENTINEL);
+			ensureRecommendationFeedback(userId, today, mealSlot, focus, existingPool);
+			return pickFromPool(userId, today, mealSlot, existingPool, USED_SENTINEL);
 		}
 
 		List<FoodRecommendationCandidate> candidates;
@@ -159,14 +141,15 @@ public class DietRecommendationService {
 			candidates = filterBlockedToday(userId, today, candidates);
 		}
 
-		if (candidates.size() < CANDIDATE_POOL_LIMIT) {
+		int candidatePoolLimit = candidatePoolLimitFor(mealSlot);
+		if (candidates.size() < candidatePoolLimit) {
 			log.warn("[DietRecommendationService] candidates less than pool size after filtering: userId={}, slot={}, size={}",
 				userId, mealSlot, candidates.size());
 		}
 
 		// 후보 중 앞에서 6개만 풀로 사용
 		List<FoodRecommendationCandidate> pool = candidates.stream()
-			.limit(CANDIDATE_POOL_LIMIT)
+			.limit(candidatePoolLimit)
 			.toList();
 
 		// 4. AI 호출하여 피드백 획득 (풀을 기준으로)
@@ -190,8 +173,8 @@ public class DietRecommendationService {
 				.toList();
 
 			// AI 사유 저장(Daily Recommendation Feedback)
-			// 기존에 같은 날짜/타입의 피드백이 있다면 업데이트
-			saveFeedback(userId, today, nonNullFeedback);
+			// 기존에 같은 날짜/타입의 피드백이 있다면 업데이트(실패해도 추천 응답은 반환)
+			saveFeedbackSafely(userId, today, mealSlot, nonNullFeedback);
 
 			return HomeRecommendationResult.of(savedPicks, nonNullFeedback, mealSlot.name());
 
@@ -210,6 +193,31 @@ public class DietRecommendationService {
 		List<String> allowedCategories = allowedCategoriesForMeal(mealSlot);
 		Weight weight = weightByPurpose(focus);
 
+		if (mealSlot == DietType.SNACK) {
+			return SnackCategory.labels().stream()
+				.map(cat -> dietRecommendationMapper.findTopFoodCandidates(
+					targetMealKcal,
+					targetMealCarbs,
+					targetMealProtein,
+					targetMealFat,
+					List.of(cat),
+					weight.kcal(),
+					weight.carbs(),
+					weight.protein(),
+					weight.fat(),
+					weight.penaltyOverKcal(),
+					weight.penaltyOverMacro(),
+					KCAL_TOLERANCE,
+					BASE_UNIT_GRAM,
+					1,
+					QUANTITY
+				))
+				.flatMap(List::stream)
+				.limit(SNACK_CANDIDATE_POOL_LIMIT)
+				.toList();
+		}
+
+		int fetchLimit = Math.max(candidatePoolLimitFor(mealSlot) * 3, allowedCategories.size());
 		return dietRecommendationMapper.findTopFoodCandidates(
 			targetMealKcal,
 			targetMealCarbs,
@@ -224,9 +232,12 @@ public class DietRecommendationService {
 			weight.penaltyOverMacro(),
 			KCAL_TOLERANCE,
 			BASE_UNIT_GRAM,
-			CANDIDATE_POOL_LIMIT,
+			fetchLimit,
 			QUANTITY
-		);
+		).stream()
+			.filter(c -> c.category() != null && !c.category().isBlank())
+			.collect(Collectors.collectingAndThen(Collectors.toList(),
+				list -> distinctByCategory(list, candidatePoolLimitFor(mealSlot))));
 	}
 
 	/**
@@ -265,7 +276,7 @@ public class DietRecommendationService {
 		return menus.stream()
 			.map(m -> scoreCandidate(m, targetMealKcal, targetMealCarbs, targetMealProtein, targetMealFat, weight))
 			.sorted((a, b) -> Double.compare(b.score(), a.score()))
-			.limit(CANDIDATE_POOL_LIMIT)
+			.limit(candidatePoolLimitFor(DietType.LUNCH))
 			.toList();
 	}
 
@@ -312,14 +323,14 @@ public class DietRecommendationService {
 	}
 
 	private HomeRecommendationResult pickFromPool(String userId, LocalDate today, DietType mealSlot,
-		List<RecommendedDiet> pool, boolean refresh, double usedSentinel) {
+		List<RecommendedDiet> pool, double usedSentinel) {
 		List<RecommendedDiet> active = pool.stream()
 			.filter(r -> r.getScore() != null && r.getScore() == usedSentinel)
 			.sorted(Comparator.comparing(RecommendedDiet::getScore, Comparator.nullsLast(Double::compareTo)))
 			.limit(ACTIVE_PICK_LIMIT)
 			.toList();
 
-		if (!refresh && !active.isEmpty()) {
+		if (!active.isEmpty()) {
 			return toResult(userId, today, mealSlot, active);
 		}
 
@@ -341,7 +352,8 @@ public class DietRecommendationService {
 
 	private HomeRecommendationResult toResult(String userId, LocalDate today, DietType mealSlot,
 		List<RecommendedDiet> picksEntity) {
-		String reason = aiFeedBackRepository.findByUserIdAndDateAndType(userId, today, FeedBackType.RECOMMENDATION)
+		String reason = aiFeedBackRepository.findByUserIdAndDateAndTypeAndMealType(userId, today,
+				FeedBackType.RECOMMENDATION, mealSlot)
 			.map(AiFeedBack::getContent)
 			.filter(r -> r != null && !r.isBlank())
 			.orElse("목표 영양에 근접한 메뉴를 엄선 추천했어요.");
@@ -390,17 +402,77 @@ public class DietRecommendationService {
 		return raw == null ? "" : raw.trim().toLowerCase();
 	}
 
-	private void saveFeedback(String userId, LocalDate today, String content) {
-		AiFeedBack feedback = aiFeedBackRepository.findByUserIdAndDateAndType(userId, today,
-				FeedBackType.RECOMMENDATION)
+	private int candidatePoolLimitFor(DietType mealSlot) {
+		return mealSlot == DietType.SNACK ? SNACK_CANDIDATE_POOL_LIMIT : GENERAL_CANDIDATE_POOL_LIMIT;
+	}
+
+	private List<FoodRecommendationCandidate> distinctByCategory(List<FoodRecommendationCandidate> candidates,
+		int limit) {
+		var seen = new java.util.LinkedHashSet<String>();
+		var result = new java.util.ArrayList<FoodRecommendationCandidate>();
+		for (FoodRecommendationCandidate c : candidates) {
+			String cat = normalizeName(c.category());
+			if (cat.isEmpty() || seen.contains(cat)) {
+				continue;
+			}
+			seen.add(cat);
+			result.add(c);
+			if (result.size() >= limit) {
+				break;
+			}
+		}
+		return result;
+	}
+
+	private void saveFeedbackSafely(String userId, LocalDate today, DietType mealSlot, String content) {
+		try {
+			saveFeedback(userId, today, mealSlot, content);
+		} catch (Exception ex) {
+			log.error("[DietRecommendationService] Failed to save recommendation feedback: userId={}, date={}, slot={}",
+				userId, today, mealSlot, ex);
+		}
+	}
+
+	private void ensureRecommendationFeedback(String userId, LocalDate today, DietType mealSlot, Focus focus,
+		List<RecommendedDiet> existingPool) {
+
+		boolean hasFeedback = aiFeedBackRepository.findByUserIdAndDateAndTypeAndMealType(userId, today,
+			FeedBackType.RECOMMENDATION, mealSlot).isPresent();
+		if (hasFeedback) {
+			return;
+		}
+
+		List<FoodRecommendationCandidate> candidates = existingPool.stream()
+			.map(this::toCandidate)
+			.limit(candidatePoolLimitFor(mealSlot))
+			.toList();
+
+		try {
+			HomeRecommendationResult aiResult = dietAiFacade.recommendHome(focus, mealSlot, candidates, userId);
+			String content = (aiResult.aiFeedBack() == null || aiResult.aiFeedBack().isBlank())
+				? "목표 영양에 근접한 메뉴를 엄선 추천했어요."
+				: aiResult.aiFeedBack();
+			saveFeedback(userId, today, mealSlot, content);
+		} catch (Exception e) {
+			log.warn("[DietRecommendationService] failed to refresh feedback for existing recommendations: userId={}, date={}, slot={}",
+				userId, today, mealSlot, e);
+		}
+	}
+
+	private void saveFeedback(String userId, LocalDate today, DietType mealSlot, String content) {
+		AiFeedBack feedback = aiFeedBackRepository.findByUserIdAndDateAndTypeAndMealType(userId, today,
+				FeedBackType.RECOMMENDATION, mealSlot)
+			.or(() -> aiFeedBackRepository.findByUserIdAndDateAndType(userId, today, FeedBackType.RECOMMENDATION)
+				.filter(f -> f.getMealType() == null))
 			.orElse(AiFeedBack.builder()
 				.userId(userId)
 				.date(today)
 				.type(FeedBackType.RECOMMENDATION)
+				.mealType(mealSlot)
 				.content(content)
 				.build());
 
-		feedback.updateContent(content);
+		feedback.update(content, mealSlot);
 		aiFeedBackRepository.save(feedback);
 	}
 

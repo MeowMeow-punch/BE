@@ -12,13 +12,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import MeowMeowPunch.pickeat.domain.diet.dto.HomeRecommendationResult;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
-import MeowMeowPunch.pickeat.domain.diet.dto.response.HomeRecommendationResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.RestaurantMenuResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
@@ -132,21 +130,6 @@ public class DietController {
 		String userId = principal.getUserId().toString();
 		DietRegisterResponse data = dietService.registerRecommendation(userId, recommendationId);
 		return ResTemplate.success(HttpStatus.OK, "추천 식단 등록 성공", data);
-	}
-
-	/**
-	 * [API] 추천 식단 재생성 (항상 신규)
-	 *
-	 * @param principal 사용자 식별자
-	 * @return HomeRecommendationResult
-	 */
-	@PostMapping("/recommend/retry")
-	public ResTemplate<HomeRecommendationResponse> retryRecommendation(
-		@AuthenticationPrincipal UserPrincipal principal
-	) {
-		String userId = principal.getUserId().toString();
-		HomeRecommendationResult result = dietService.retryHomeRecommendation(userId);
-		return ResTemplate.success(HttpStatus.OK, "추천 식단 재생성 성공", HomeRecommendationResponse.from(result));
 	}
 
 	/**

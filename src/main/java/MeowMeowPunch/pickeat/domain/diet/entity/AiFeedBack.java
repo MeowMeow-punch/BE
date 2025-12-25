@@ -15,6 +15,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import MeowMeowPunch.pickeat.global.common.enums.FeedBackType;
+import MeowMeowPunch.pickeat.global.common.enums.DietType;
 import MeowMeowPunch.pickeat.global.common.entity.BaseEntity;
 
 @Entity
@@ -38,18 +39,28 @@ public class AiFeedBack extends BaseEntity {
 	@Column(nullable = false)
 	private FeedBackType type;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "diet_type")
+	private DietType mealType;
+
 	@Column(nullable = false, length = 1000)
 	private String content;
 
 	@Builder
-	public AiFeedBack(String userId, LocalDate date, FeedBackType type, String content) {
+	public AiFeedBack(String userId, LocalDate date, FeedBackType type, DietType mealType, String content) {
 		this.userId = userId;
 		this.date = date;
 		this.type = type;
+		this.mealType = mealType;
 		this.content = content;
 	}
 
 	public void updateContent(String content) {
 		this.content = content;
+	}
+
+	public void update(String content, DietType mealType) {
+		this.content = content;
+		this.mealType = mealType;
 	}
 }
