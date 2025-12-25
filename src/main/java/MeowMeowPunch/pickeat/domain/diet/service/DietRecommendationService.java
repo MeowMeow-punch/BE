@@ -7,9 +7,12 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -22,13 +25,13 @@ import MeowMeowPunch.pickeat.domain.diet.dto.FoodRecommendationCandidate;
 import MeowMeowPunch.pickeat.domain.diet.dto.HomeRecommendationResult;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutrientTotals;
 import MeowMeowPunch.pickeat.domain.diet.dto.NutritionGoals;
+import MeowMeowPunch.pickeat.domain.diet.dto.NutritionSummary;
 import MeowMeowPunch.pickeat.domain.diet.entity.AiFeedBack;
 import MeowMeowPunch.pickeat.domain.diet.entity.Food;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDiet;
 import MeowMeowPunch.pickeat.domain.diet.entity.RecommendedDietFood;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietFeedbackGenerateException;
 import MeowMeowPunch.pickeat.domain.diet.exception.DietRecommendationSaveException;
-import MeowMeowPunch.pickeat.domain.diet.exception.FoodNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.exception.UserNotFoundException;
 import MeowMeowPunch.pickeat.domain.diet.repository.AiFeedBackRepository;
 import MeowMeowPunch.pickeat.domain.diet.repository.DietRecommendationMapper;
@@ -60,8 +63,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class DietRecommendationService {
-	private static final int TOP_LIMIT = 2;
-	private static final int MIN_PICK = 1;
+	private static final int ACTIVE_PICK_LIMIT = 2;
+	private static final int GENERAL_CANDIDATE_POOL_LIMIT = 6;
+	private static final int SNACK_CANDIDATE_POOL_LIMIT = 4;
 	private static final int KCAL_TOLERANCE = 200; // +- 칼로리 허용 오차
 	private static final int QUANTITY = 2; //
 	private static final String BASE_UNIT_GRAM = "G";
@@ -91,50 +95,39 @@ public class DietRecommendationService {
 	private final AiFeedBackRepository aiFeedBackRepository;
 	private final UserRepository userRepository;
 	private final NutritionGoalCalculator nutritionGoalCalculator;
+	private final NutritionStatusClassifier nutritionStatusClassifier;
 
 	/**
-	 * [Recommend] 오늘/현재 식사 슬롯에 맞춰 추천 TOP5 계산 + AI 선택
+	 * [Recommend] 주어진 슬롯에 대해 추천 TOP5 계산 + AI 선택
 	 *
 	 * @param userId 사용자 식별자
 	 * @param focus  추천 목적(균형/단백질 등)
 	 * @param totals 오늘 섭취 합계
+	 * @param mealSlot 대상 식사 슬롯
+	 * @param forceNew 기존 추천 재사용 없이 항상 새로 생성할지 여부
+	 * @param excludeExisting 오늘 동일 슬롯의 기존 추천 메뉴를 후보에서 제외할지 여부
 	 * @return 추천 결과 (Picks + Reason)
 	 */
 	@Transactional
-	public HomeRecommendationResult recommendTopFoods(String userId, Focus focus, NutrientTotals totals) {
+	public HomeRecommendationResult recommendTopFoods(String userId, Focus focus, NutrientTotals totals,
+		DietType mealSlot, boolean forceNew, boolean excludeExisting) {
 		LocalDate today = LocalDate.now(KOREA_ZONE);
-		LocalTime nowTime = LocalTime.now(KOREA_ZONE);
-		DietType mealSlot = mealSlot(nowTime);
+		final double USED_SENTINEL = -1.0;
 
 		User user = userRepository.findById(UUID.fromString(userId))
 			.orElseThrow(UserNotFoundException::new);
 
 		String groupName = DietPageAssembler.getGroupName(user, groupMappingRepository);
+		List<RecommendedDiet> existingPool = recommendedDietRepository
+			.findByUserIdAndDateAndDietTypeOrderByScoreAsc(userId, today, mealSlot);
 
-		// 1. 이미 생성된 추천 조회
-		List<RecommendedDiet> existing = recommendedDietRepository.findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(
-			userId, today, mealSlot);
-
-		if (existing.size() >= MIN_PICK) {
-			List<FoodRecommendationCandidate> picks = existing.stream()
-				.sorted(Comparator.comparing(RecommendedDiet::getScore, Comparator.nullsLast(Double::compareTo))
-					.reversed())
-				.map(this::toCandidate)
-				// LUNCH 외 슬롯에서는 WELSTORY 추천은 제외(그룹 점심 우선 정책)
-				.filter(c -> mealSlot == DietType.LUNCH || c.sourceType() != DietSourceType.WELSTORY)
-				.limit(TOP_LIMIT)
-				.toList();
-
-			// 저장된 피드백 사유 조회
-			String reason = aiFeedBackRepository.findByUserIdAndDateAndType(userId, today, FeedBackType.RECOMMENDATION)
-				.map(AiFeedBack::getContent)
-				.orElse("목표 영양에 근접한 메뉴를 엄선 추천했어요.");
-
-			return HomeRecommendationResult.of(picks, reason);
+		// 기존 풀 재사용 (forceNew가 아니고, 풀 존재)
+		if (!forceNew && !existingPool.isEmpty()) {
+			ensureRecommendationFeedback(userId, today, mealSlot, focus, existingPool);
+			return pickFromPool(userId, today, mealSlot, existingPool, USED_SENTINEL);
 		}
 
 		List<FoodRecommendationCandidate> candidates;
-
 		// 2. 웰스토리(그룹) 점심 우선 확인
 		if (isGroupUser(user) && mealSlot == DietType.LUNCH) {
 			candidates = recommendWelstoryLunch(today, focus, totals, groupName);
@@ -144,40 +137,46 @@ public class DietRecommendationService {
 			candidates = recommendGeneralFoods(mealSlot, focus, totals, goals, userId);
 		}
 
-		// 4. AI 호출하여 최종 Pick & Reason 획득
-		HomeRecommendationResult aiResult = dietAiFacade.recommendHome(focus, mealSlot, candidates, userId);
+		if (excludeExisting) {
+			candidates = filterBlockedToday(userId, today, candidates);
+		}
+
+		int candidatePoolLimit = candidatePoolLimitFor(mealSlot);
+		if (candidates.size() < candidatePoolLimit) {
+			log.warn("[DietRecommendationService] candidates less than pool size after filtering: userId={}, slot={}, size={}",
+				userId, mealSlot, candidates.size());
+		}
+
+		// 후보 중 앞에서 6개만 풀로 사용
+		List<FoodRecommendationCandidate> pool = candidates.stream()
+			.limit(candidatePoolLimit)
+			.toList();
+
+		// 4. AI 호출하여 피드백 획득 (풀을 기준으로)
+		HomeRecommendationResult aiResult = dietAiFacade.recommendHome(focus, mealSlot, pool, userId);
+		String nonNullFeedback = (aiResult.aiFeedBack() == null || aiResult.aiFeedBack().isBlank())
+			? "목표 영양에 근접한 메뉴를 엄선 추천했어요."
+			: aiResult.aiFeedBack();
 
 		// 5. 저장
 		try {
-			// 선택된 메뉴 저장
-			List<RecommendedDiet> savedDiets = saveTopRecommended(userId, today, mealSlot, aiResult.picks());
-
-			// 저장된 RecommendedDiet 엔티티를 기반으로 다시 후보 리스트를 매핑하여
-			// recommendationId에 올바른 DB PK가 들어가도록 함.
-			List<FoodRecommendationCandidate> savedPicks = savedDiets.stream()
-				.sorted(Comparator.comparing(RecommendedDiet::getScore, Comparator.nullsLast(Double::compareTo))
-					.reversed())
+			List<RecommendedDiet> savedPool = saveCandidatePool(userId, today, mealSlot, pool, USED_SENTINEL);
+			List<RecommendedDiet> initialPicks = savedPool.stream()
+				.filter(r -> r.getScore() != null && r.getScore() == USED_SENTINEL)
+				.sorted(Comparator.comparing(RecommendedDiet::getScore))
+				.limit(ACTIVE_PICK_LIMIT)
+				.toList();
+			List<FoodRecommendationCandidate> savedPicks = initialPicks.stream()
 				.map(this::toCandidate)
-				// LUNCH 외 슬롯에서는 WELSTORY 추천 제외 + 최대 2개
 				.filter(c -> mealSlot == DietType.LUNCH || c.sourceType() != DietSourceType.WELSTORY)
-				.limit(TOP_LIMIT)
+				.limit(ACTIVE_PICK_LIMIT)
 				.toList();
 
 			// AI 사유 저장(Daily Recommendation Feedback)
-			// 기존에 같은 날짜/타입의 피드백이 있다면 업데이트
-			AiFeedBack feedback = aiFeedBackRepository.findByUserIdAndDateAndType(userId, today,
-					FeedBackType.RECOMMENDATION)
-				.orElse(AiFeedBack.builder()
-					.userId(userId)
-					.date(today)
-					.type(FeedBackType.RECOMMENDATION)
-					.content(aiResult.reason())
-					.build());
+			// 기존에 같은 날짜/타입의 피드백이 있다면 업데이트(실패해도 추천 응답은 반환)
+			saveFeedbackSafely(userId, today, mealSlot, nonNullFeedback);
 
-			feedback.updateContent(aiResult.reason());
-			aiFeedBackRepository.save(feedback);
-
-			return HomeRecommendationResult.of(savedPicks, aiResult.reason());
+			return HomeRecommendationResult.of(savedPicks, nonNullFeedback, mealSlot.name());
 
 		} catch (Exception e) {
 			throw new DietRecommendationSaveException(e);
@@ -194,6 +193,31 @@ public class DietRecommendationService {
 		List<String> allowedCategories = allowedCategoriesForMeal(mealSlot);
 		Weight weight = weightByPurpose(focus);
 
+		if (mealSlot == DietType.SNACK) {
+			return SnackCategory.labels().stream()
+				.map(cat -> dietRecommendationMapper.findTopFoodCandidates(
+					targetMealKcal,
+					targetMealCarbs,
+					targetMealProtein,
+					targetMealFat,
+					List.of(cat),
+					weight.kcal(),
+					weight.carbs(),
+					weight.protein(),
+					weight.fat(),
+					weight.penaltyOverKcal(),
+					weight.penaltyOverMacro(),
+					KCAL_TOLERANCE,
+					BASE_UNIT_GRAM,
+					1,
+					QUANTITY
+				))
+				.flatMap(List::stream)
+				.limit(SNACK_CANDIDATE_POOL_LIMIT)
+				.toList();
+		}
+
+		int fetchLimit = Math.max(candidatePoolLimitFor(mealSlot) * 3, allowedCategories.size());
 		return dietRecommendationMapper.findTopFoodCandidates(
 			targetMealKcal,
 			targetMealCarbs,
@@ -208,9 +232,12 @@ public class DietRecommendationService {
 			weight.penaltyOverMacro(),
 			KCAL_TOLERANCE,
 			BASE_UNIT_GRAM,
-			TOP_LIMIT,
+			fetchLimit,
 			QUANTITY
-		);
+		).stream()
+			.filter(c -> c.category() != null && !c.category().isBlank())
+			.collect(Collectors.collectingAndThen(Collectors.toList(),
+				list -> distinctByCategory(list, candidatePoolLimitFor(mealSlot))));
 	}
 
 	/**
@@ -249,6 +276,7 @@ public class DietRecommendationService {
 		return menus.stream()
 			.map(m -> scoreCandidate(m, targetMealKcal, targetMealCarbs, targetMealProtein, targetMealFat, weight))
 			.sorted((a, b) -> Double.compare(b.score(), a.score()))
+			.limit(candidatePoolLimitFor(DietType.LUNCH))
 			.toList();
 	}
 
@@ -267,6 +295,7 @@ public class DietRecommendationService {
 
 		return new FoodRecommendationCandidate(
 			c.recommendationId(),
+			c.foodId(),
 			c.name(),
 			c.thumbnailUrl(),
 			c.kcal(),
@@ -293,13 +322,171 @@ public class DietRecommendationService {
 		return date.getYear() * 10000 + date.getMonthValue() * 100 + date.getDayOfMonth();
 	}
 
+	private HomeRecommendationResult pickFromPool(String userId, LocalDate today, DietType mealSlot,
+		List<RecommendedDiet> pool, double usedSentinel) {
+		List<RecommendedDiet> active = pool.stream()
+			.filter(r -> r.getScore() != null && r.getScore() == usedSentinel)
+			.sorted(Comparator.comparing(RecommendedDiet::getScore, Comparator.nullsLast(Double::compareTo)))
+			.limit(ACTIVE_PICK_LIMIT)
+			.toList();
+
+		if (!active.isEmpty()) {
+			return toResult(userId, today, mealSlot, active);
+		}
+
+		List<RecommendedDiet> remaining = pool.stream()
+			.filter(r -> r.getScore() == null || r.getScore() >= 0)
+			.sorted(Comparator.comparing(RecommendedDiet::getScore, Comparator.nullsLast(Double::compareTo)))
+			.limit(ACTIVE_PICK_LIMIT)
+			.toList();
+
+		if (remaining.isEmpty()) {
+			return HomeRecommendationResult.empty("더 이상 추천할 식단이 없습니다.");
+		}
+
+		remaining.forEach(r -> r.updateScore(usedSentinel));
+		recommendedDietRepository.saveAll(remaining);
+
+		return toResult(userId, today, mealSlot, remaining);
+	}
+
+	private HomeRecommendationResult toResult(String userId, LocalDate today, DietType mealSlot,
+		List<RecommendedDiet> picksEntity) {
+		String reason = aiFeedBackRepository.findByUserIdAndDateAndTypeAndMealType(userId, today,
+				FeedBackType.RECOMMENDATION, mealSlot)
+			.map(AiFeedBack::getContent)
+			.filter(r -> r != null && !r.isBlank())
+			.orElse("목표 영양에 근접한 메뉴를 엄선 추천했어요.");
+
+		List<FoodRecommendationCandidate> picks = picksEntity.stream()
+			.map(this::toCandidate)
+			.filter(c -> mealSlot == DietType.LUNCH || c.sourceType() != DietSourceType.WELSTORY)
+			.limit(ACTIVE_PICK_LIMIT)
+			.toList();
+
+		return HomeRecommendationResult.of(picks, reason, mealSlot.name());
+	}
+
+	private List<FoodRecommendationCandidate> filterBlockedToday(String userId, LocalDate today,
+		List<FoodRecommendationCandidate> candidates) {
+		var blocked = new LinkedHashSet<String>();
+		dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, today).forEach(d ->
+			addName(blocked, d.getTitle()));
+		recommendedDietRepository.findByUserIdAndDateOrderByCreatedAtDesc(userId, today).forEach(r ->
+			addName(blocked, r.getTitle()));
+
+		Set<String> selected = new LinkedHashSet<>();
+		return candidates.stream()
+			.filter(c -> {
+				String nm = normalizeName(c.name());
+				if (nm.isEmpty() || blocked.contains(nm)) {
+					return false;
+				}
+				if (selected.contains(nm)) {
+					return false;
+				}
+				selected.add(nm);
+				return true;
+			})
+			.toList();
+	}
+
+	private void addName(Set<String> set, String raw) {
+		String nm = normalizeName(raw);
+		if (!nm.isEmpty()) {
+			set.add(nm);
+		}
+	}
+
+	private String normalizeName(String raw) {
+		return raw == null ? "" : raw.trim().toLowerCase();
+	}
+
+	private int candidatePoolLimitFor(DietType mealSlot) {
+		return mealSlot == DietType.SNACK ? SNACK_CANDIDATE_POOL_LIMIT : GENERAL_CANDIDATE_POOL_LIMIT;
+	}
+
+	private List<FoodRecommendationCandidate> distinctByCategory(List<FoodRecommendationCandidate> candidates,
+		int limit) {
+		var seen = new java.util.LinkedHashSet<String>();
+		var result = new java.util.ArrayList<FoodRecommendationCandidate>();
+		for (FoodRecommendationCandidate c : candidates) {
+			String cat = normalizeName(c.category());
+			if (cat.isEmpty() || seen.contains(cat)) {
+				continue;
+			}
+			seen.add(cat);
+			result.add(c);
+			if (result.size() >= limit) {
+				break;
+			}
+		}
+		return result;
+	}
+
+	private void saveFeedbackSafely(String userId, LocalDate today, DietType mealSlot, String content) {
+		try {
+			saveFeedback(userId, today, mealSlot, content);
+		} catch (Exception ex) {
+			log.error("[DietRecommendationService] Failed to save recommendation feedback: userId={}, date={}, slot={}",
+				userId, today, mealSlot, ex);
+		}
+	}
+
+	private void ensureRecommendationFeedback(String userId, LocalDate today, DietType mealSlot, Focus focus,
+		List<RecommendedDiet> existingPool) {
+
+		boolean hasFeedback = aiFeedBackRepository.findByUserIdAndDateAndTypeAndMealType(userId, today,
+			FeedBackType.RECOMMENDATION, mealSlot).isPresent();
+		if (hasFeedback) {
+			return;
+		}
+
+		List<FoodRecommendationCandidate> candidates = existingPool.stream()
+			.map(this::toCandidate)
+			.limit(candidatePoolLimitFor(mealSlot))
+			.toList();
+
+		try {
+			HomeRecommendationResult aiResult = dietAiFacade.recommendHome(focus, mealSlot, candidates, userId);
+			String content = (aiResult.aiFeedBack() == null || aiResult.aiFeedBack().isBlank())
+				? "목표 영양에 근접한 메뉴를 엄선 추천했어요."
+				: aiResult.aiFeedBack();
+			saveFeedback(userId, today, mealSlot, content);
+		} catch (Exception e) {
+			log.warn("[DietRecommendationService] failed to refresh feedback for existing recommendations: userId={}, date={}, slot={}",
+				userId, today, mealSlot, e);
+		}
+	}
+
+	private void saveFeedback(String userId, LocalDate today, DietType mealSlot, String content) {
+		AiFeedBack feedback = aiFeedBackRepository.findByUserIdAndDateAndTypeAndMealType(userId, today,
+				FeedBackType.RECOMMENDATION, mealSlot)
+			.or(() -> aiFeedBackRepository.findByUserIdAndDateAndType(userId, today, FeedBackType.RECOMMENDATION)
+				.filter(f -> f.getMealType() == null))
+			.orElse(AiFeedBack.builder()
+				.userId(userId)
+				.date(today)
+				.type(FeedBackType.RECOMMENDATION)
+				.mealType(mealSlot)
+				.content(content)
+				.build());
+
+		feedback.update(content, mealSlot);
+		aiFeedBackRepository.save(feedback);
+	}
+
 	// RecommendedDiet 테이블에 저장
-	private List<RecommendedDiet> saveTopRecommended(String userId, LocalDate date, DietType dietType,
-		List<FoodRecommendationCandidate> picks) {
-		return picks.stream().map(c -> {
+	private List<RecommendedDiet> saveCandidatePool(String userId, LocalDate date, DietType dietType,
+		List<FoodRecommendationCandidate> pool, double usedSentinel) {
+		final java.util.concurrent.atomic.AtomicInteger order = new java.util.concurrent.atomic.AtomicInteger(0);
+		List<RecommendedDiet> saved = pool.stream().map(c -> {
 			DietSourceType sourceType = c.sourceType() == null ? DietSourceType.FOOD_DB : c.sourceType();
-			Long foodId = sourceType == DietSourceType.WELSTORY ? null : resolveFoodId(c);
-			RecommendedDiet saved = recommendedDietRepository.save(
+			Long foodId = sourceType == DietSourceType.WELSTORY ? null : resolveFoodIdStrict(c, true);
+			int currentOrder = order.getAndIncrement();
+			boolean useNow = currentOrder < ACTIVE_PICK_LIMIT;
+
+			RecommendedDiet savedDiet = recommendedDietRepository.save(
 				RecommendedDiet.builder()
 					.userId(userId)
 					.foodId(foodId)
@@ -313,32 +500,42 @@ public class DietRecommendationService {
 					.protein(nullSafe(c.protein()))
 					.fat(nullSafe(c.fat()))
 					.thumbnailUrl(c.thumbnailUrl())
-					.score(c.score())
+					.score(useNow ? usedSentinel : (double)currentOrder)
 					.build()
 
 			);
 			if (foodId != null) {
 				recommendedDietFoodRepository.save(
 					RecommendedDietFood.builder()
-						.recommendedDiet(saved)
+						.recommendedDiet(savedDiet)
 						.foodId(foodId)
 						.quantity(2)
 						.build());
 			}
-			return saved;
+			return savedDiet;
 		}).toList();
+		return saved;
 	}
 
-	// foodId 반환
-	private Long resolveFoodId(FoodRecommendationCandidate c) {
+	// foodId 반환 (저장용 - 없으면 예외/또는 null 허용)
+	private Long resolveFoodIdStrict(FoodRecommendationCandidate c, boolean allowMissing) {
+		if (c.sourceType() == DietSourceType.WELSTORY) {
+			return null;
+		}
+		if (c.foodId() != null && c.foodId() > 0) {
+			return c.foodId();
+		}
 		if (c.recommendationId() != null && c.recommendationId() > 0) {
 			return c.recommendationId();
 		}
 		Food existing = foodRepository.findByName(c.name());
-		if (existing != null) {
-			return existing.getId();
+		if (existing == null) {
+			if (allowMissing) {
+				return null;
+			}
+			return null;
 		}
-		throw new FoodNotFoundException(c.recommendationId() != null ? c.recommendationId() : -1L);
+		return existing.getId();
 	}
 
 	// 남은 양 산출 (음수 방지)
@@ -398,7 +595,8 @@ public class DietRecommendationService {
 	private FoodRecommendationCandidate toCandidate(RecommendedDiet r) {
 		DietSourceType source = r.getSourceType() != null ? r.getSourceType() : DietSourceType.FOOD_DB;
 		return new FoodRecommendationCandidate(
-			r.getId(), // dietId가 candidate의 recommendationId 슬롯으로 전달됨. DietService에서 사용.
+			r.getId(), // recommendationId
+			r.getFoodId(),
 			r.getTitle(),
 			r.getThumbnailUrl(),
 			nullSafe(r.getKcal()),
@@ -417,24 +615,26 @@ public class DietRecommendationService {
 	@Transactional
 	public void generateDailyFeedback(String userId, LocalDate date) {
 		try {
+			User user = userRepository.findById(UUID.fromString(userId))
+				.orElseThrow(UserNotFoundException::new);
+			Focus focus = user.getFocus();
+			DietType mealSlot = mealSlot(LocalTime.now(KOREA_ZONE));
+
 			// 1. 오늘 누적값 확인
 			NutrientTotals todayTotals = dietRecommendationMapper.findTotalsByDate(userId, date);
 			boolean isFirstMeal = (todayTotals == null ||
 				todayTotals.totalKcal() == null ||
 				todayTotals.totalKcal().compareTo(BigDecimal.ZERO) == 0);
 
-			NutrientTotals lastRecord = null;
-			if (isFirstMeal) {
-				// 2. Cold Start: 최근 기록 조회
-				lastRecord = dietRepository.findTopByUserIdAndDateLessThanOrderByDateDesc(userId, date)
-					.map(d -> dietRecommendationMapper.findTotalsByDate(userId, d.getDate()))
-					.orElse(null);
-			}
+			NutritionGoals goals = nutritionGoalCalculator.calculateGoals(user);
+			NutritionSummary nutritionSummary = isFirstMeal || todayTotals == null
+				? NutritionSummary.empty()
+				: nutritionStatusClassifier.classify(todayTotals, goals);
 
-			// 3. AI 호출
-			String feedback = dietAiFacade.feedbackDaily(isFirstMeal, todayTotals, lastRecord);
+			// 2. AI 호출
+			String feedback = dietAiFacade.feedbackDaily(isFirstMeal, mealSlot, focus, nutritionSummary);
 
-			// 4. 저장 (기존 피드백 있으면 업데이트)
+			// 3. 저장 (기존 피드백 있으면 업데이트)
 			AiFeedBack aiFeedBack = aiFeedBackRepository.findByUserIdAndDateAndType(userId, date, FeedBackType.DAILY)
 				.orElse(AiFeedBack.builder()
 					.userId(userId)

@@ -1,7 +1,5 @@
 package MeowMeowPunch.pickeat.domain.diet.controller;
 
-import MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest;
-import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import MeowMeowPunch.pickeat.domain.diet.dto.request.DietRequest;
+import MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DailyDietResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietDetailResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.DietRegisterResponse;
@@ -22,6 +21,7 @@ import MeowMeowPunch.pickeat.domain.diet.dto.response.NutritionResponse;
 import MeowMeowPunch.pickeat.domain.diet.dto.response.RestaurantMenuResponse;
 import MeowMeowPunch.pickeat.domain.diet.service.DietService;
 import MeowMeowPunch.pickeat.global.common.template.ResTemplate;
+import MeowMeowPunch.pickeat.global.jwt.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -60,7 +60,7 @@ public class DietController {
 		@AuthenticationPrincipal UserPrincipal principal,
 		@RequestParam(name = "date") String date
 	) {
-        String userId = principal.getUserId().toString();
+		String userId = principal.getUserId().toString();
 		DailyDietResponse data = dietService.getDaily(userId, date);
 		return ResTemplate.success(HttpStatus.OK, "식단 페이지 조회 성공", data);
 	}
@@ -74,10 +74,10 @@ public class DietController {
 	 */
 	@GetMapping("/{myDietId}")
 	public ResTemplate<DietDetailResponse> getDietDetail(
-        @AuthenticationPrincipal UserPrincipal principal,
+		@AuthenticationPrincipal UserPrincipal principal,
 		@PathVariable("myDietId") Long dietId
 	) {
-        String userId = principal.getUserId().toString();
+		String userId = principal.getUserId().toString();
 		DietDetailResponse data = dietService.getDetail(userId, dietId);
 		return ResTemplate.success(HttpStatus.OK, "식단 상세 조회 성공", data);
 	}
@@ -91,10 +91,10 @@ public class DietController {
 	 */
 	@GetMapping("/nutrient")
 	public ResTemplate<NutritionResponse> getDietNutrition(
-        @AuthenticationPrincipal UserPrincipal principal,
+		@AuthenticationPrincipal UserPrincipal principal,
 		@RequestParam(name = "date") String date
 	) {
-        String userId = principal.getUserId().toString();
+		String userId = principal.getUserId().toString();
 		NutritionResponse data = dietService.getNutrition(userId, date);
 		return ResTemplate.success(HttpStatus.OK, "식단 상세 조회 성공", data);
 	}
@@ -107,10 +107,10 @@ public class DietController {
 	 */
 	@GetMapping("/restaurant/menu")
 	public ResTemplate<RestaurantMenuResponse> getRestaurantMenu(
-        @AuthenticationPrincipal UserPrincipal principal,
+		@AuthenticationPrincipal UserPrincipal principal,
 		@RequestParam(name = "date") String date
 	) {
-        String userId = principal.getUserId().toString();
+		String userId = principal.getUserId().toString();
 		RestaurantMenuResponse data = dietService.getRestaurantMenus(date, userId);
 		return ResTemplate.success(HttpStatus.OK, "사내 식당 메뉴 조회 성공", data);
 	}
@@ -124,10 +124,10 @@ public class DietController {
 	 */
 	@PostMapping({"/recommendation/{recommendationId}"})
 	public ResTemplate<DietRegisterResponse> registerRecommendation(
-        @AuthenticationPrincipal UserPrincipal principal,
+		@AuthenticationPrincipal UserPrincipal principal,
 		@PathVariable("recommendationId") Long recommendationId
 	) {
-        String userId = principal.getUserId().toString();
+		String userId = principal.getUserId().toString();
 		DietRegisterResponse data = dietService.registerRecommendation(userId, recommendationId);
 		return ResTemplate.success(HttpStatus.OK, "추천 식단 등록 성공", data);
 	}
@@ -141,10 +141,10 @@ public class DietController {
 	 */
 	@PostMapping
 	public ResTemplate<Void> createDiet(
-        @AuthenticationPrincipal UserPrincipal principal,
+		@AuthenticationPrincipal UserPrincipal principal,
 		@Valid @RequestBody DietRequest request
 	) {
-        String userId = principal.getUserId().toString();
+		String userId = principal.getUserId().toString();
 		dietService.create(userId, request);
 		return ResTemplate.success(HttpStatus.OK, "식단 등록 성공");
 	}
@@ -159,11 +159,11 @@ public class DietController {
 	 */
 	@PutMapping("/{myDietId}")
 	public ResTemplate<Void> updateDiet(
-        @AuthenticationPrincipal UserPrincipal principal,
+		@AuthenticationPrincipal UserPrincipal principal,
 		@PathVariable("myDietId") Long myDietId,
 		@Valid @RequestBody DietRequest request
 	) {
-        String userId = principal.getUserId().toString();
+		String userId = principal.getUserId().toString();
 		dietService.update(userId, myDietId, request);
 		return ResTemplate.success(HttpStatus.OK, "식단 수정 성공");
 	}
@@ -177,24 +177,24 @@ public class DietController {
 	 */
 	@DeleteMapping("/{myDietId}")
 	public ResTemplate<Void> deleteDiet(
-        @AuthenticationPrincipal UserPrincipal principal,
+		@AuthenticationPrincipal UserPrincipal principal,
 		@PathVariable("myDietId") Long myDietId
 	) {
-        String userId = principal.getUserId().toString();
+		String userId = principal.getUserId().toString();
 		dietService.delete(userId, myDietId);
 		return ResTemplate.success(HttpStatus.OK, "식단 삭제 성공");
 	}
 
-    /**
-     * [API] 웰스토리 주간식단에서 특정 메뉴를 내 식단으로 등록
-     */
-    @PostMapping("/restaurant/register")
-    public ResTemplate<DietRegisterResponse> registerWelstoryDiet(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @RequestBody RegisterWelstoryDietRequest request
-    ) {
-        String userId = principal.getUserId().toString();
-        DietRegisterResponse data = dietService.registerWelstoryDiet(userId, request);
-        return ResTemplate.success(HttpStatus.OK, "웰스토리 식단 등록 성공", data);
-    }
+	/**
+	 * [API] 웰스토리 주간식단에서 특정 메뉴를 내 식단으로 등록
+	 */
+	@PostMapping("/restaurant/register")
+	public ResTemplate<DietRegisterResponse> registerWelstoryDiet(
+		@AuthenticationPrincipal UserPrincipal principal,
+		@RequestBody RegisterWelstoryDietRequest request
+	) {
+		String userId = principal.getUserId().toString();
+		DietRegisterResponse data = dietService.registerWelstoryDiet(userId, request);
+		return ResTemplate.success(HttpStatus.OK, "웰스토리 식단 등록 성공", data);
+	}
 }

@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,13 +106,14 @@ public class DietService {
 
 		Focus focus = user.getFocus();
 		LocalDate todayDate = LocalDate.now(KOREA_ZONE);
+		DietType targetSlot = resolveTargetSlot(userId, todayDate);
 
 		// 오늘 섭취 합계 (쿼리 1회)
 		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, todayDate);
 
 		// 식단 추천 계산 트리거 (이미 있으면 재사용) 후 TOP5 후보 반환
 		HomeRecommendationResult recommendationResult = dietRecommendationService.recommendTopFoods(userId,
-			focus, totals);
+			focus, totals, targetSlot, false, true);
 
 		// 개인화된 영양 목표 계산
 		NutritionGoals goals = nutritionGoalCalculator.calculateGoals(user);
@@ -119,7 +121,9 @@ public class DietService {
 		SummaryInfo summaryInfo = buildSummary(totals, goals);
 
 		AiFeedBack aiFeedBack = AiFeedBack.of(
-			recommendationResult.reason(),
+			recommendationResult.aiFeedBack() == null || recommendationResult.aiFeedBack().isBlank()
+				? "AI 피드백을 준비하는 중입니다."
+				: recommendationResult.aiFeedBack(),
 			LocalDateTime.now(KOREA_ZONE).withNano(0).toString());
 
 		// Provide sourceType to RecommendedDietInfo via context for serialization
@@ -138,7 +142,7 @@ public class DietService {
 				c.recommendationId(), // 여기서는 FoodRecommendationCandidate.foodId에 RecommendedDiet
 				// ID가 담겨옴
 				c.name(),
-				mealSlot(LocalTime.now(KOREA_ZONE)).name(),
+				recommendationResult.mealType(),
 				toThumbnailList(c.thumbnailUrl()),
 				toInt(c.kcal()),
 				Nutrients.of(
@@ -208,6 +212,9 @@ public class DietService {
 			foodById);
 
 		List<TodayDietInfo> todayDietInfo = diets.stream()
+			.sorted(Comparator
+				.comparingInt((Diet d) -> mealTypeOrder(d.getStatus()))
+				.thenComparing(Diet::getTime, Comparator.nullsLast(Comparator.naturalOrder())))
 			.map(diet -> {
 				List<String> thumbs = thumbnailsByDietId.getOrDefault(diet.getId(), List.of());
 				if (thumbs.isEmpty()) {
@@ -407,6 +414,11 @@ public class DietService {
 			}
 		}
 		dietRecommendationService.generateDailyFeedback(userId, date);
+
+		// 다음 슬롯 추천 자동 생성 (SNACK은 계속 SNACK)
+		DietType nextSlot = nextSlot(recommended.getDietType());
+		generateNextRecommendation(userId, nextSlot);
+
 		return DietRegisterResponse.from(saved.getId());
 	}
 
@@ -621,5 +633,58 @@ public class DietService {
 	private RecommendedDiet getOwnedRecommendedOrThrow(String userId, Long recommendationId) {
 		return recommendedDietRepository.findByIdAndUserId(recommendationId, userId)
 			.orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
+	}
+
+	private DietType nextSlot(DietType current) {
+		return switch (current) {
+			case BREAKFAST -> DietType.LUNCH;
+			case LUNCH -> DietType.DINNER;
+			case DINNER, SNACK -> DietType.SNACK;
+		};
+	}
+
+	private int mealTypeOrder(DietType type) {
+		return switch (type) {
+			case BREAKFAST -> 0;
+			case LUNCH -> 1;
+			case DINNER -> 2;
+			case SNACK -> 3;
+		};
+	}
+
+	private DietType resolveTargetSlot(String userId, LocalDate targetDate) {
+		// 최근에 등록된 오늘 식단이 있다면(등록 시점 기준) 그 다음 슬롯을 우선 사용
+		List<Diet> todayDiets = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate);
+		if (!todayDiets.isEmpty()) {
+			DietType lastSlot = todayDiets.stream()
+				.max(Comparator.comparing(Diet::getCreatedAt))
+				.map(Diet::getStatus)
+				.orElse(todayDiets.get(todayDiets.size() - 1).getStatus());
+			return nextSlot(lastSlot);
+		}
+
+		DietType currentSlot = mealSlot(LocalTime.now(KOREA_ZONE));
+		boolean hasCurrentMeal = dietRepository.existsByUserIdAndDateAndStatus(userId, targetDate, currentSlot);
+		return hasCurrentMeal ? nextSlot(currentSlot) : currentSlot;
+	}
+
+	// 오늘 해당 슬롯에 식단이 없으면 새 추천 생성
+	public void generateNextRecommendation(String userId, DietType slot) {
+		if (slot == null) {
+			return;
+		}
+		LocalDate today = LocalDate.now(KOREA_ZONE);
+		boolean hasDiet = dietRepository.existsByUserIdAndDateAndStatus(userId, today, slot);
+		// SNACK은 다회 섭취 가능하므로 추천은 항상 생성하도록 중복 체크를 우회
+		if (slot != DietType.SNACK && hasDiet) {
+			return;
+		}
+
+		User user = userRepository.findById(UUID.fromString(userId))
+			.orElseThrow(UserNotFoundException::new);
+		Focus focus = user.getFocus();
+		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, today);
+
+		dietRecommendationService.recommendTopFoods(userId, focus, totals, slot, true, true);
 	}
 }

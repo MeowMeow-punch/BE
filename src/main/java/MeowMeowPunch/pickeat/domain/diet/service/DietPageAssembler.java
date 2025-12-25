@@ -108,7 +108,7 @@ public final class DietPageAssembler {
 		if (hour >= 4 && hour < 10) {
 			return DietType.BREAKFAST;
 		}
-		if (hour >= 10 && hour < 15) {
+		if (hour >= 10 && hour < 17) {
 			return DietType.LUNCH;
 		}
 		if (hour >= 15 && hour < 21) {
@@ -152,39 +152,39 @@ public final class DietPageAssembler {
 	}
 
 	// 단일 식단 상세 응답 생성
-    public static DietInfo toDietInfo(Diet diet, List<DietFood> dietFoods, Map<Long, Food> foodById) {
-        List<DietDetailItem> foods = dietFoods.stream()
-                .map(df -> toDietFoodItem(foodById.get(df.getFoodId()), df))
-                .toList();
+	public static DietInfo toDietInfo(Diet diet, List<DietFood> dietFoods, Map<Long, Food> foodById) {
+		List<DietDetailItem> foods = dietFoods.stream()
+			.map(df -> toDietFoodItem(foodById.get(df.getFoodId()), df))
+			.toList();
 
-        // 음식 기반 썸네일 수집
-        List<String> thumbnails = dietFoods.stream()
-                .map(df -> foodById.get(df.getFoodId()))
-                .filter(Objects::nonNull)
-                .map(Food::getThumbnailUrl)
-                .filter(StringUtils::hasText)
-                .distinct()
-                .toList();
-        // 폴백: Diet 자체 썸네일 사용
-        if (thumbnails.isEmpty()) {
-            thumbnails = toThumbnailList(diet.getThumbnailUrl());
-        }
+		// 음식 기반 썸네일 수집
+		List<String> thumbnails = dietFoods.stream()
+			.map(df -> foodById.get(df.getFoodId()))
+			.filter(Objects::nonNull)
+			.map(Food::getThumbnailUrl)
+			.filter(StringUtils::hasText)
+			.distinct()
+			.toList();
+		// 폴백: Diet 자체 썸네일 사용
+		if (thumbnails.isEmpty()) {
+			thumbnails = toThumbnailList(diet.getThumbnailUrl());
+		}
 
-        return DietInfo.of(
-                diet.getId(),
-                diet.getTitle(),
-                diet.getStatus().name(),
-                diet.getTime() != null ? diet.getTime().toString() : "",
-                diet.getDate().toString(),
-                diet.isEditable(),
-                toInt(nullSafe(diet.getKcal())),
-                Nutrients.of(
-                        toInt(nullSafe(diet.getCarbs())),
-                        toInt(nullSafe(diet.getProtein())),
-                        toInt(nullSafe(diet.getFat()))),
-                foods,
-                thumbnails);
-    }
+		return DietInfo.of(
+			diet.getId(),
+			diet.getTitle(),
+			diet.getStatus().name(),
+			diet.getTime() != null ? diet.getTime().toString() : "",
+			diet.getDate().toString(),
+			diet.isEditable(),
+			toInt(nullSafe(diet.getKcal())),
+			Nutrients.of(
+				toInt(nullSafe(diet.getCarbs())),
+				toInt(nullSafe(diet.getProtein())),
+				toInt(nullSafe(diet.getFat()))),
+			foods,
+			thumbnails);
+	}
 
 	// 단일 썸네일을 리스트로 래핑
 	public static List<String> toThumbnailList(String thumbnailUrl) {

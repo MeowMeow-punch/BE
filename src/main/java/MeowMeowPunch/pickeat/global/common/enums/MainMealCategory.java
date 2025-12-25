@@ -14,8 +14,7 @@ public enum MainMealCategory {
 	STEW("찌개 및 전골"),
 	SOUP("국 및 탕"),
 	NOODLE("면 및 만두"),
-	MEAT_FISH("어류 및 육류"),
-	BEAN_NUT_SEED("두류 및 견과");
+	MEAT_FISH("어류 및 육류");
 
 	private final String label;
 
