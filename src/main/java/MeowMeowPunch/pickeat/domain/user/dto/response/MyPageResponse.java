@@ -51,13 +51,15 @@ public record MyPageResponse(
 
         public record ActivitySummary(
                         Streak streak,
-                        WeeklyDiet weeklyDiet) {
+                        WeeklyDiet weeklyDiet,
+                        Integer goalWeight) {
 
                 public static ActivitySummary of(int currentStreak, long totalRecordedDays, long weeklyRecordedCount,
-                                int weeklyTargetCount) {
+                                int weeklyTargetCount, Integer goalWeight) {
                         return new ActivitySummary(
                                         new Streak(currentStreak, totalRecordedDays),
-                                        new WeeklyDiet(weeklyRecordedCount, weeklyTargetCount));
+                                        new WeeklyDiet(weeklyRecordedCount, weeklyTargetCount),
+                                        goalWeight);
                 }
 
                 public record Streak(

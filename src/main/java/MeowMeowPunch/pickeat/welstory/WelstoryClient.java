@@ -46,13 +46,12 @@ public class WelstoryClient {
 	// Welstory 인증 토큰 발급
 	private void loginInternal() {
 		String body = "username=" + urlEncode(username)
-			+ "&password=" + urlEncode(password)
-			+ "&remember-me=false";
+				+ "&password=" + urlEncode(password)
+				+ "&remember-me=false";
 
 		var res = http.post(Endpoints.LOGIN, Map.of(
-			"Content-Type", "application/x-www-form-urlencoded",
-			"X-Autologin", "N"
-		), body, null);
+				"Content-Type", "application/x-www-form-urlencoded",
+				"X-Autologin", "N"), body, null);
 
 		if (!res.ok()) {
 			throw new WelstoryAuthException("Welstory login failed: " + res.status() + " " + safe(res.text()));
@@ -87,15 +86,17 @@ public class WelstoryClient {
 
 	// WelstoryResponse 검증
 	public <T> WelstoryResponse<T> unwrap(HttpResult<WelstoryResponse<T>> res, String action) {
-		if (!res.ok() || res.json() == null) {
+		if (!res.ok()) {
 			throw new WelstoryApiException(action + " HTTP 실패: " + res.status() + " body=" + safe(res.text()));
+		}
+		if (res.json() == null) {
+			// Body가 비어있는 경우 (ex: 영양 정보 없음 등)
+			// 빈 응답 객체를 반환하여 호출자가 data=null 처리를 할 수 있게 함
+			return new WelstoryResponse<>(0, "Empty Body", null);
 		}
 		WelstoryResponse<T> body = res.json();
 		if (body.code() != 0) {
 			throw new WelstoryApiException(action + " 실패 code=" + body.code() + ", message=" + body.message());
-		}
-		if (body.data() == null) {
-			throw new WelstoryApiException(action + " 성공이지만 data가 null 입니다.");
 		}
 		return body;
 	}
@@ -106,7 +107,7 @@ public class WelstoryClient {
 
 	// 401/403 자동 재시도
 	<T> HttpResult<WelstoryResponse<T>> callWithRetry(
-		Supplier<HttpResult<WelstoryResponse<T>>> caller) {
+			Supplier<HttpResult<WelstoryResponse<T>>> caller) {
 		for (int attempt = 0; attempt < 2; attempt++) {
 			HttpResult<WelstoryResponse<T>> res = caller.get();
 			if (!isAuthFailure(res.status())) {
