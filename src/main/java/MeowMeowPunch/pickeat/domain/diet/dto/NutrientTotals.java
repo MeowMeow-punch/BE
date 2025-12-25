@@ -7,6 +7,7 @@ public record NutrientTotals(
 	BigDecimal totalKcal,
 	BigDecimal totalCarbs,
 	BigDecimal totalProtein,
-	BigDecimal totalFat
+	BigDecimal totalFat,
+	BigDecimal totalSodium
 ) {
 }

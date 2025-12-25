@@ -12,10 +12,11 @@ public record DietInfo(
 	boolean isEditable,
 	int calorie,
 	Nutrients nutrients,
-	List<DietDetailItem> foods
+	List<DietDetailItem> foods,
+	List<String> thumbnailUrls
 ) {
 	public static DietInfo of(Long myDietId, String title, String mealType, String time, String date,
-		boolean isEditable, int calorie, Nutrients nutrients, List<DietDetailItem> foods) {
-		return new DietInfo(myDietId, title, mealType, time, date, isEditable, calorie, nutrients, foods);
+		boolean isEditable, int calorie, Nutrients nutrients, List<DietDetailItem> foods, List<String> thumbnailUrls) {
+		return new DietInfo(myDietId, title, mealType, time, date, isEditable, calorie, nutrients, foods, thumbnailUrls);
 	}
 }

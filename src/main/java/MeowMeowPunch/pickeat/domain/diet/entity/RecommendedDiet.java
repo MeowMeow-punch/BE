@@ -74,4 +74,8 @@ public class RecommendedDiet extends BaseEntity {
 
 	@Column(name = "score")
 	private Double score;
+
+	public void updateScore(Double score) {
+		this.score = score;
+	}
 }

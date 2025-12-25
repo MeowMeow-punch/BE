@@ -10,7 +10,8 @@
         COALESCE(SUM(kcal), 0) AS totalKcal,
         COALESCE(SUM(carbs), 0) AS totalCarbs,
         COALESCE(SUM(protein), 0) AS totalProtein,
-        COALESCE(SUM(fat), 0) AS totalFat
+        COALESCE(SUM(fat), 0) AS totalFat,
+        COALESCE(SUM(sodium), 0) AS totalSodium
         FROM my_diets
         WHERE user_id = #{userId}
         AND date = #{date}
@@ -39,6 +40,7 @@
         </if>
         )
         SELECT
+        NULL AS recommendationId,
         foodId,
         name,
         thumbnailUrl,

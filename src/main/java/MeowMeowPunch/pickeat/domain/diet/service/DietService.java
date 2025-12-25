@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +52,8 @@ import MeowMeowPunch.pickeat.global.common.dto.response.diet.AiFeedBack;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.DietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.Nutrients;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfo;
-import MeowMeowPunch.pickeat.global.common.dto.response.diet.RestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.RecommendedDietInfoContext;
+import MeowMeowPunch.pickeat.global.common.dto.response.diet.RestaurantMenuInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.SummaryInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayDietInfo;
 import MeowMeowPunch.pickeat.global.common.dto.response.diet.TodayRestaurantMenuInfo;
@@ -105,13 +106,14 @@ public class DietService {
 
 		Focus focus = user.getFocus();
 		LocalDate todayDate = LocalDate.now(KOREA_ZONE);
+		DietType targetSlot = resolveTargetSlot(userId, todayDate);
 
 		// 오늘 섭취 합계 (쿼리 1회)
 		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, todayDate);
 
 		// 식단 추천 계산 트리거 (이미 있으면 재사용) 후 TOP5 후보 반환
 		HomeRecommendationResult recommendationResult = dietRecommendationService.recommendTopFoods(userId,
-			focus, totals);
+			focus, totals, targetSlot, false, true);
 
 		// 개인화된 영양 목표 계산
 		NutritionGoals goals = nutritionGoalCalculator.calculateGoals(user);
@@ -119,7 +121,9 @@ public class DietService {
 		SummaryInfo summaryInfo = buildSummary(totals, goals);
 
 		AiFeedBack aiFeedBack = AiFeedBack.of(
-			recommendationResult.reason(),
+			recommendationResult.aiFeedBack() == null || recommendationResult.aiFeedBack().isBlank()
+				? "AI 피드백을 준비하는 중입니다."
+				: recommendationResult.aiFeedBack(),
 			LocalDateTime.now(KOREA_ZONE).withNano(0).toString());
 
 		// Provide sourceType to RecommendedDietInfo via context for serialization
@@ -138,7 +142,7 @@ public class DietService {
 				c.recommendationId(), // 여기서는 FoodRecommendationCandidate.foodId에 RecommendedDiet
 				// ID가 담겨옴
 				c.name(),
-				mealSlot(LocalTime.now(KOREA_ZONE)).name(),
+				recommendationResult.mealType(),
 				toThumbnailList(c.thumbnailUrl()),
 				toInt(c.kcal()),
 				Nutrients.of(
@@ -208,9 +212,19 @@ public class DietService {
 			foodById);
 
 		List<TodayDietInfo> todayDietInfo = diets.stream()
-			.map(diet -> DietPageAssembler.toTodayDietInfo(
-				diet,
-				thumbnailsByDietId.getOrDefault(diet.getId(), List.of())))
+			.sorted(Comparator
+				.comparingInt((Diet d) -> mealTypeOrder(d.getStatus()))
+				.thenComparing(Diet::getTime, Comparator.nullsLast(Comparator.naturalOrder())))
+			.map(diet -> {
+				List<String> thumbs = thumbnailsByDietId.getOrDefault(diet.getId(), List.of());
+				if (thumbs.isEmpty()) {
+					List<String> fallback = DietPageAssembler.toThumbnailList(diet.getThumbnailUrl());
+					if (!fallback.isEmpty()) {
+						thumbs = fallback;
+					}
+				}
+				return DietPageAssembler.toTodayDietInfo(diet, thumbs);
+			})
 			.toList();
 
 		Map<String, TodayRestaurantMenuInfo> todayRestaurantMenu = buildTodayRestaurantMenu(
@@ -341,7 +355,7 @@ public class DietService {
 	 */
 	@Transactional
 	public DietRegisterResponse registerRecommendation(String userId, Long recommendationId) {
-        RecommendedDiet recommended = getOwnedRecommendedOrThrow(userId, recommendationId);
+		RecommendedDiet recommended = getOwnedRecommendedOrThrow(userId, recommendationId);
 
 		DietSourceType sourceType = recommended.getSourceType() != null ? recommended.getSourceType()
 			: DietSourceType.FOOD_DB;
@@ -399,8 +413,124 @@ public class DietService {
 						.build());
 			}
 		}
-        dietRecommendationService.generateDailyFeedback(userId, date);
+		dietRecommendationService.generateDailyFeedback(userId, date);
+
+		// 다음 슬롯 추천 자동 생성 (SNACK은 계속 SNACK)
+		DietType nextSlot = nextSlot(recommended.getDietType());
+		generateNextRecommendation(userId, nextSlot);
+
 		return DietRegisterResponse.from(saved.getId());
+	}
+
+	/**
+	 * [Register] 웰스토리 주간식단에서 특정 메뉴를 내 식단으로 등록
+	 */
+	@Transactional
+	public DietRegisterResponse registerWelstoryDiet(String userId,
+		MeowMeowPunch.pickeat.domain.diet.dto.request.RegisterWelstoryDietRequest request) {
+		LocalDate date = parseDateOrToday(request.date());
+		DietType mealType = request.mealType();
+
+		java.util.UUID uid = java.util.UUID.fromString(userId);
+		MeowMeowPunch.pickeat.domain.auth.entity.User user = userRepository.findById(uid)
+			.orElseThrow(MeowMeowPunch.pickeat.domain.diet.exception.UserNotFoundException::new);
+		String userGroupId = user.getGroupId();
+		MeowMeowPunch.pickeat.welstory.entity.GroupMapping mapping = groupMappingRepository
+			.findByGroupId(userGroupId)
+			.orElseThrow(
+				() -> new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryGroupNotFoundException(userGroupId));
+
+		int dateYyyymmdd = toYyyymmdd(date);
+		String mealTimeId = mealTimeIdForSlot(mealType);
+		java.util.List<MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem> menus = welstoryMenuService
+			.getMenus(mapping.getGroupId(), dateYyyymmdd, mealTimeId, mealType.name());
+		if (menus.isEmpty()) {
+			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuNotFoundException(
+				request.restaurantName(), request.menuName());
+		}
+
+		String targetRestaurant = normalize(request.restaurantName());
+		String targetMenu = normalize(request.menuName());
+		java.util.List<MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem> matched = menus.stream()
+			.filter(m -> normalize(m.courseName()).equals(targetRestaurant))
+			.filter(m -> normalize(m.name()).equals(targetMenu))
+			.toList();
+
+		if (matched.isEmpty()) {
+			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuNotFoundException(
+				request.restaurantName(), request.menuName());
+		}
+		if (matched.size() > 1) {
+			throw new MeowMeowPunch.pickeat.domain.diet.exception.WelstoryMenuAmbiguousException(
+				request.restaurantName(), request.menuName());
+		}
+		MeowMeowPunch.pickeat.welstory.dto.WelstoryMenuItem menu = matched.getFirst();
+
+		java.math.BigDecimal totalKcal = java.math.BigDecimal.ZERO;
+		java.math.BigDecimal totalCarbs = java.math.BigDecimal.ZERO;
+		java.math.BigDecimal totalProtein = java.math.BigDecimal.ZERO;
+		java.math.BigDecimal totalFat = java.math.BigDecimal.ZERO;
+
+		if (notBlank(menu.hallNo()) && notBlank(menu.menuCourseType())) {
+			var nutrients = welstoryMenuService.getNutrients(menu.restaurantId(), dateYyyymmdd, mealTimeId,
+				menu.hallNo(), menu.menuCourseType());
+			for (var n : nutrients) {
+				totalKcal = totalKcal.add(toBigDecimal(n.kcal()));
+				totalCarbs = totalCarbs.add(toBigDecimal(n.totCho()));
+				totalProtein = totalProtein.add(toBigDecimal(n.totProtein()));
+				totalFat = totalFat.add(toBigDecimal(n.totFat()));
+			}
+		} else {
+			totalKcal = toBigDecimal(menu.kcal());
+		}
+
+		String title = request.restaurantName() + " - " + request.menuName();
+
+		RecommendedDiet saved = recommendedDietRepository.save(
+			RecommendedDiet.builder()
+				.userId(userId)
+				.foodId(null)
+				.dietType(mealType)
+				.sourceType(DietSourceType.WELSTORY)
+				.date(date)
+				.time(LocalTime.now(KOREA_ZONE))
+				.title(title)
+				.kcal(totalKcal)
+				.carbs(totalCarbs)
+				.protein(totalProtein)
+				.fat(totalFat)
+				.thumbnailUrl(menu.photoUrl())
+				.score(0.0)
+				.build()
+		);
+
+		return registerRecommendation(userId, saved.getId());
+	}
+
+	private String normalize(String s) {
+		if (s == null)
+			return "";
+		return s.toLowerCase()
+			.replaceAll("[\\s\\p{Z}]+", "")
+			.replaceAll("[()\u3000\u3001\u3002\uFF08\uFF09{}·∙・·.,_-]", "");
+	}
+
+	private boolean notBlank(String v) {
+		return v != null && !v.isBlank();
+	}
+
+	private java.math.BigDecimal toBigDecimal(String value) {
+		if (value == null || value.isBlank()) {
+			return java.math.BigDecimal.ZERO;
+		}
+		try {
+			String cleaned = value.replace(",", "").trim();
+			if (cleaned.startsWith("."))
+				cleaned = "0" + cleaned;
+			return new java.math.BigDecimal(cleaned);
+		} catch (Exception e) {
+			return java.math.BigDecimal.ZERO;
+		}
 	}
 
 	/**
@@ -478,7 +608,10 @@ public class DietService {
 	 */
 	@Transactional
 	public void delete(String userId, Long dietId) {
-        Diet diet = getOwnedDietOrThrow(userId, dietId);
+		Diet diet = getOwnedDietOrThrow(userId, dietId);
+
+		// 수정은 막되, 삭제는 허용: 비편집 식단(WELSTORY 등)도 삭제 가능하도록 변경
+		// 기존 정책상 editable=false면 수정 불가이며, 삭제는 허용
 
 		dietFoodRepository.deleteAllByDietId(dietId);
 		dietRepository.delete(diet);
@@ -486,19 +619,72 @@ public class DietService {
 		dietRecommendationService.generateDailyFeedback(userId, diet.getDate());
 	}
 
-    // 공통 검증 메서드
-    private Diet getOwnedDietOrThrow(String userId, Long dietId) {
-        return dietRepository.findByIdAndUserId(dietId, userId)
-                .orElseThrow(() -> new DietNotFoundException(dietId));
-    }
+	// 공통 검증 메서드
+	private Diet getOwnedDietOrThrow(String userId, Long dietId) {
+		return dietRepository.findByIdAndUserId(dietId, userId)
+			.orElseThrow(() -> new DietNotFoundException(dietId));
+	}
 
-    private Diet getOwnedDietDetailOrThrow(String userId, Long dietId) {
-        return dietRepository.findByIdAndUserId(dietId, userId)
-                .orElseThrow(() -> new DietDetailNotFoundException(dietId));
-    }
+	private Diet getOwnedDietDetailOrThrow(String userId, Long dietId) {
+		return dietRepository.findByIdAndUserId(dietId, userId)
+			.orElseThrow(() -> new DietDetailNotFoundException(dietId));
+	}
 
-    private RecommendedDiet getOwnedRecommendedOrThrow(String userId, Long recommendationId) {
-        return recommendedDietRepository.findByIdAndUserId(recommendationId, userId)
-                .orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
-    }
+	private RecommendedDiet getOwnedRecommendedOrThrow(String userId, Long recommendationId) {
+		return recommendedDietRepository.findByIdAndUserId(recommendationId, userId)
+			.orElseThrow(() -> new DietDetailNotFoundException(recommendationId));
+	}
+
+	private DietType nextSlot(DietType current) {
+		return switch (current) {
+			case BREAKFAST -> DietType.LUNCH;
+			case LUNCH -> DietType.DINNER;
+			case DINNER, SNACK -> DietType.SNACK;
+		};
+	}
+
+	private int mealTypeOrder(DietType type) {
+		return switch (type) {
+			case BREAKFAST -> 0;
+			case LUNCH -> 1;
+			case DINNER -> 2;
+			case SNACK -> 3;
+		};
+	}
+
+	private DietType resolveTargetSlot(String userId, LocalDate targetDate) {
+		// 최근에 등록된 오늘 식단이 있다면(등록 시점 기준) 그 다음 슬롯을 우선 사용
+		List<Diet> todayDiets = dietRepository.findAllByUserIdAndDateOrderByTimeAsc(userId, targetDate);
+		if (!todayDiets.isEmpty()) {
+			DietType lastSlot = todayDiets.stream()
+				.max(Comparator.comparing(Diet::getCreatedAt))
+				.map(Diet::getStatus)
+				.orElse(todayDiets.get(todayDiets.size() - 1).getStatus());
+			return nextSlot(lastSlot);
+		}
+
+		DietType currentSlot = mealSlot(LocalTime.now(KOREA_ZONE));
+		boolean hasCurrentMeal = dietRepository.existsByUserIdAndDateAndStatus(userId, targetDate, currentSlot);
+		return hasCurrentMeal ? nextSlot(currentSlot) : currentSlot;
+	}
+
+	// 오늘 해당 슬롯에 식단이 없으면 새 추천 생성
+	public void generateNextRecommendation(String userId, DietType slot) {
+		if (slot == null) {
+			return;
+		}
+		LocalDate today = LocalDate.now(KOREA_ZONE);
+		boolean hasDiet = dietRepository.existsByUserIdAndDateAndStatus(userId, today, slot);
+		// SNACK은 다회 섭취 가능하므로 추천은 항상 생성하도록 중복 체크를 우회
+		if (slot != DietType.SNACK && hasDiet) {
+			return;
+		}
+
+		User user = userRepository.findById(UUID.fromString(userId))
+			.orElseThrow(UserNotFoundException::new);
+		Focus focus = user.getFocus();
+		NutrientTotals totals = dietRecommendationMapper.findTotalsByDate(userId, today);
+
+		dietRecommendationService.recommendTopFoods(userId, focus, totals, slot, true, true);
+	}
 }

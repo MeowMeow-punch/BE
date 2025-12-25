@@ -28,4 +28,9 @@ public interface RecommendedDietRepository extends JpaRepository<RecommendedDiet
 	 */
 	List<RecommendedDiet> findByUserIdAndDateAndDietTypeOrderByCreatedAtDesc(String userId, LocalDate date,
 			DietType dietType);
+
+	List<RecommendedDiet> findByUserIdAndDateOrderByCreatedAtDesc(String userId, LocalDate date);
+
+	List<RecommendedDiet> findByUserIdAndDateAndDietTypeOrderByScoreAsc(String userId, LocalDate date,
+			DietType dietType);
 }

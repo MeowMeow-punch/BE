@@ -5,10 +5,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-
 @EnableAsync
+@EnableScheduling
 @ConfigurationPropertiesScan // @ConfigurationProperties 어노테이션이 붙은 클래스를 자동 스캔
 public class PickeatApplication {
 

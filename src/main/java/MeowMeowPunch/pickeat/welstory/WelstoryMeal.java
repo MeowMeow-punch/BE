@@ -20,7 +20,7 @@ public class WelstoryMeal {
 	public final String menuCourseType;
 
 	public WelstoryMeal(WelstoryClient client, String restaurantId, int dateYyyymmdd,
-		String mealTimeId, String hallNo, String menuCourseType) {
+			String mealTimeId, String hallNo, String menuCourseType) {
 		this.client = client;
 		this.restaurantId = restaurantId;
 		this.dateYyyymmdd = dateYyyymmdd;
@@ -38,17 +38,16 @@ public class WelstoryMeal {
 		String normalizedMealTimeId = trimSafe(mealTimeId);
 
 		var res = client.callWithRetry(
-			() -> client.http().get(
-				Endpoints.listMealNutrient(dateYyyymmdd, normalizedMealTimeId, normalizedHallNo,
-					normalizedMenuCourseType,
-					restaurantId),
-				Map.of("Cookie", "cafeteriaActiveId=" + restaurantId),
-				new ParameterizedTypeReference<WelstoryResponse<List<ApiTypes.RawMealMenuData>>>() {
-				}
-			)
-		);
+				() -> client.http().get(
+						Endpoints.listMealNutrient(dateYyyymmdd, normalizedMealTimeId, normalizedHallNo,
+								normalizedMenuCourseType,
+								restaurantId),
+						Map.of("Cookie", "cafeteriaActiveId=" + restaurantId),
+						new ParameterizedTypeReference<WelstoryResponse<List<ApiTypes.RawMealMenuData>>>() {
+						}));
 
-		return client.unwrap(res, "영양 정보 조회").data();
+		var response = client.unwrap(res, "영양 정보 조회");
+		return response.data() != null ? response.data() : java.util.Collections.emptyList();
 	}
 
 	private String trimSafe(String value) {

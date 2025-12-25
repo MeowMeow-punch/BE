@@ -5,17 +5,16 @@ import java.util.stream.Stream;
 
 // 메인 식사(아침/점심/저녁) 추천에서 허용하는 카테고리 집합
 public enum MainMealCategory {
-	RICE("밥류"),
-	STEAM("찜류"),
-	GRILL("구이류"),
-	STIR_FRY("볶음류"),
-	BRAISED("조림류"),
-	FRY("튀김류"),
-	STEW("찌개 및 전골류"),
-	SOUP("국 및 탕류"),
-	NOODLE("면 및 만두류"),
-	MEAT_FISH("수·조·어·육류"),
-	BEAN_NUT_SEED("두류, 견과 및 종실류");
+	RICE("밥"),
+	STEAM("찜"),
+	GRILL("구이"),
+	STIR_FRY("볶음"),
+	BRAISED("조림"),
+	FRY("튀김"),
+	STEW("찌개 및 전골"),
+	SOUP("국 및 탕"),
+	NOODLE("면 및 만두"),
+	MEAT_FISH("어류 및 육류");
 
 	private final String label;
 
